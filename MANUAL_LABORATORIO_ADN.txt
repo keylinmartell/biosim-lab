@@ -1,0 +1,444 @@
+================================================================================
+BIOSIM LAB - MANUAL TECNICO Y GUIA OPERATIVA DEL LABORATORIO DE ADN
+MODULO INTEGRAL: ADN, REPLICACION, MUTACIONES Y MECANISMOS DE REPARACION
+Version: v1.1 - Cierre Fase 1
+================================================================================
+
+1. PROPOSITO CIENTIFICO Y MODELO COMPUTACIONAL DIDACTICO
+--------------------------------------------------------------------------------
+BioSIM Lab es una estacion bio-computacional orientada a la simulacion, visualizacion 
+y analisis del material genetico in silico.
+
+Este modulo modela las operaciones moleculares esenciales del dogma central de la 
+biologia molecular mediante abstracciones formales y didacticas:
+  a) Representacion y validacion de secuencias de acido desoxirribonucleico (A, T, C, G).
+  b) Generacion de la cadena complementaria en orientacion antiparalela Watson-Crick.
+  c) Copia fidedigna y replicacion celular estocastica con tasa de error de polimerasa.
+  d) Mutagénesis puntual dirigida (sustituciones, inserciones y deleciones).
+  e) Deteccion automatica de desapareamientos en doble hebra (Mismatch Detection / MMR).
+  f) Reparacion ortogonal asistida por plantillas homologas fiables.
+  g) Roturas bicatenarias (Double-Strand Breaks - DSB) comparando vias HDR y NHEJ.
+  h) Trazabilidad inmutable y persistencia integral del ciclo de vida del ensayo.
+
+REGLA DE ORO DEL MODELO:
+En la naturaleza y en este software, un error de apareamiento (por ejemplo un par A-G) 
+no contiene informacion intrinseca sobre cual de las dos bases es la correcta original. 
+El sistema detecta y senala el fallo con precision, pero unicamente puede restaurar 
+la secuencia genuina cuando dispone de una HEBRA MOLDE PARENTAL o PLANTILLA HOMOLOGA 
+fiable de referencia.
+
+
+================================================================================
+2. ARQUITECTURA DEL FLUJO EXPERIMENTAL GUIADO (5 PASOS)
+================================================================================
+La barra de progreso experimental (Stepper) superior coordina la transicion logica 
+del ensayo en cinco etapas cronologicas continuas:
+
+  [PASO 1: Molde Inicial Validado]
+  * El usuario introduce o carga una secuencia canonica de ADN.
+  * El sistema la valida de forma reactiva, calcula sus propiedades biofisicas 
+    (longitud, porcentaje GC, balance purinas/pirimidinas) y la fija como MOLDE 
+    PARENTAL INMUTABLE de partida.
+
+  [PASO 2: Generacion de Copia de Trabajo]
+  * Se clona la hebra molde para obtener una copia activa de manipulacion.
+  * El motor verifica la identidad de secuencia al 100% y genera un evento de 
+    auditoria. Las alteraciones posteriores se aplicaran sobre esta copia de 
+    trabajo, manteniendo la hebra molde parental intacta para comparacion.
+
+  [PASO 3: Induccion de Daño Molecular]
+  * Se induce una alteracion en la copia mediante mutacion quirurgica (CRISPR), 
+    duplicacion celular con ruido estocastico o escision fisica (rotura DSB).
+
+  [PASO 4: Deteccion Automatica de Daño (MMR y Diff)]
+  * Al producirse el dano, el motor computa de forma automatica:
+    1. El alineamiento diferencial (Diff) contra la secuencia de referencia.
+    2. El analisis de apareamientos no canonicos (MMR) comparando la hebra 
+       mutada con la complementaria legitima de la hebra molde.
+    3. Resalta la base afectada tanto en el track 2D como en la helice 3D.
+
+  [PASO 5: Reparacion Guiada por Homologia / Resolucion de Cicatriz]
+  * Se invoca la maquinaria de correccion. Si se utiliza la plantilla parental 
+    (HDR o reparacion dirigida), la secuencia se restituye a su pureza original 
+    (100% homologia). Si se opta por union de extremos (NHEJ), el sistema 
+    resuelve la union directa documentando la cicatriz o microdelecion producida.
+
+
+================================================================================
+3. DICCIONARIO COMPLETO DE CONTROLES: CADA BOTON, CAMPO Y SU FUNCION
+================================================================================
+
+--------------------------------------------------------------------------------
+[3.1] ENCABEZADO Y GESTION DE SESION (HEADER PRINCIPAL)
+--------------------------------------------------------------------------------
+* Boton "Guardar Experimento" (Icono de disco):
+  - PA QUE SIRVE: Guarda en memoria y en almacenamiento permanente de disco 
+    (backend/app/data/saved_experiments.json) el ciclo de vida completo del ensayo 
+    actual: molde parental, copia de trabajo, mutaciones sufridas, deteccion de errores, 
+    reparacion ejecutada, secuencia resultante y mapa de diferencias diff.
+  - CUANDO USARLO: Cada vez que desees conservar un ensayo exitoso o registrar un 
+    resultado mutacional relevante para presentacion o auditoria.
+
+* Boton "Cargar Experimento (N)" (Icono de historial):
+  - PA QUE SIRVE: Abre la ventana modal donde se listan todos los ensayos previamente 
+    guardados, mostrando su ID unico, nombre, fecha y resumen de secuencias.
+  - CUANDO USARLO: Para revisar experimentos anteriores o restaurar cualquier estado 
+    pasado en el laboratorio con un solo clic.
+
+* Boton "Manual de Laboratorio" (Icono de libro):
+  - PA QUE SIRVE: Abre la guia interactiva en pantalla con explicaciones paso a paso 
+    de cada componente, teclado de atajos y protocolos operativos.
+
+* Boton "Restaurar a Molde" (Icono de retroceso):
+  - PA QUE SIRVE: Restablece de forma inmediata la secuencia de entrada al estado de 
+    la hebra molde inicial, limpiando mutaciones, roturas y alertas de error.
+  - CUANDO USARLO: Para volver a empezar un ensayo limpio sin tener que volver a 
+    escribir la secuencia de ADN original.
+
+
+--------------------------------------------------------------------------------
+[3.2] BANCO DE MUESTRAS ESTANDAR RAPIDAS
+--------------------------------------------------------------------------------
+* Chip "Control Corto (12bp)" [ATCGATCGATCG]:
+  - PA QUE SIRVE: Carga una secuencia patron equilibrada de 12 pares de bases. 
+    Ideal para calibracion inicial y verificacion rapida de complementariedad.
+
+* Chip "Gen Sintetico (20bp)" [ATGCGATCGATCGATCGATC]:
+  - PA QUE SIRVE: Carga una secuencia mas larga representativa de un fragmento de 
+    marco abierto de lectura (ORF).
+
+* Chip "Rica en GC (64.7%)" [ATGCCCCCGGGGTTTAA]:
+  - PA QUE SIRVE: Carga una hebra con predominio de enlaces triples C-G para ensayar 
+    la estabilidad estructural frente a desnaturalizacion termica.
+
+
+--------------------------------------------------------------------------------
+[3.3] SECUENCIACION DE ENTRADA Y METRICAS BIOFISICAS
+--------------------------------------------------------------------------------
+* Campo de Texto "Hebra Codificante de Entrada (5' -> 3')":
+  - PA QUE SIRVE: Permite escribir, editar o pegar cualquier secuencia de ADN.
+  - COMPORTAMIENTO INTELIGENTE: Convierte automaticamente las letras a mayusculas. 
+    Posee validacion reactiva en tiempo real: si se introduce cualquier caracter 
+    ajeno a A, T, C, G (como 'O', 'X', numeros o espacios), la hélice 3D se protege, 
+    se desactiva la mutacion y se despliega un banner de advertencia molecular.
+
+* Boton "Procesar Secuencia" (Icono de analitica):
+  - PA QUE SIRVE: Fuerza la re-evaluacion instantanea de la secuencia en el backend, 
+    actualizando la hebra complementaria (3'->5'), la cadena binaria (2 bits/base) 
+    y el conteo estequiometrico.
+
+* Boton "Generar Copia de Trabajo" / "Copiar Secuencia" (Icono de copiar):
+  - PA QUE SIRVE: Realiza una duplicacion molecular estricta de la cadena actual, 
+    certifica la identidad al 100% contra el molde, registra el evento en la bitacora 
+    y avanza el stepper al Paso 2.
+
+* Tarjeta Metrica "Longitud Total":
+  - PA QUE SIRVE: Informa el numero total de nucleotidos (pares de bases, bp).
+
+* Tarjeta Metrica "Contenido GC (%)" y Barra de Progreso:
+  - PA QUE SIRVE: Muestra el porcentaje de guanina y citosina. Un contenido GC alto 
+    implica mayor cantidad de triples enlaces de hidrogeno y mayor temperatura de fusion.
+
+* Tarjeta Metrica "Distribucion de Nucleotidos":
+  - PA QUE SIRVE: Contabiliza de manera individual las bases A, T, C y G.
+
+* Chip de "Estado de Calidad":
+  - PA QUE SIRVE: Indica en verde ("Secuencia Valida") o en rojo ("Bases No Validas") 
+    si el motor biologico aprueba la hebra para simulacion molecular.
+
+
+--------------------------------------------------------------------------------
+[3.4] MAPA DE ALINEAMIENTO DE NUCLEOTIDOS (TRACK INTERACTIVO 2D)
+--------------------------------------------------------------------------------
+* Segmento Superior (5' -> 3'):
+  - PA QUE SIRVE: Representa visualmente la hebra principal codificante con sus 
+    indices numericos de posicion (0, 1, 2, ...).
+  - INTERACTIVIDAD: Al pulsar sobre cualquier columna de nucleotido, el sistema 
+    selecciona esa base especifica, la enfoca en el visor 3D y rellena 
+    automaticamente la coordenada en el panel de edicion quirurgica CRISPR.
+
+* Enlaces de Hidrogeno Centrales:
+  - PA QUE SIRVE: Dibuja fisicamente 2 lineas para el par A-T (2 puentes H) y 
+    3 lineas para el par C-G (3 puentes H, mas estable).
+
+* Segmento Inferior (3' -> 5'):
+  - PA QUE SIRVE: Muestra la base complementaria correspondiente de la segunda hebra.
+
+* Campo "Hebra Complementaria Antisentido (3' -> 5')":
+  - PA QUE SIRVE: Muestra la secuencia completa de la cadena antisentido complementaria.
+
+* Campo "Representacion Binaria Biocontrolada (2 bits/base)":
+  - PA QUE SIRVE: Muestra la serializacion compacta en formato digital:
+    A = 00 | C = 01 | G = 10 | T = 11.
+
+
+--------------------------------------------------------------------------------
+[3.5] VISOR MOLECULAR TRIDIMENSIONAL DE LA DOBLE HELICE (B-DNA)
+--------------------------------------------------------------------------------
+* Boton "Modo: Curva In Vivo / Eje Lineal" (Header 3D):
+  - PA QUE SIRVE: Cambia la conformacion espacial del modelo. "Curva In Vivo" 
+    reproduce la curvatura natural y dinamica del ADN dentro del nucleo celular. 
+    "Eje Lineal" estira la hebra paralelamente al eje Y para mediciones y 
+    conteo cristalografico.
+
+* Boton "bp mostrados":
+  - PA QUE SIRVE: Muestra la cantidad de pares de bases renderizados en la escena 3D.
+
+* Boton "Expandir / Contraer" (Icono de pantalla completa):
+  - PA QUE SIRVE: Amplia el visor molecular a modo cinematografico maximizado para 
+    inspeccion minuciosa de los surcos mayor y menor.
+
+* Boton "Pausar / Reanudar Rotacion" (Boton circular con icono de giro):
+  - PA QUE SIRVE: Detiene o reactiva el giro orbital automatico de la doble helice. 
+    Muy util para pausar la vista y examinar un enlace determinado.
+
+* Boton "Acercar Zoom" (Icono de lupa +):
+  - PA QUE SIRVE: Aproxima la camara virtual a la helice. Tambien se puede 
+    usar la rueda del raton.
+
+* Boton "Alejar Zoom" (Icono de lupa -):
+  - PA QUE SIRVE: Aleja la perspectiva visual para ver la molecula completa.
+
+* Boton "Restablecer perspectiva cenital" (Icono de refrescar):
+  - PA QUE SIRVE: Centra la camara, reorienta la inclinacion inicial y restablece 
+    los parametros orbitales optimos.
+
+* Interaccion Directa en el Canvas 3D:
+  - PA QUE SIRVE: Puedes rotar la helice libremente haciendo clic y arrastrando con 
+    el raton en cualquier direccion (360 grados). Al hacer clic directamente sobre 
+    cualquier base o peldaño, se resalta con un anillo de seleccion iluminado y se 
+    despliega el panel HUD con el detalle de puentes de hidrogeno del par.
+
+
+--------------------------------------------------------------------------------
+[3.6] PANEL "MODO 2: EDICION DIRIGIDA (INTERVENCION CRISPR)"
+--------------------------------------------------------------------------------
+* Campo "Posicion Cero-Indexada":
+  - PA QUE SIRVE: Indica el indice numerico exacto de la base a modificar (0 a N-1). 
+    Se actualiza automaticamente si haces clic en el mapa 2D o en la helice 3D.
+
+* Selector "Tipo de Evento":
+  - Sustitucion (Puntual): Cambia la base actual por otra sin modificar la longitud.
+  - Insercion (+1 Base): Introduce un nucleotido nuevo, desplazando el marco 
+    de lectura hacia la derecha (frameshift).
+  - Delecion (-1 Base): Elimina el nucleotido en esa posicion, acortando la cadena.
+
+* Selector de Segmento "Base a Incorporar" (Botones A, T, C, G):
+  - PA QUE SIRVE: Permite escoger de forma tactil la nueva base deseada para 
+    sustituciones o inserciones.
+
+* Boton "Aplicar Mutacion Dirigida" (Icono de tijeras CRISPR):
+  - PA QUE SIRVE: Aplica la edicion quirurgica sobre la copia de trabajo en el 
+    backend, actualiza la visualizacion 3D en tiempo real, dispara la deteccion 
+    automatica de diferencias y avanza el stepper al Paso 3 y Paso 4.
+
+
+--------------------------------------------------------------------------------
+[3.7] PANEL "MODO 1: REPLICACION CELULAR ESTOCASTICA"
+--------------------------------------------------------------------------------
+* Slider "Tasa de Error por Base" (0.0% a 20.0%):
+  - PA QUE SIRVE: Configura la fidelidad de la ADN polimerasa virtual.
+    * 0.0%: Copia perfecta de alta fidelidad biologica.
+    * 10.0%: Hipermutacion acelerada.
+    * 20.0%: Tasa letal extrema (induce multiples errores simultaneos).
+
+* Boton "Simular Duplicacion Estocastica" (Icono de ciclo):
+  - PA QUE SIRVE: Ejecuta un ciclo completo de replicacion celular sintetizando una 
+    nueva cadena donde cada nucleotido tiene la probabilidad indicada de mutar.
+
+
+--------------------------------------------------------------------------------
+[3.8] PANEL "REPORTE DE MUTAGENESIS Y DIFERENCIAS (DIFF INSPECTOR)"
+--------------------------------------------------------------------------------
+* Indicador de Mutaciones Detectadas:
+  - PA QUE SIRVE: Muestra en verde si la copia sintetizada es identica a la referencia, 
+    o en naranja/rojo la cantidad exacta de diferencias acumuladas.
+
+* Alineamiento Textual REFERENCIA vs SINTETIZADA:
+  - PA QUE SIRVE: Contrasta de extremo a extremo las dos cadenas para ubicar el desfasaje.
+
+* Fichas de Mutaciones por Coordenada:
+  - PA QUE SIRVE: Desglosa cada posicion alterada indicando si fue "changed", 
+    "inserted" o "deleted", y la transicion ocurrida (ej: C -> A).
+
+
+--------------------------------------------------------------------------------
+[3.9] PANEL "3.1 DETECCION DE APAREAMIENTOS INCORRECTOS (MMR DUPLEX)"
+--------------------------------------------------------------------------------
+* Campo "Cadena Apareada a Comprobar":
+  - PA QUE SIRVE: Aloja la segunda hebra con la que se empareja la cadena principal 
+    para formar la doble helice duplex.
+
+* Boton "Complementaria":
+  - PA QUE SIRVE: Rellena inmediatamente el campo con la complementaria canonica 
+    exacta de la cadena activa.
+
+* Boton "Inducir Error":
+  - PA QUE SIRVE: Introduce deliberadamente una base no complementaria en el centro 
+    de la cadena duplex (por ejemplo, emparejando Guanina con Adenina) para ensayar 
+    el sistema de deteccion de errores.
+
+* Boton "Escanear Apareamientos Duplex" (Icono de analitica):
+  - PA QUE SIRVE: Analiza cada posicion del duplex y califica el apareamiento:
+    * Par Canonico (Verde): Cumple la regla A-T o C-G.
+    * Par No Canonico (Rojo/Naranja): Error molecular detectado (ej: A-G, C-T).
+
+
+--------------------------------------------------------------------------------
+[3.10] PANEL "3.2 REPARACION GUIADA POR REFERENCIA FIABLE"
+--------------------------------------------------------------------------------
+* Campo "Secuencia de Referencia Homologa Fiable":
+  - PA QUE SIRVE: Define la secuencia de la plantilla autentica (cromosoma homologo 
+    o hebra molde parental) que la maquinaria celular utilizara como guia de reparacion.
+
+* Boton "Usar Inicial":
+  - PA QUE SIRVE: Rellena el campo de referencia directamente con la hebra molde 
+    parental registrada al inicio del experimento.
+
+* Boton "Reparar con Referencia" (Icono de herramienta):
+  - PA QUE SIRVE: Ejecuta la reparacion guiada. Corrige unicamente las divergencias 
+    que estan avaladas por la plantilla de referencia. Si la secuencia se restaura 
+    completamente, el stepper marca el exito en Paso 5.
+
+
+--------------------------------------------------------------------------------
+[3.11] PANEL "3.3 ROTURAS BICATENARIAS (DSB) Y VIAS DE REPARACION"
+--------------------------------------------------------------------------------
+* Campo "Posicion del Punto de Rotura":
+  - PA QUE SIRVE: Establece la coordenada donde se secciona fisicamente la molecula 
+    de ADN bicatenario en dos fragmentos (extremo 5' izquierdo y extremo 3' derecho).
+
+* Boton "Reparar via HDR (Homologia)" (Icono de escudo):
+  - PA QUE SIRVE: Simula la via de Reparacion Dirigida por Homologia (HDR). 
+    Utiliza la secuencia parental homologa como molde para reconstruir la zona rota 
+    con 100% de fidelidad y sin dejar ninguna cicatriz molecular.
+
+* Boton "Reparar via NHEJ (Union Extremos)" (Icono de union mecanica):
+  - PA QUE SIRVE: Simula la via de Union de Extremos No Homologos (NHEJ). 
+    Liga directamente los dos cabos rotos sin disponer de plantilla completa. 
+    Es propensa a errores biologicos e introduce cicatrices o microdeleciones.
+
+
+--------------------------------------------------------------------------------
+[3.12] PANEL "7. REGISTRO DE EXPERIMENTOS & TRAZABILIDAD (AUDITORIA)"
+--------------------------------------------------------------------------------
+* Boton "Refrescar Registro (N)" (Icono de reiniciar):
+  - PA QUE SIRVE: Consulta al backend FastAPI y actualiza la tabla con los ultimos 
+    eventos moleculares procesados.
+
+* Tabla de Auditoria de Eventos:
+  - Columnas: ID Experimento, Tipo de Operacion, Secuencia Inicial, Secuencia Final, 
+    Referencia Empleada y Resultado de Reparacion.
+
+* Boton "Cargar" (En cada fila de la tabla):
+  - PA QUE SIRVE: Restaura al instante en la estacion de trabajo el estado exacto de 
+    ese ensayo historico, actualizando la doble helice 3D y los campos de entrada.
+
+
+--------------------------------------------------------------------------------
+[3.13] DIALOGO MODAL "CARGAR EXPERIMENTO GUARDADO"
+--------------------------------------------------------------------------------
+* Boton "✕" (Cerrar modal):
+  - PA QUE SIRVE: Cierra la ventana emergente sin alterar la sesion actual.
+
+* Tarjetas de Experimentos Guardados:
+  - Muestran el ID unico (EXP-xxxx), fecha de guardado, etiqueta de mutacion, molde 
+    inicial y secuencia final consolidada.
+
+* Boton "Cargar en Lab" (En cada tarjeta):
+  - PA QUE SIRVE: Carga la totalidad del experimento guardado en memoria y en la 
+    interfaz: restaura el molde parental, la copia de trabajo, la orientacion 3D, 
+    las coordenadas de mutacion seleccionadas y el reporte diff.
+
+
+================================================================================
+4. CODIGO ESPECTRAL DE BASES NITROGENADAS
+================================================================================
+En toda la interfaz y en el visor macromolecular 3D se respira una paleta cromatica 
+armonica y estandarizada:
+
+  * ADENINA (A):
+    - Color: Rojo Coral / Carmesi (#EF4444).
+    - Tipo: Purina (2 anillos).
+    - Apareamiento Watson-Crick: Timina (T) mediante 2 puentes de hidrogeno.
+
+  * TIMINA (T):
+    - Color: Verde Esmeralda / Bio-verde (#10B981).
+    - Tipo: Pirimidina (1 anillo).
+    - Apareamiento Watson-Crick: Adenina (A) mediante 2 puentes de hidrogeno.
+
+  * CITOSINA (C):
+    - Color: Cian Electrico (#06B6D4).
+    - Tipo: Pirimidina (1 anillo).
+    - Apareamiento Watson-Crick: Guanina (G) mediante 3 puentes de hidrogeno.
+
+  * GUANINA (G):
+    - Color: Ambar Dorado / Naranja (#F59E0B).
+    - Tipo: Purina (2 anillos).
+    - Apareamiento Watson-Crick: Citosina (C) mediante 3 puentes de hidrogeno.
+
+
+================================================================================
+5. PROTOCOLOS PRACTICOS EXPERIMENTALES PASO A PASO
+================================================================================
+
+[PROTOCOLO A: MUTACION DIRIGIDA CRISPR Y REPARACION HOMOLOGA]
+--------------------------------------------------------------------------------
+1. En la entrada de secuencia, asegurate de tener una cadena valida (ej: ATCGATCGATCG).
+2. Observa el Stepper superior en "Paso 1 de 5: Molde Inicial Validado".
+3. Pulsa el boton "Copiar Secuencia" para certificar la copia de trabajo (Paso 2).
+4. En el Mapa 2D o en la helice 3D, haz clic en la base de la posicion 4.
+5. En el panel "Modo 2: Edicion Dirigida", selecciona Sustitucion y la nueva base 'G'.
+6. Pulsa "Aplicar Mutacion Dirigida".
+   -> Observa como el Stepper pasa a "Paso 3: Dano Inducido" y de inmediato a 
+      "Paso 4: Deteccion MMR/Diff".
+   -> En el panel 3.1 observaras que el par en posicion 4 se senala como no canonico.
+7. Desplazate a la seccion "3.2 Reparacion Guiada por Referencia Fiable".
+8. Pulsa el boton "Usar Inicial" (para cargar el molde parental original).
+9. Pulsa "Reparar con Referencia".
+   -> La mutacion se corrige con alta fidelidad y el Stepper concluye en 
+      "Paso 5: Restaurado por Homologia".
+10. Pulsa el boton superior "Guardar Experimento" para archivar el ensayo completo.
+
+
+[PROTOCOLO B: ROTURA DE DOBLE CADENA Y COMPARACION HDR VS NHEJ]
+--------------------------------------------------------------------------------
+1. Carga la muestra estandar "Gen Sintetico (20bp)".
+2. Pulsa "Copiar Secuencia".
+3. Desplazate a la seccion "3.3 Roturas Bicatenarias (DSB)".
+4. Define el punto de rotura en la posicion 8.
+5. Pulsa "Reparar via NHEJ (Union Extremos)".
+   -> Observa la separacion grafica de los fragmentos 5' y 3' y la aparicion de 
+      la cicatriz molecular o microdelecion en el fragmento resultante.
+6. Pulsa "Restaurar a Molde" en la cabecera para restablecer el gen intacto.
+7. Ahora ensaya con el boton "Reparar via HDR (Homologia)".
+   -> Observa la reconstitucion limpia de alta fidelidad sin cicatriz asistida 
+      por la secuencia homologa.
+
+
+[PROTOCOLO C: GUARDADO Y CARGA DE ENSAYOS HISTORICOS]
+--------------------------------------------------------------------------------
+1. Tras ejecutar cualquier protocolo anterior, pulsa "Guardar Experimento".
+2. Aparecera un banner verde confirmando el guardado con un identificador unico (EXP-xxxx).
+3. Modifica la secuencia escribiendo cualquier texto nuevo o cambiando de muestra.
+4. Pulsa el boton "Cargar Experimento (N)".
+5. En la lista modal, localiza tu ensayo y pulsa "Cargar en Lab".
+6. Comprueba como la doble helice 3D, la secuencia, las mutaciones aplicadas y los 
+   paneles de diagnostico se restauran exactamente a como estaban cuando los guardaste.
+
+
+================================================================================
+6. NOTA CIENTIFICA Y SUPOSICIONES DEL MODELO IN SILICO
+================================================================================
+La reparacion del ADN in vivo en celulas eucariotas o procariotas involucra complejos 
+enzimaticos multimericos dinamicos (MutS, MutL, exonucleasas, ADN polimerasa delta/epsilon, 
+complejos MRN, ATM/ATR, RAD51, DNA-PKcs, XRCC4 y ADN Ligasa IV), asi como modificaciones 
+epigeneticas y remodelado de cromatina.
+
+BioSIM Lab implementa un MODELO COMPUTACIONAL DIDACTICO formalizado para facilitar 
+la comprension logica de estos principios moleculares. La disponibilidad de una secuencia 
+de referencia permite la correccion in silico automatica, pero en un contexto biologico 
+real las celulas estan sujetas a cineticas enzimaticas complejas y pueden no detectar 
+o reparar a tiempo dichas lesiones. Los resultados aqui generados representan simulaciones 
+bioinformaticas didacticas.
+================================================================================

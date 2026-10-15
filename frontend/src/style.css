@@ -1,0 +1,284 @@
+/* ==========================================================================
+   BioSIM Lab — Material Design 3 (MD3) Dark Laboratory Design System
+   ========================================================================== */
+
+:root {
+  /* Color Roles (MD3 Dark Theme - Deep Lab Spectrum) */
+  --md-sys-color-primary: #70d6ff;
+  --md-sys-color-on-primary: #003549;
+  --md-sys-color-primary-container: #004d69;
+  --md-sys-color-on-primary-container: #c3e8ff;
+
+  --md-sys-color-secondary: #9ecaff;
+  --md-sys-color-on-secondary: #003258;
+  --md-sys-color-secondary-container: #1b4776;
+  --md-sys-color-on-secondary-container: #d1e4ff;
+
+  --md-sys-color-tertiary: #7ae582;
+  --md-sys-color-on-tertiary: #003914;
+  --md-sys-color-tertiary-container: #005321;
+  --md-sys-color-on-tertiary-container: #97ff9c;
+
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+
+  /* Tonal Surface Architecture */
+  --md-sys-color-surface: #0b0f17;
+  --md-sys-color-surface-dim: #070a10;
+  --md-sys-color-surface-bright: #1c2433;
+  --md-sys-color-surface-container-lowest: #04070c;
+  --md-sys-color-surface-container-low: #0f1521;
+  --md-sys-color-surface-container: #151d2c;
+  --md-sys-color-surface-container-high: #1c2639;
+  --md-sys-color-surface-container-highest: #243046;
+
+  --md-sys-color-on-surface: #e2e8f0;
+  --md-sys-color-on-surface-variant: #94a3b8;
+  --md-sys-color-outline: #475569;
+  --md-sys-color-outline-variant: #1e293b;
+  --md-sys-color-inverse-surface: #e2e8f0;
+  --md-sys-color-inverse-on-surface: #0b0f17;
+  --md-sys-color-inverse-primary: #0284c7;
+
+  /* Nucleotide Spectral Colors (Standard Molecular Biology) */
+  --bio-base-a: #ef4444;       /* Adenina - Carmín */
+  --bio-base-t: #10b981;       /* Timina - Esmeralda */
+  --bio-base-c: #06b6d4;       /* Citosina - Cian */
+  --bio-base-g: #f59e0b;       /* Guanina - Ámbar */
+  --bio-fluo-dapi: #3b82f6;    /* Núcleo DAPI */
+  --bio-fluo-foci: #a3e635;    /* Horquillas / Centrosomas */
+
+  /* Typography Scale */
+  --md-ref-typeface-brand: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
+  --md-ref-typeface-plain: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
+  --md-ref-typeface-mono: 'Roboto Mono', 'SF Mono', Consolas, monospace;
+
+  --md-sys-typescale-display-small: 400 2.25rem/2.75rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-large: 500 2rem/2.5rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-medium: 500 1.75rem/2.25rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-headline-small: 500 1.5rem/2rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-large: 500 1.35rem/1.75rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-medium: 600 1rem/1.5rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-title-small: 600 0.875rem/1.25rem var(--md-ref-typeface-brand);
+  --md-sys-typescale-body-large: 400 1rem/1.5rem var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-medium: 400 0.875rem/1.25rem var(--md-ref-typeface-plain);
+  --md-sys-typescale-body-small: 400 0.75rem/1rem var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-large: 500 0.875rem/1.25rem var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-medium: 500 0.75rem/1rem var(--md-ref-typeface-plain);
+  --md-sys-typescale-label-small: 600 0.6875rem/0.9rem var(--md-ref-typeface-plain);
+
+  /* Shape Tokens */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* Motion Curves (MD3 Expressive Transition Spec) */
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-duration-short: 150ms;
+  --md-sys-motion-duration-medium: 300ms;
+  --md-sys-motion-duration-long: 500ms;
+}
+
+/* Base Styles & Normalization */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--md-ref-typeface-plain);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbars for High-Density Lab Workstations */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--md-sys-color-surface-dim);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 2px solid var(--md-sys-color-surface-dim);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-outline);
+}
+
+/* Code & Monospace Elements */
+code, pre, .font-mono {
+  font-family: var(--md-ref-typeface-mono);
+}
+
+/* MD3 Common Components & Utilities */
+
+/* Outlined Card */
+.md3-card-outlined {
+  background-color: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  transition: border-color var(--md-sys-motion-duration-short) ease,
+              background-color var(--md-sys-motion-duration-short) ease;
+}
+
+.md3-card-outlined:hover {
+  border-color: var(--md-sys-color-outline);
+}
+
+/* Elevated Card */
+.md3-card-elevated {
+  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* MD3 Buttons */
+.md3-button-filled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  font: var(--md-sys-typescale-label-large);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--md-sys-motion-duration-short) var(--md-sys-motion-easing-emphasized);
+}
+
+.md3-button-filled:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 0 16px rgba(112, 214, 255, 0.35);
+}
+
+.md3-button-filled:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.md3-button-tonal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font: var(--md-sys-typescale-label-large);
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short) ease;
+}
+
+.md3-button-tonal:hover:not(:disabled) {
+  background-color: #27578f;
+  color: #ffffff;
+}
+
+.md3-button-outlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline);
+  font: var(--md-sys-typescale-label-large);
+  cursor: pointer;
+  transition: all var(--md-sys-motion-duration-short) ease;
+}
+
+.md3-button-outlined:hover:not(:disabled) {
+  background-color: rgba(112, 214, 255, 0.08);
+  border-color: var(--md-sys-color-primary);
+}
+
+/* MD3 Chips */
+.md3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--md-sys-shape-corner-small);
+  background-color: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-medium);
+  font-weight: 500;
+  cursor: default;
+  transition: all var(--md-sys-motion-duration-short) ease;
+}
+
+.md3-chip.active {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: var(--md-sys-color-primary);
+}
+
+/* MD3 Text Field Container */
+.md3-textfield {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.md3-textfield label {
+  font: var(--md-sys-typescale-body-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.md3-textfield input,
+.md3-textfield select,
+.md3-textfield textarea {
+  height: 44px;
+  padding: 0 14px;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: var(--md-sys-color-on-surface);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color var(--md-sys-motion-duration-short) ease,
+              box-shadow var(--md-sys-motion-duration-short) ease;
+}
+
+.md3-textfield input:focus,
+.md3-textfield select:focus,
+.md3-textfield textarea:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 3px rgba(112, 214, 255, 0.2);
+}

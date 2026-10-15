@@ -1,0 +1,190 @@
+from fastapi import APIRouter, HTTPException
+from collections import Counter
+from app.services.dna_engine import dna_engine
+from app.schemas.dna import (
+    ValidateSequenceRequest,
+    ValidateSequenceResponse,
+    ComplementRequest,
+    ComplementResponse,
+    ControlledMutationRequest,
+    ReplicateRequest,
+    ReplicateResponse,
+    CompareRequest,
+    CompareResponse,
+    CopyDnaRequest,
+    CopyDnaResponse,
+    MismatchDetectionRequest,
+    MismatchDetectionResponse,
+    RepairWithReferenceRequest,
+    RepairWithReferenceResponse,
+    BreakRepairRequest,
+    BreakRepairResponse,
+    DnaEventLogResponse,
+    SaveFullExperimentRequest,
+    FullExperimentReport,
+    SavedExperimentListResponse
+)
+
+router = APIRouter(prefix="/dna", tags=["DNA Engine"])
+
+@router.post("/validate", response_model=ValidateSequenceResponse)
+def validate_sequence(payload: ValidateSequenceRequest):
+    seq = payload.sequence.upper().strip()
+    is_valid = dna_engine.validate(seq)
+    counts = dict(Counter(seq))
+    invalid_chars = sorted(list(set(seq) - dna_engine.VALID_BASES))
+    gc_count = counts.get("G", 0) + counts.get("C", 0)
+    gc_content = round((gc_count / len(seq)) * 100, 2) if (is_valid and len(seq) > 0) else 0.0
+
+    error_message = None
+    if not is_valid:
+        if len(seq) == 0:
+            error_message = "Secuencia vacia. Introduce al menos un nucleotido (A, T, C, G)."
+        elif invalid_chars:
+            chars_str = ", ".join(f"'{c}'" for c in invalid_chars)
+            error_message = f"Simbolos no canonicos detectados: {chars_str}. El alfabeto genetico solo permite A, T, C, G."
+        else:
+            error_message = "Secuencia no valida."
+
+    return ValidateSequenceResponse(
+        sequence=seq,
+        is_valid=is_valid,
+        length=len(seq),
+        gc_content=gc_content,
+        base_counts=counts,
+        invalid_chars=invalid_chars,
+        error_message=error_message
+    )
+
+@router.post("/complement", response_model=ComplementResponse)
+def complement_sequence(payload: ComplementRequest):
+    try:
+        seq = payload.sequence.upper().strip()
+        comp = dna_engine.complement(seq)
+        binary = dna_engine.to_binary(seq)
+        return ComplementResponse(
+            original=seq,
+            complement=comp,
+            binary_repr=binary
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/mutate")
+def mutate_controlled(payload: ControlledMutationRequest):
+    """Modo 2: Aplica una mutacion controlada en posicion especifica."""
+    try:
+        result = dna_engine.apply_controlled_mutation(
+            sequence=payload.sequence,
+            mutation_type=payload.mutation_type,
+            position=payload.position,
+            new_base=payload.new_base
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/replicate", response_model=ReplicateResponse)
+def replicate_stochastic(payload: ReplicateRequest):
+    """Modo 1: Replicacion probabilistica con tasa de error."""
+    try:
+        result = dna_engine.replicate_with_mutations(
+            sequence=payload.sequence,
+            mutation_rate=payload.mutation_rate
+        )
+        return ReplicateResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/compare", response_model=CompareResponse)
+def compare_sequences(payload: CompareRequest):
+    """Detecta diferencias (diff) entre secuencia de referencia y modificada."""
+    diffs = dna_engine.compare(payload.reference, payload.modified)
+    return CompareResponse(
+        reference=payload.reference.upper().strip(),
+        modified=payload.modified.upper().strip(),
+        differences=diffs,
+        difference_count=len(diffs)
+    )
+
+@router.post("/copy", response_model=CopyDnaResponse)
+def copy_sequence(payload: CopyDnaRequest):
+    """Genera una copia sin cambios y comprueba que coincida con la original."""
+    try:
+        result = dna_engine.copy_dna(payload.sequence)
+        return CopyDnaResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/mismatches", response_model=MismatchDetectionResponse)
+def detect_mismatches_endpoint(payload: MismatchDetectionRequest):
+    """3.1 Deteccion de apareamientos no canonicos entre dos cadenas alineadas."""
+    try:
+        result = dna_engine.detect_mismatches(payload.strand1, payload.strand2)
+        return MismatchDetectionResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/repair", response_model=RepairWithReferenceResponse)
+def repair_with_reference_endpoint(payload: RepairWithReferenceRequest):
+    """3.2 Reparacion guiada por secuencia de referencia fiable."""
+    try:
+        result = dna_engine.repair_with_reference(
+            altered=payload.altered,
+            reference=payload.reference,
+            positions=payload.positions
+        )
+        return RepairWithReferenceResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/break-repair", response_model=BreakRepairResponse)
+def break_repair_endpoint(payload: BreakRepairRequest):
+    """3.3 Roturas de ADN (DSB) y comparacion entre HDR y NHEJ."""
+    try:
+        result = dna_engine.simulate_break_repair(
+            sequence=payload.sequence,
+            break_position=payload.break_position,
+            method=payload.method,
+            reference=payload.reference
+        )
+        return BreakRepairResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/events", response_model=DnaEventLogResponse)
+def get_dna_events(limit: int = 50):
+    """7. Registro de datos de experimentos de ADN."""
+    events = dna_engine.get_events(limit=limit)
+    return DnaEventLogResponse(
+        events=events,
+        total=len(events)
+    )
+
+@router.post("/experiment/save", response_model=FullExperimentReport)
+def save_full_experiment_endpoint(payload: SaveFullExperimentRequest):
+    """Guarda el informe integral del experimento (proceso completo de inicio a fin)."""
+    try:
+        saved = dna_engine.save_full_experiment(payload.dict())
+        return FullExperimentReport(**saved)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/experiment/list", response_model=SavedExperimentListResponse)
+def list_saved_experiments_endpoint():
+    """Lista todos los experimentos completos guardados."""
+    exps = dna_engine.list_saved_experiments()
+    return SavedExperimentListResponse(
+        experiments=exps,
+        total=len(exps)
+    )
+
+@router.get("/experiment/{experiment_id}", response_model=FullExperimentReport)
+def get_saved_experiment_endpoint(experiment_id: str):
+    """Obtiene el informe completo de un experimento para restaurar su estado en la UI."""
+    exp = dna_engine.get_saved_experiment(experiment_id)
+    if not exp:
+        raise HTTPException(status_code=404, detail=f"Experimento {experiment_id} no encontrado")
+    return FullExperimentReport(**exp)
+
+

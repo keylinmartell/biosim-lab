@@ -1,0 +1,118 @@
+[
+  {
+    "experiment_id": "EXP-0004-FEF69F",
+    "name": "Ensayo ATGGATCGAT (substitution)",
+    "created_at": "2026-10-15T18:14:04.218840+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATGGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 2,
+      "original_base": "C",
+      "new_base": "G",
+      "mode": "controlled"
+    },
+    "altered_sequence": "ATGGATCGATCG",
+    "detection_result": {
+      "strand1": "ATGGATCGATCG",
+      "strand2": "TAGCTAGCTAGC",
+      "length": 12,
+      "is_fully_canonical": false,
+      "mismatch_count": 1,
+      "canonical_count": 11,
+      "mismatches": [
+        {
+          "position": 2,
+          "base_strand1": "G",
+          "base_strand2": "G",
+          "pair": "G-G",
+          "is_canonical": false,
+          "status": "mismatch",
+          "note": "Apareamiento no canonico detectado; no se puede inferir base original sin referencia fiable."
+        }
+      ],
+      "event_id": "EXP-0007-890E09"
+    },
+    "repair_applied": {},
+    "final_sequence": "ATGGATCGATCG",
+    "diff_result": {
+      "reference": "ATCGATCGATCG",
+      "modified": "ATGGATCGATCG",
+      "differences": [
+        {
+          "position": 2,
+          "reference_base": "C",
+          "modified_base": "G",
+          "status": "changed"
+        }
+      ],
+      "difference_count": 1
+    },
+    "status": "mutated",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0003-934C44",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-15T18:10:48.732851+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0002-82FC29",
+    "name": "Ensayo ATGCGATCGA (control)",
+    "created_at": "2026-10-15T18:03:53.978313+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATGCGATCGATCGATCGATC",
+    "mutation_applied": {},
+    "altered_sequence": "ATGCGATCGATCGATCGATC",
+    "detection_result": {},
+    "repair_applied": {},
+    "final_sequence": "ATGCGATCGATCGATCGATC",
+    "diff_result": {},
+    "status": "intact",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0001-5F9C27",
+    "name": "Ensayo de prueba",
+    "created_at": "2026-10-15T18:02:47.516392+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": null,
+    "mutation_applied": {},
+    "altered_sequence": null,
+    "detection_result": {},
+    "repair_applied": {},
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "intact",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  }
+]
