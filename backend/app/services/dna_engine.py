@@ -126,6 +126,154 @@ class DNAEngine:
         }
 
     @classmethod
+    def simulate_environmental_damage(
+        cls,
+        sequence: str,
+        agent: str = "uv_radiation",
+        intensity: float = 0.25
+    ) -> Dict[str, Any]:
+        """
+        Simula daño ambiental estocastico sobre la hebra molde parental en Fase G1
+        segun Alberts et al. (Molecular Biology of the Cell 7.ª ed. cap. 5).
+        Agentes:
+          - 'uv_radiation': Fotolesion por luz UV (dímeros de pirimidina / transiciones T-T / C->T).
+          - 'oxidative_ros': Radicales libres de oxigeno (oxida G a 8-oxo-G -> aparea con A -> transversion G->T).
+          - 'deamination': Desaminacion espontanea (Citosina pierde grupo amino y se convierte en U/T).
+        """
+        clean = sequence.upper().strip()
+        if not cls.validate(clean):
+            raise ValueError("Secuencia invalida para daño ambiental")
+
+        seq_list = list(clean)
+        lesions_log: List[Dict[str, Any]] = []
+        agent_clean = agent.lower().strip()
+
+        agent_names = {
+            "uv_radiation": "Fotolesión por Radiación Ultravioleta (Luz UV)",
+            "oxidative_ros": "Estrés Oxidativo por Radicales Libres (ROS / 8-oxo-Guanina)",
+            "deamination": "Desaminación Espontánea Hidrolítica (Citosina -> Uracilo/Timina)"
+        }
+        agent_name = agent_names.get(agent_clean, "Agente Mutagénico Ambiental")
+
+        mechanisms = {
+            "uv_radiation": "La radiación UV induce dímeros covalentes de ciclobutano entre pirimidinas adyacentes, bloqueando la conformación helicoidal.",
+            "oxidative_ros": "Especies reactivas de oxígeno oxidan la Guanina a 8-oxo-7,8-dihidroguanina, que aparea anómalamente con Adenina generando transversiones G->T.",
+            "deamination": "Pérdida espontánea del grupo amino por choque térmico: la Citosina se desamina a Uracilo, induciendo transición permanente C->T."
+        }
+        mechanism_desc = mechanisms.get(agent_clean, "Daño inducido en el molde parental.")
+
+        for i in range(len(clean)):
+            b = clean[i]
+            if agent_clean == "uv_radiation":
+                # Afecta preferentemente timinas adyacentes o citosinas
+                if (b == "T" or b == "C") and random.random() < intensity:
+                    new_b = "A" if b == "T" else "T"
+                    seq_list[i] = new_b
+                    lesions_log.append({
+                        "position": i,
+                        "original_base": b,
+                        "damaged_base": new_b,
+                        "type": "uv_photodimer_lesion",
+                        "description": f"Dímero/lesión fotoinducida en posición {i}: {b} -> {new_b}"
+                    })
+            elif agent_clean == "oxidative_ros":
+                # Oxida Guanina preferentemente
+                if b == "G" and random.random() < intensity:
+                    seq_list[i] = "T"
+                    lesions_log.append({
+                        "position": i,
+                        "original_base": "G",
+                        "damaged_base": "T",
+                        "type": "8_oxo_guanine_transversion",
+                        "description": f"Oxidación de Guanina (8-oxo-G) en posición {i}: G -> T"
+                    })
+            elif agent_clean == "deamination":
+                # Desamina Citosina
+                if b == "C" and random.random() < intensity:
+                    seq_list[i] = "T"
+                    lesions_log.append({
+                        "position": i,
+                        "original_base": "C",
+                        "damaged_base": "T",
+                        "type": "cytosine_deamination",
+                        "description": f"Desaminación espontánea en posición {i}: C -> Uracilo/T"
+                    })
+            else:
+                # Agente genérico estocástico
+                if random.random() < (intensity * 0.5):
+                    other_bases = [x for x in list(cls.VALID_BASES) if x != b]
+                    new_b = random.choice(other_bases)
+                    seq_list[i] = new_b
+                    lesions_log.append({
+                        "position": i,
+                        "original_base": b,
+                        "damaged_base": new_b,
+                        "type": "spontaneous_chemical_lesion",
+                        "description": f"Lesión química en posición {i}: {b} -> {new_b}"
+                    })
+
+        # Si no hubo lesión por azar y la intensidad > 0, forzar al menos 1 para que el ensayo educativo sea interactivo
+        if len(lesions_log) == 0 and intensity > 0:
+            target_indices = []
+            if agent_clean == "oxidative_ros":
+                target_indices = [idx for idx, ch in enumerate(clean) if ch == "G"]
+            elif agent_clean == "deamination":
+                target_indices = [idx for idx, ch in enumerate(clean) if ch == "C"]
+            elif agent_clean == "uv_radiation":
+                target_indices = [idx for idx, ch in enumerate(clean) if ch in ("T", "C")]
+
+            if not target_indices:
+                target_indices = list(range(len(clean)))
+
+            idx = random.choice(target_indices)
+            b = clean[idx]
+            new_b = "T" if b in ("G", "C") else ("A" if b == "T" else "G")
+            seq_list[idx] = new_b
+            lesions_log.append({
+                "position": idx,
+                "original_base": b,
+                "damaged_base": new_b,
+                "type": f"{agent_clean}_induced_lesion",
+                "description": f"Lesión inducida por {agent_name} en posición {idx}: {b} -> {new_b}"
+            })
+
+        damaged_seq = "".join(seq_list)
+        is_damaged = (damaged_seq != clean)
+
+        event = cls.log_event(
+            operation_type="environmental_damage",
+            initial_sequence=clean,
+            final_sequence=damaged_seq,
+            parameters={
+                "agent": agent_clean,
+                "intensity": intensity,
+                "lesion_count": len(lesions_log)
+            },
+            reference_used=clean,
+            detection_result={"lesions": lesions_log, "status": "damaged" if is_damaged else "intact"},
+            repair_result={"status": "pending_ber_ner_repair"}
+        )
+
+        checkpoint_msg = (
+            "PUNTO R BLOQUEADO: El sensor p53 detectó distorsión del molde por daño ambiental. Se activa p21, arrestando el ciclo en G1 para dar tiempo a BER/NER. Si no se repara, procede a apoptosis."
+            if is_damaged else
+            "PUNTO R DESPEJADO: No se detectaron aductos ni lesiones en el molde parental."
+        )
+
+        return {
+            "original_sequence": clean,
+            "damaged_sequence": damaged_seq,
+            "agent": agent_clean,
+            "agent_name": agent_name,
+            "lesions": lesions_log,
+            "lesion_count": len(lesions_log),
+            "is_damaged": is_damaged,
+            "mechanism_description": mechanism_desc,
+            "checkpoint_consequence": checkpoint_msg,
+            "event_id": event["experiment_id"]
+        }
+
+    @classmethod
     def replicate_with_mutations(
         cls,
         sequence: str,
@@ -186,12 +334,51 @@ class DNAEngine:
                 mutated_bases.append(base)
 
         replicated_seq = "".join(mutated_bases)
+        is_identical = (clean == replicated_seq)
+
+        event = cls.log_event(
+            operation_type="stochastic_replication",
+            initial_sequence=clean,
+            final_sequence=replicated_seq,
+            parameters={
+                "mutation_rate": mutation_rate,
+                "mutations_occurred": len(mutations_log)
+            },
+            reference_used=clean,
+            detection_result={"mutation_count": len(mutations_log)},
+            repair_result={"status": "identical" if is_identical else "mutated"}
+        )
+
+        fidelity_filters = {
+            "filter_1_polymerase": {
+                "name": "Seleccion de nucleotido por ADN Polimerasa",
+                "error_rate": "1 en 10^5",
+                "probability": 1e-5,
+                "mechanism": "Apareamiento geometrico en el centro catalitico activo"
+            },
+            "filter_2_proofreading": {
+                "name": "Correccion de pruebas (Exonucleasa 3'->5')",
+                "error_rate": "1 en 10^7",
+                "probability": 1e-7,
+                "mechanism": "Deteccion inmediata de distorsion y escision del extremo 3'-OH"
+            },
+            "filter_3_mismatch_repair": {
+                "name": "Reparacion de desapareamientos (MMR post-replicativo)",
+                "error_rate": "1 en 10^9 - 10^10",
+                "probability": 1e-10,
+                "mechanism": "Escaneo post-horquilla de la hebra hija recien sintetizada"
+            },
+            "overall_fidelity": "~1 error por cada 1.000 a 10.000 millones de nucleotidos copiados (Alberts cap. 5)"
+        }
+
         return {
             "original_sequence": clean,
             "replicated_sequence": replicated_seq,
             "mutations": mutations_log,
             "mutation_count": len(mutations_log),
-            "is_identical": clean == replicated_seq
+            "is_identical": is_identical,
+            "event_id": event["experiment_id"],
+            "fidelity_filters": fidelity_filters
         }
 
     @classmethod
@@ -320,14 +507,14 @@ class DNAEngine:
         cls,
         altered: str,
         reference: str,
-        positions: Optional[List[int]] = None
+        positions: Optional[List[int]] = None,
+        efficiency: float = 1.0
     ) -> Dict[str, Any]:
         """
         3.2. Reparacion guiada por una referencia (Template-guided repair).
         Compara la secuencia alterada con una referencia fiable y reemplaza
-        unicamente las posiciones autorizadas/seleccionadas por la regla.
-        Registra que posiciones se cambiaron y si la secuencia final coincide con la referencia.
-        Distingue explicitamente entre correccion respaldada por referencia y conjetura.
+        las posiciones autorizadas/seleccionadas, modulado por la eficiencia enzimatica de escision (BER/NER).
+        Registra que posiciones se cambiaron, cuales escaparon por saturacion/cinetica y si la secuencia final coincide.
         """
         alt = altered.upper().strip()
         ref = reference.upper().strip()
@@ -341,15 +528,24 @@ class DNAEngine:
 
         alt_list = list(alt)
         repaired_positions = []
+        escaped_positions = []
+
+        eff = max(0.1, min(1.0, float(efficiency)))
 
         for pos in sorted(target_positions):
             if 0 <= pos < len(ref) and pos < len(alt_list):
                 if alt_list[pos] != ref[pos]:
-                    alt_list[pos] = ref[pos]
-                    repaired_positions.append(pos)
+                    if eff >= 1.0 or random.random() < eff:
+                        alt_list[pos] = ref[pos]
+                        repaired_positions.append(pos)
+                    else:
+                        escaped_positions.append(pos)
             elif pos >= len(alt_list) and pos < len(ref):
-                alt_list.append(ref[pos])
-                repaired_positions.append(pos)
+                if eff >= 1.0 or random.random() < eff:
+                    alt_list.append(ref[pos])
+                    repaired_positions.append(pos)
+                else:
+                    escaped_positions.append(pos)
 
         repaired_seq = "".join(alt_list)
         matches_reference = (repaired_seq == ref)
@@ -366,26 +562,40 @@ class DNAEngine:
             operation_type="reference_guided_repair",
             initial_sequence=alt,
             final_sequence=repaired_seq,
-            parameters={"authorized_positions": list(target_positions)},
+            parameters={"authorized_positions": list(target_positions), "efficiency": eff},
             reference_used=ref,
             detection_result={"original_divergences": len(diffs)},
             repair_result={
                 "status": status,
                 "repaired_positions": repaired_positions,
+                "escaped_positions": escaped_positions,
                 "remaining_divergences": len(remaining_diffs),
                 "matches_reference": matches_reference
             }
         )
+
+        checkpoint_status = {
+            "phase": "G1",
+            "checkpoint_name": "Punto de Control G1/S (Punto de Restriccion R)",
+            "sensor": "Eje p53 -> p21 (Inhibidor de CDK)",
+            "p53_state": "Inactivo / Basal (Genoma íntegro)" if matches_reference else "Fosforilado / Activo (Señal de alarma por lesiones no reparadas)",
+            "outcome": "Autorizado a Fase S (Molde Fiel Homologo)" if matches_reference else f"Punto R Bloqueado ({len(escaped_positions)} lesiones escaparon a la maquinaria enzimática en este ciclo)",
+            "biological_rule": "La celula no copia un molde danado a ciegas. Si el dano no se repara en G1, p53 induce apoptosis para evitar replicar un genoma roto."
+        }
 
         return {
             "altered_sequence": alt,
             "reference_sequence": ref,
             "repaired_sequence": repaired_seq,
             "repaired_positions": repaired_positions,
+            "escaped_positions": escaped_positions,
+            "efficiency": eff,
             "matches_reference": matches_reference,
             "status": status,
             "remaining_divergences": len(remaining_diffs),
-            "event_id": event["experiment_id"]
+            "event_id": event["experiment_id"],
+            "cell_cycle_phase": "G1",
+            "checkpoint_status": checkpoint_status
         }
 
     @classmethod

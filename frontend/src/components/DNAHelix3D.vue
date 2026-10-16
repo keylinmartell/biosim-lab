@@ -54,10 +54,10 @@
         </div>
       </div>
 
-      <!-- HUD Superior Derecho: Detalle del Par Seleccionado -->
+      <!-- HUD Superior Derecho: Detalle del Par y Esqueleto Azúcar-Fosfato -->
       <div class="hud-card hud-top-right" v-if="selectedBaseData">
         <div class="hud-card-header">
-          <span class="hud-label">Par Seleccionado (Posición {{ selectedPosition }})</span>
+          <span class="hud-label">Nucleótido Dúplex (Posición {{ selectedPosition }})</span>
         </div>
         <div class="pair-display-row">
           <div :class="['base-badge', selectedBaseData.strand1.toLowerCase()]">
@@ -75,6 +75,17 @@
           <div :class="['base-badge', selectedBaseData.strand2.toLowerCase()]">
             <span class="strand-id">3'</span>
             <span class="base-letter font-mono">{{ selectedBaseData.strand2 }}</span>
+          </div>
+        </div>
+
+        <div class="hud-backbone-detail">
+          <div class="hud-bb-line">
+            <span class="hud-bb-tag">5' Hebra:</span>
+            <span>Fosfato (PO₄³⁻) + 2'-Desoxirribosa</span>
+          </div>
+          <div class="hud-bb-line">
+            <span class="hud-bb-tag">3' Antiparalela:</span>
+            <span>2'-Desoxirribosa + Fosfato (PO₄³⁻)</span>
           </div>
         </div>
       </div>
@@ -143,7 +154,6 @@ let scene = null;
 let camera = null;
 let controls = null;
 let mainHelixGroup = null;
-let bgHelicesGroup = null;
 let molecularDiagramsGroup = null;
 let bokehGroup = null;
 let animId = null;
@@ -727,67 +737,7 @@ function fitCameraToHelix(N) {
   controls.update();
 }
 
-// Constructor de Hélices Secundarias en Profundidad de Campo
-function buildBackgroundHelices(parentGroup) {
-  function createBgHelix(numPairs, radius, heightStep, scale, pos, rot, opacity) {
-    const group = new THREE.Group();
-    const pts1 = [];
-    const pts2 = [];
-    const angleStep = (Math.PI * 2) / 10.5;
 
-    for (let i = 0; i < numPairs; i++) {
-      const th1 = i * angleStep;
-      const th2 = th1 + MINOR_GROOVE_OFFSET;
-      const y = (i - (numPairs - 1) / 2) * heightStep;
-      const p1 = new THREE.Vector3(radius * Math.cos(th1), y, radius * Math.sin(th1));
-      const p2 = new THREE.Vector3(radius * Math.cos(th2), y, radius * Math.sin(th2));
-      pts1.push(p1);
-      pts2.push(p2);
-
-      // Peldaños simplificados en el fondo
-      if (i % 2 === 0) {
-        const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-        const dist = p1.distanceTo(p2);
-        const rungGeo = new THREE.CylinderGeometry(0.18, 0.18, dist, 8);
-        const rungMat = new THREE.MeshBasicMaterial({
-          color: 0x0284c7,
-          transparent: true,
-          opacity: opacity * 0.75
-        });
-        const rung = new THREE.Mesh(rungGeo, rungMat);
-        rung.position.copy(mid);
-        rung.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
-        group.add(rung);
-      }
-    }
-
-    const c1 = new THREE.CatmullRomCurve3(pts1);
-    const c2 = new THREE.CatmullRomCurve3(pts2);
-    const bgMat = createBackboneShader(true);
-
-    const t1 = new THREE.Mesh(new THREE.TubeGeometry(c1, numPairs * 14, 0.28, 12, false), bgMat);
-    const t2 = new THREE.Mesh(new THREE.TubeGeometry(c2, numPairs * 14, 0.28, 12, false), bgMat);
-    group.add(t1);
-    group.add(t2);
-
-    group.scale.set(scale, scale, scale);
-    group.position.set(pos[0], pos[1], pos[2]);
-    group.rotation.set(rot[0], rot[1], rot[2]);
-    parentGroup.add(group);
-    return group;
-  }
-
-  // Hélice 1: Superior Derecha (inclinada como en la foto)
-  const h1 = createBgHelix(32, 2.4, 0.58, 0.82, [14, 8, -14], [0.45, 0.35, 0.72], 0.45);
-
-  // Hélice 2: Inferior Izquierda (segundo plano)
-  const h2 = createBgHelix(28, 2.2, 0.58, 0.65, [-15, -9, -18], [-0.52, 0.68, -0.48], 0.32);
-
-  // Hélice 3: Fondo Profundo Central
-  const h3 = createBgHelix(26, 2.0, 0.58, 0.48, [3, -14, -24], [0.65, -0.35, 0.45], 0.22);
-
-  return [h1, h2, h3];
-}
 
 // Constructor de Fórmulas Químicas Realistas en Suspensión Acuosa
 function buildChemicalAtmosphere(parentGroup) {
@@ -829,7 +779,6 @@ function buildChemicalAtmosphere(parentGroup) {
   return sprites;
 }
 
-let bgHelices = [];
 let chemicalSprites = [];
 
 function initScene() {
@@ -927,10 +876,7 @@ function initScene() {
   });
   scene.add(new THREE.Points(dustGeo, dustMat));
 
-  // Hélices Secundarias en Fondo
-  bgHelicesGroup = new THREE.Group();
-  scene.add(bgHelicesGroup);
-  bgHelices = buildBackgroundHelices(bgHelicesGroup);
+
 
   // Fórmulas Químicas Flotantes
   molecularDiagramsGroup = new THREE.Group();
@@ -991,12 +937,7 @@ function animate() {
     mainHelixGroup.rotation.y += 0.0036;
   }
 
-  // Rotación de hélices secundarias
-  if (bgHelices && bgHelices.length > 0) {
-    if (bgHelices[0]) bgHelices[0].rotation.y += 0.0012;
-    if (bgHelices[1]) bgHelices[1].rotation.y -= 0.0015;
-    if (bgHelices[2]) bgHelices[2].rotation.y += 0.0009;
-  }
+
 
   // Flotación de fórmulas químicas
   if (chemicalSprites && chemicalSprites.length > 0) {
@@ -1394,5 +1335,29 @@ onUnmounted(() => {
 
 .dock-icon {
   color: #38bdf8;
+}
+
+.hud-backbone-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.65rem;
+  color: #cbd5e1;
+}
+
+.hud-bb-line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hud-bb-tag {
+  font-family: var(--md-ref-typeface-mono);
+  font-weight: 700;
+  color: #38bdf8;
+  font-size: 0.62rem;
 }
 </style>

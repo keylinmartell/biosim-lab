@@ -1,5 +1,315 @@
 [
   {
+    "experiment_id": "EXP-0014-3A4928",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T17:06:34.431275+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0013-82CC93",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T16:47:16.789463+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0012-FBE84E",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T16:34:45.811090+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0011-4E0BC5",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T16:32:41.376043+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0010-9E3577",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T15:21:41.460573+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0009-5D68EA",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T15:21:22.871543+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0008-53B26E",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T15:18:26.180606+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0007-375BD8",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T14:17:52.422927+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0006-31B647",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T14:13:24.882281+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
+    "experiment_id": "EXP-0005-B4E414",
+    "name": "Ensayo de Replicación y Reparación MMR",
+    "created_at": "2026-10-16T14:13:00.969924+00:00",
+    "initial_sequence": "ATCGATCGATCG",
+    "working_copy": "ATCGATCGATCG",
+    "mutation_applied": {
+      "type": "substitution",
+      "position": 4,
+      "new_base": "G"
+    },
+    "altered_sequence": "ATCGGTCGATCG",
+    "detection_result": {
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "position": 4,
+          "pair": "G-T"
+        }
+      ]
+    },
+    "repair_applied": {
+      "status": "repaired_full_match",
+      "repaired_sequence": "ATCGATCGATCG"
+    },
+    "final_sequence": "ATCGATCGATCG",
+    "diff_result": {},
+    "status": "repaired_full_match",
+    "notes": "Registro completo del experimento guardado por el usuario en BioSim Lab.",
+    "code_version": "v1.1-phase1-closed"
+  },
+  {
     "experiment_id": "EXP-0004-FEF69F",
     "name": "Ensayo ATGGATCGAT (substitution)",
     "created_at": "2026-10-15T18:14:04.218840+00:00",

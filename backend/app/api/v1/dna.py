@@ -22,7 +22,9 @@ from app.schemas.dna import (
     DnaEventLogResponse,
     SaveFullExperimentRequest,
     FullExperimentReport,
-    SavedExperimentListResponse
+    SavedExperimentListResponse,
+    EnvironmentalDamageRequest,
+    EnvironmentalDamageResponse
 )
 
 router = APIRouter(prefix="/dna", tags=["DNA Engine"])
@@ -46,6 +48,17 @@ def validate_sequence(payload: ValidateSequenceRequest):
         else:
             error_message = "Secuencia no valida."
 
+    backbone_info = {
+        "monomer_name": "Desoxirribonucleotido monofosfato (dNMP)",
+        "sugar_unit": "2'-Desoxirribosa (pentosa)",
+        "phosphate_group": "Grupo Fosfato (PO4^3-)",
+        "linkage_type": "Enlace fosfodiéster 3'-5'",
+        "total_sugars": len(seq) if is_valid else 0,
+        "total_phosphates": len(seq) if is_valid else 0,
+        "phosphodiester_bonds": max(0, len(seq) - 1) if is_valid else 0,
+        "polarity": "5' Fosfato libre -> 3' Hidroxilo libre (-OH)"
+    } if is_valid else None
+
     return ValidateSequenceResponse(
         sequence=seq,
         is_valid=is_valid,
@@ -53,7 +66,8 @@ def validate_sequence(payload: ValidateSequenceRequest):
         gc_content=gc_content,
         base_counts=counts,
         invalid_chars=invalid_chars,
-        error_message=error_message
+        error_message=error_message,
+        backbone_info=backbone_info
     )
 
 @router.post("/complement", response_model=ComplementResponse)
@@ -62,10 +76,24 @@ def complement_sequence(payload: ComplementRequest):
         seq = payload.sequence.upper().strip()
         comp = dna_engine.complement(seq)
         binary = dna_engine.to_binary(seq)
+        backbone_structure = {
+            "strand_5_to_3": {
+                "label": "Hebra Codificante Principal",
+                "backbone": f"5'-P - [{' - '.join(seq)}] - OH-3'",
+                "polarity": "5' -> 3'"
+            },
+            "strand_3_to_5": {
+                "label": "Hebra Complementaria Antisentido",
+                "backbone": f"3'-OH - [{' - '.join(comp)}] - P-5'",
+                "polarity": "3' -> 5' (Antiparalela)"
+            },
+            "backbone_type": "Doble esqueleto antiparalelo de azúcar-fosfato"
+        }
         return ComplementResponse(
             original=seq,
             complement=comp,
-            binary_repr=binary
+            binary_repr=binary,
+            backbone_structure=backbone_structure
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -81,6 +109,19 @@ def mutate_controlled(payload: ControlledMutationRequest):
             new_base=payload.new_base
         )
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/environmental-damage", response_model=EnvironmentalDamageResponse)
+def environmental_damage(payload: EnvironmentalDamageRequest):
+    """Fase G1: Simula daño ambiental estocastico sobre el molde parental (UV, ROS, Desaminacion)."""
+    try:
+        result = dna_engine.simulate_environmental_damage(
+            sequence=payload.sequence,
+            agent=payload.agent,
+            intensity=payload.intensity
+        )
+        return EnvironmentalDamageResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -132,7 +173,8 @@ def repair_with_reference_endpoint(payload: RepairWithReferenceRequest):
         result = dna_engine.repair_with_reference(
             altered=payload.altered,
             reference=payload.reference,
-            positions=payload.positions
+            positions=payload.positions,
+            efficiency=payload.efficiency or 1.0
         )
         return RepairWithReferenceResponse(**result)
     except ValueError as e:

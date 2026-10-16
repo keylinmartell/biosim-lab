@@ -136,5 +136,31 @@ class TestDNAPhase1(unittest.TestCase):
         self.assertEqual(retrieved["experiment_id"], saved["experiment_id"])
         self.assertEqual(retrieved["mutation_applied"]["new_base"], "G")
 
+    def test_12_triple_filtro_fase_s_y_checkpoint_g1(self):
+        """
+        Prueba 12: Verificacion del triple filtro de fidelidad en fase S
+        (Polimerasa 10^5, Exonucleasa 10^7, MMR 10^9-10^10) y del punto de control G1/S con p53/p21.
+        """
+        # Prueba Fase S: Triple filtro
+        rep_res = self.engine.replicate_with_mutations("ATCGATCG", mutation_rate=0.0)
+        self.assertIn("fidelity_filters", rep_res)
+        filters = rep_res["fidelity_filters"]
+        self.assertIn("filter_1_polymerase", filters)
+        self.assertIn("filter_2_proofreading", filters)
+        self.assertIn("filter_3_mismatch_repair", filters)
+        self.assertEqual(filters["filter_1_polymerase"]["error_rate"], "1 en 10^5")
+        self.assertEqual(filters["filter_2_proofreading"]["error_rate"], "1 en 10^7")
+        self.assertEqual(filters["filter_3_mismatch_repair"]["error_rate"], "1 en 10^9 - 10^10")
+
+        # Prueba Fase G1: Checkpoint G1/S p53/p21
+        repair_res = self.engine.repair_with_reference(altered="ATGG", reference="ATCG")
+        self.assertEqual(repair_res["cell_cycle_phase"], "G1")
+        self.assertIn("checkpoint_status", repair_res)
+        cp = repair_res["checkpoint_status"]
+        self.assertEqual(cp["phase"], "G1")
+        self.assertIn("p53", cp["sensor"])
+        self.assertIn("p21", cp["sensor"])
+        self.assertIn("Autorizado a Fase S", cp["outcome"])
+
 if __name__ == "__main__":
     unittest.main()

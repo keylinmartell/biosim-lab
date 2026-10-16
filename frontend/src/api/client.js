@@ -46,6 +46,11 @@ export const api = {
     body: JSON.stringify({ sequence, mutation_rate }),
   }),
 
+  simulateEnvironmentalDamage: (sequence, agent = 'uv_radiation', intensity = 0.25) => request('/dna/environmental-damage', {
+    method: 'POST',
+    body: JSON.stringify({ sequence, agent, intensity }),
+  }),
+
   compareDNA: (reference, modified) => request('/dna/compare', {
     method: 'POST',
     body: JSON.stringify({ reference, modified }),
@@ -61,9 +66,9 @@ export const api = {
     body: JSON.stringify({ strand1, strand2 }),
   }),
 
-  repairWithReference: (altered, reference, positions = null) => request('/dna/repair', {
+  repairWithReference: (altered, reference, positions = null, efficiency = 1.0) => request('/dna/repair', {
     method: 'POST',
-    body: JSON.stringify({ altered, reference, positions }),
+    body: JSON.stringify({ altered, reference, positions, efficiency }),
   }),
 
   simulateBreakRepair: (sequence, break_position, method = 'homology_directed', reference = null) => request('/dna/break-repair', {

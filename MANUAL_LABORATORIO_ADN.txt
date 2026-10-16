@@ -29,39 +29,35 @@ fiable de referencia.
 
 
 ================================================================================
-2. ARQUITECTURA DEL FLUJO EXPERIMENTAL GUIADO (5 PASOS)
+2. ARQUITECTURA DEL FLUJO EXPERIMENTAL Y FASES DEL CICLO CELULAR (G1 -> S -> G2/M)
 ================================================================================
 La barra de progreso experimental (Stepper) superior coordina la transicion logica 
-del ensayo en cinco etapas cronologicas continuas:
+del ensayo en concordancia estricta con las fases del ciclo celular:
 
-  [PASO 1: Molde Inicial Validado]
-  * El usuario introduce o carga una secuencia canonica de ADN.
-  * El sistema la valida de forma reactiva, calcula sus propiedades biofisicas 
-    (longitud, porcentaje GC, balance purinas/pirimidinas) y la fija como MOLDE 
-    PARENTAL INMUTABLE de partida.
+  [ETAPA 1: FASE G1 - Molde Parental & Checkpoint G1/S (Punto de Restriccion R)]
+  * La celula evalua la integridad de la hebra molde de ADN. ¡No se copia a ciegas!
+  * Si el molde tiene alteraciones o dano inducido, el sensor guardian p53 activa 
+    el inhibidor de CDK p21 y frena el ciclo celular en el punto de control G1/S.
+  * Vias pre-replicativas de reparacion (BER, NER y homologia asistida) corrigen 
+    el molde. Si se restaura con exito, el Punto R se desbloquea y autoriza el 
+    paso a la Fase S.
+  * Si el dano es irreparable o no se corrige, p53 conduce a la celula a apoptosis 
+    (muerte celular programada) para impedir la replicacion de un molde defectuoso.
 
-  [PASO 2: Generacion de Copia de Trabajo]
-  * Se clona la hebra molde para obtener una copia activa de manipulacion.
-  * El motor verifica la identidad de secuencia al 100% y genera un evento de 
-    auditoria. Las alteraciones posteriores se aplicaran sobre esta copia de 
-    trabajo, manteniendo la hebra molde parental intacta para comparacion.
+  [ETAPA 2: FASE S - Replicacion Semiconservativa & Triple Filtro de Copia]
+  * La celula duplica su ADN incorporando desoxirribonucleotidos (dNTPs) en 5'->3'.
+  * La sintesis opera bajo un TRIPLE FILTRO biologico de fidelidad extrema:
+    1. Seleccion de base por ADN Polimerasa: tasa de error de ~1 cada 10^5 nt.
+    2. Correccion de pruebas ("Proofreading", exonucleasa 3'->5'): baja el error a ~1 cada 10^7 nt.
+    3. Reparacion de desapareamientos (Mismatch Repair - MMR post-replicativo): 
+       escanea la hebra hija y baja el error final a ~1 cada 10^9 - 10^10 nucleotidos 
+       (solo 1 error por cada 1.000 a 10.000 millones de nucleotidos copiados).
 
-  [PASO 3: Induccion de Daño Molecular]
-  * Se induce una alteracion en la copia mediante mutacion quirurgica (CRISPR), 
-    duplicacion celular con ruido estocastico o escision fisica (rotura DSB).
-
-  [PASO 4: Deteccion Automatica de Daño (MMR y Diff)]
-  * Al producirse el dano, el motor computa de forma automatica:
-    1. El alineamiento diferencial (Diff) contra la secuencia de referencia.
-    2. El analisis de apareamientos no canonicos (MMR) comparando la hebra 
-       mutada con la complementaria legitima de la hebra molde.
-    3. Resalta la base afectada tanto en el track 2D como en la helice 3D.
-
-  [PASO 5: Reparacion Guiada por Homologia / Resolucion de Cicatriz]
-  * Se invoca la maquinaria de correccion. Si se utiliza la plantilla parental 
-    (HDR o reparacion dirigida), la secuencia se restituye a su pureza original 
-    (100% homologia). Si se opta por union de extremos (NHEJ), el sistema 
-    resuelve la union directa documentando la cicatriz o microdelecion producida.
+  [ETAPA 3: FASE G2 / M - Integridad Genomica Post-Replicativa & Roturas Bicatenarias (DSB)]
+  * Antes de entrar a mitosis (M), el punto de control G2/M inspecciona roturas fisicas.
+  * Se compara la via de Recombinacion Homologa (HDR, asistida por la cromatida hermana 
+    disponible en Fase S/G2, fiel y sin cicatriz) frente a la Union de Extremos No 
+    Homologos (NHEJ, resolucion directa de emergencia propensa a cicatriz/microdelecion).
 
 
 ================================================================================
@@ -148,21 +144,30 @@ del ensayo en cinco etapas cronologicas continuas:
 
 
 --------------------------------------------------------------------------------
-[3.4] MAPA DE ALINEAMIENTO DE NUCLEOTIDOS (TRACK INTERACTIVO 2D)
+[3.4] MAPA DE ALINEAMIENTO DE NUCLEOTIDOS Y ESQUELETO AZUCAR-FOSFATO (TRACK 2D)
 --------------------------------------------------------------------------------
-* Segmento Superior (5' -> 3'):
-  - PA QUE SIRVE: Representa visualmente la hebra principal codificante con sus 
-    indices numericos de posicion (0, 1, 2, ...).
+* Esqueleto Covalente Superior Azúcar-Fosfato (5' -> 3'):
+  - PA QUE SIRVE: Representa visualmente la union covalente de cada monomero de nucleotido:
+    un grupo Fosfato [P] (extremo 5' libre) esterificado con la pentosa 2'-Desoxirribosa [D],
+    cuyo carbono C1' se une por enlace N-glucosidico a la base nitrogenada (A, T, C, G).
+  - Enlaces Fosfodiester: Uniones covalentes que ligan el C3' del azucar previo al fosfato 5'.
+
+* Segmento Superior de Bases Codificantes (5' -> 3'):
+  - PA QUE SIRVE: Muestra las bases nitrogenadas de la hebra con sus indices numericos (0, 1, 2...).
   - INTERACTIVIDAD: Al pulsar sobre cualquier columna de nucleotido, el sistema 
     selecciona esa base especifica, la enfoca en el visor 3D y rellena 
     automaticamente la coordenada en el panel de edicion quirurgica CRISPR.
 
-* Enlaces de Hidrogeno Centrales:
+* Enlaces de Hidrogeno Centrales Watson-Crick:
   - PA QUE SIRVE: Dibuja fisicamente 2 lineas para el par A-T (2 puentes H) y 
-    3 lineas para el par C-G (3 puentes H, mas estable).
+    3 lineas para el par C-G (3 puentes H, mayor estabilidad termodinamica).
 
-* Segmento Inferior (3' -> 5'):
-  - PA QUE SIRVE: Muestra la base complementaria correspondiente de la segunda hebra.
+* Segmento Inferior de Bases Complementarias (3' -> 5'):
+  - PA QUE SIRVE: Muestra la base complementaria de la segunda cadena en orientacion antiparalela.
+
+* Esqueleto Covalente Inferior Antiparalelo (3' -> 5'):
+  - PA QUE SIRVE: Representa el esqueleto complementario donde el azucar [D] precede 
+    al fosfato [P], reflejando la asimetria helicoidal del B-DNA.
 
 * Campo "Hebra Complementaria Antisentido (3' -> 5')":
   - PA QUE SIRVE: Muestra la secuencia completa de la cadena antisentido complementaria.
@@ -211,122 +216,99 @@ del ensayo en cinco etapas cronologicas continuas:
 
 
 --------------------------------------------------------------------------------
-[3.6] PANEL "MODO 2: EDICION DIRIGIDA (INTERVENCION CRISPR)"
+[FASE G1] MODULO 1.1: INDUCCION DE DAÑO EN EL MOLDE PARENTAL
 --------------------------------------------------------------------------------
-* Campo "Posicion Cero-Indexada":
-  - PA QUE SIRVE: Indica el indice numerico exacto de la base a modificar (0 a N-1). 
-    Se actualiza automaticamente si haces clic en el mapa 2D o en la helice 3D.
+* Modo A: Daño Ambiental Estocastico (Alberts cap. 5; Lodish cap. 5):
+  - Luz Ultravioleta (UV): Fotolesion por dimeros de pirimidina covalentes (T-T o C->T).
+  - Estres Oxidativo (ROS): Radicales libres oxidan Guanina a 8-oxo-Guanina (aparea con A -> transversion G->T).
+  - Desaminacion Espontanea: Perdida hidrolitica del grupo amino; Citosina se convierte en Uracilo (transicion C->T).
+  - Slider de Intensidad / Exposicion: Modula la probabilidad probabilistica de daño por posicion susceptible.
 
-* Selector "Tipo de Evento":
-  - Sustitucion (Puntual): Cambia la base actual por otra sin modificar la longitud.
-  - Insercion (+1 Base): Introduce un nucleotido nuevo, desplazando el marco 
-    de lectura hacia la derecha (frameshift).
-  - Delecion (-1 Base): Elimina el nucleotido en esa posicion, acortando la cadena.
-
-* Selector de Segmento "Base a Incorporar" (Botones A, T, C, G):
-  - PA QUE SIRVE: Permite escoger de forma tactil la nueva base deseada para 
-    sustituciones o inserciones.
-
-* Boton "Aplicar Mutacion Dirigida" (Icono de tijeras CRISPR):
-  - PA QUE SIRVE: Aplica la edicion quirurgica sobre la copia de trabajo en el 
-    backend, actualiza la visualizacion 3D en tiempo real, dispara la deteccion 
-    automatica de diferencias y avanza el stepper al Paso 3 y Paso 4.
+* Modo B: Edicion Quirurgica Dirigida (CRISPR in silico):
+  - Campo "Posicion Cero-Indexada": Indice de la base a alterar (0 a N-1).
+  - Selector "Tipo de Evento": Sustitucion puntual, Insercion (+1 base, frameshift) o Delecion (-1 base).
+  - Selector de Base: A, T, C, G para incorporar.
+  - Boton "Aplicar Mutacion Dirigida CRISPR": Aplica la edicion quirurgica en el molde.
 
 
 --------------------------------------------------------------------------------
-[3.7] PANEL "MODO 1: REPLICACION CELULAR ESTOCASTICA"
+[FASE G1] MODULO 1.2: CHECKPOINT G1/S (SENSOR p53 / p21 & PUNTO DE RESTRICCION R)
 --------------------------------------------------------------------------------
-* Slider "Tasa de Error por Base" (0.0% a 20.0%):
-  - PA QUE SIRVE: Configura la fidelidad de la ADN polimerasa virtual.
-    * 0.0%: Copia perfecta de alta fidelidad biologica.
-    * 10.0%: Hipermutacion acelerada.
-    * 20.0%: Tasa letal extrema (induce multiples errores simultaneos).
-
-* Boton "Simular Duplicacion Estocastica" (Icono de ciclo):
-  - PA QUE SIRVE: Ejecuta un ciclo completo de replicacion celular sintetizando una 
-    nueva cadena donde cada nucleotido tiene la probabilidad indicada de mutar.
+* Sensor Molecular de Daño p53 / Inhibidor de Ciclina-CDK p21:
+  - PA QUE SIRVE: Monitorea la pureza e integridad del ADN molde antes de autorizar el paso a Fase S.
+  - PRINCIPIO CIENTIFICO (Alberts cap. 9; Lodish cap. 9): La celula NUNCA copia un ADN danado a ciegas.
+    Si el molde tiene alteraciones ambientales o mutaciones, las quinasas ATM/ATR fosforilan a p53,
+    el cual transcribe p21 bloqueando a CDK2/Ciclina E. El ciclo se congela en G1 (Punto R activo)
+    para permitir la reparacion pre-replicativa.
+  - RIESGO DE APOPTOSIS: Si el dano es masivo o no se repara, p53 activa la cascada de apoptosis.
 
 
 --------------------------------------------------------------------------------
-[3.8] PANEL "REPORTE DE MUTAGENESIS Y DIFERENCIAS (DIFF INSPECTOR)"
+[FASE G1] MODULO 1.3: REPARACION PRE-REPLICATIVA DEL MOLDE (BER / NER / CINETICA)
 --------------------------------------------------------------------------------
-* Indicador de Mutaciones Detectadas:
-  - PA QUE SIRVE: Muestra en verde si la copia sintetizada es identica a la referencia, 
-    o en naranja/rojo la cantidad exacta de diferencias acumuladas.
-
-* Alineamiento Textual REFERENCIA vs SINTETIZADA:
-  - PA QUE SIRVE: Contrasta de extremo a extremo las dos cadenas para ubicar el desfasaje.
-
-* Fichas de Mutaciones por Coordenada:
-  - PA QUE SIRVE: Desglosa cada posicion alterada indicando si fue "changed", 
-    "inserted" o "deleted", y la transicion ocurrida (ej: C -> A).
-
-
---------------------------------------------------------------------------------
-[3.9] PANEL "3.1 DETECCION DE APAREAMIENTOS INCORRECTOS (MMR DUPLEX)"
---------------------------------------------------------------------------------
-* Campo "Cadena Apareada a Comprobar":
-  - PA QUE SIRVE: Aloja la segunda hebra con la que se empareja la cadena principal 
-    para formar la doble helice duplex.
-
-* Boton "Complementaria":
-  - PA QUE SIRVE: Rellena inmediatamente el campo con la complementaria canonica 
-    exacta de la cadena activa.
-
-* Boton "Inducir Error":
-  - PA QUE SIRVE: Introduce deliberadamente una base no complementaria en el centro 
-    de la cadena duplex (por ejemplo, emparejando Guanina con Adenina) para ensayar 
-    el sistema de deteccion de errores.
-
-* Boton "Escanear Apareamientos Duplex" (Icono de analitica):
-  - PA QUE SIRVE: Analiza cada posicion del duplex y califica el apareamiento:
-    * Par Canonico (Verde): Cumple la regla A-T o C-G.
-    * Par No Canonico (Rojo/Naranja): Error molecular detectado (ej: A-G, C-T).
-
-
---------------------------------------------------------------------------------
-[3.10] PANEL "3.2 REPARACION GUIADA POR REFERENCIA FIABLE"
---------------------------------------------------------------------------------
+* Selector de Modo de Reparacion:
+  - Cinetica Enzimatica Real (Probabilistico): Modela la probabilidad estocastica de 
+    escision de lesiones segun afinidad enzimatica (Km, kcat) y saturacion de glicosilasas/APE1.
+  - Control Asistido (100% Fiel): Restauracion determinista instantanea para calibracion.
+* Slider "Capacidad / Eficiencia de Escision (BER/NER)" (50% a 98%):
+  - Modula la probabilidad de que una lesion sea reconocida y reparada en el ciclo actual.
+  - Si una lesion escapa a la escision, el sensor p53/p21 permanece en alerta roja y el Punto R 
+    continua bloqueado para impedir replicar un molde lesionado.
 * Campo "Secuencia de Referencia Homologa Fiable":
-  - PA QUE SIRVE: Define la secuencia de la plantilla autentica (cromosoma homologo 
-    o hebra molde parental) que la maquinaria celular utilizara como guia de reparacion.
-
-* Boton "Usar Inicial":
-  - PA QUE SIRVE: Rellena el campo de referencia directamente con la hebra molde 
-    parental registrada al inicio del experimento.
-
-* Boton "Reparar con Referencia" (Icono de herramienta):
-  - PA QUE SIRVE: Ejecuta la reparacion guiada. Corrige unicamente las divergencias 
-    que estan avaladas por la plantilla de referencia. Si la secuencia se restaura 
-    completamente, el stepper marca el exito en Paso 5.
+  - PA QUE SIRVE: Aloja la plantilla parental o cromosoma homologo no mutado.
+* Boton "Usar Molde Inicial": Carga la hebra original intacta registrada al inicio.
+* Boton "Ciclo de Escision / Reparar Molde":
+  - PA QUE SIRVE: Ejecuta la ronda catalitica. Si se alcanza el 100%, apaga a p53/p21 y 
+    autoriza el paso a Fase S. Si quedan lesiones sin reparar, informa las posiciones 
+    que escaparon y mantiene el arresto en G1.
 
 
 --------------------------------------------------------------------------------
-[3.11] PANEL "3.3 ROTURAS BICATENARIAS (DSB) Y VIAS DE REPARACION"
+[FASE S] MODULO 2.1: DUPLICACION CELULAR SEMICONSERVATIVA (ADN POLIMERASA)
 --------------------------------------------------------------------------------
-* Campo "Posicion del Punto de Rotura":
-  - PA QUE SIRVE: Establece la coordenada donde se secciona fisicamente la molecula 
-    de ADN bicatenario en dos fragmentos (extremo 5' izquierdo y extremo 3' derecho).
-
-* Boton "Reparar via HDR (Homologia)" (Icono de escudo):
-  - PA QUE SIRVE: Simula la via de Reparacion Dirigida por Homologia (HDR). 
-    Utiliza la secuencia parental homologa como molde para reconstruir la zona rota 
-    con 100% de fidelidad y sin dejar ninguna cicatriz molecular.
-
-* Boton "Reparar via NHEJ (Union Extremos)" (Icono de union mecanica):
-  - PA QUE SIRVE: Simula la via de Union de Extremos No Homologos (NHEJ). 
-    Liga directamente los dos cabos rotos sin disponer de plantilla completa. 
-    Es propensa a errores biologicos e introduce cicatrices o microdeleciones.
+* Opcion A: Copia Fiel de Alta Fidelidad:
+  - PA QUE SIRVE: Realiza la sintesis de una nueva cadena con fidelidad canonica del 100%.
+* Opcion B: Replicacion con Tasa de Error Estocastico de Polimerasa:
+  - Slider "Tasa de Error por Base" (0.0% a 20.0%): Modela la probabilidad estocastica 
+    de incorporacion de dNTPs erroneos por la ADN polimerasa durante la horquilla de replicacion.
+  - Boton "Simular Duplicacion con Error de Polimerasa": Genera la hebra hija sintetizada.
 
 
 --------------------------------------------------------------------------------
-[3.12] PANEL "7. REGISTRO DE EXPERIMENTOS & TRAZABILIDAD (AUDITORIA)"
+[FASE S] MODULO 2.2: DETECCION DE DESAPAREAMIENTOS (FILTRO MMR DUPLEX)
 --------------------------------------------------------------------------------
-* Boton "Refrescar Registro (N)" (Icono de reiniciar):
-  - PA QUE SIRVE: Consulta al backend FastAPI y actualiza la tabla con los ultimos 
-    eventos moleculares procesados.
+* Campo "Cadena Sintetizada a Comprobar":
+  - PA QUE SIRVE: Muestra la cadena hija sintetizada en 2.1 alineada con el molde.
+* Botones Auxiliares: "Complementaria" (restaura duplex canonico) e "Inducir Error" (introduce un par erroneo).
+* Boton "Escanear Apareamientos Duplex (MMR)":
+  - PA QUE SIRVE: Simula el complejo MutS/MutL post-horquilla, detectando pares canonicos (verdes) 
+    y desajustes no canonicos (rojos, ej: A-G, C-T).
 
-* Tabla de Auditoria de Eventos:
+
+--------------------------------------------------------------------------------
+[FASE S] MODULO 2.3: REPORTE DIFERENCIAL DE SINTESIS (DIFF INSPECTOR)
+--------------------------------------------------------------------------------
+* Muestra el contraste nucleotido a nucleotido MOLDE REFERENCIA vs SINTETIZADA, 
+  desglosando mutaciones por coordenada, tipo (sustitucion, insercion, delecion) y transicion.
+
+
+--------------------------------------------------------------------------------
+[FASE G2/M] MODULO 3.1 & 3.2: ROTURAS BICATENARIAS (DSB) Y RESOLUCION PRE-MITOTICA
+--------------------------------------------------------------------------------
+* Modulo 3.1: Coordenada de Rotura: Establece la posicion del corte fisico de doble hebra.
+* Modulo 3.2: Vias de Resolucion:
+  - Boton "Reparar via HDR (Cromatida Hermana)": Recombinacion homologa asistida por la 
+    cromatida hermana presente en G2. Reconstruccion limpia al 100% sin cicatriz.
+  - Boton "Reparar via NHEJ (Union Extremos)": Union directa de emergencia sin plantilla. 
+    Propensa a cicatriz mutacional (microdeleciones).
+
+
+--------------------------------------------------------------------------------
+MODULO 4: REGISTRO DE EXPERIMENTOS & TRAZABILIDAD (AUDITORIA INMUTABLE)
+--------------------------------------------------------------------------------
+* Consulta la base de auditoria con identificador EXP-xxxx, operaciones ejecutadas, secuencias 
+  inicial y final, resolucion celular y boton de restauracion directa al laboratorio.
+
   - Columnas: ID Experimento, Tipo de Operacion, Secuencia Inicial, Secuencia Final, 
     Referencia Empleada y Resultado de Reparacion.
 
@@ -392,8 +374,8 @@ armonica y estandarizada:
 6. Pulsa "Aplicar Mutacion Dirigida".
    -> Observa como el Stepper pasa a "Paso 3: Dano Inducido" y de inmediato a 
       "Paso 4: Deteccion MMR/Diff".
-   -> En el panel 3.1 observaras que el par en posicion 4 se senala como no canonico.
-7. Desplazate a la seccion "3.2 Reparacion Guiada por Referencia Fiable".
+   -> En el panel MMR observaras si el par se senala como no canonico.
+7. Desplazate a la seccion "3.1 Reparacion Pre-Replicativa / Guiada por Referencia Fiable".
 8. Pulsa el boton "Usar Inicial" (para cargar el molde parental original).
 9. Pulsa "Reparar con Referencia".
    -> La mutacion se corrige con alta fidelidad y el Stepper concluye en 

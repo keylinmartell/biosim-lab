@@ -31,7 +31,7 @@
         </div>
 
         <div class="exp-management-buttons">
-          <button class="md3-button-filled save-exp-btn" @click="saveCurrentExperiment" :disabled="loading" title="Guardar todo el proceso del experimento">
+          <button class="md3-button-filled save-exp-btn" @click="openSaveDialog" :disabled="loading" title="Guardar todo el proceso del experimento con nombre y notas">
             <Icon name="save" size="18" />
             <span>Guardar Experimento</span>
           </button>
@@ -115,6 +115,17 @@
             <span class="n-badge g"><span class="pip"></span>G: {{ validationData.base_counts?.G || 0 }}</span>
           </div>
         </div>
+        <div class="metric-tile backbone-metric-tile">
+          <span class="m-k">Esqueleto Azúcar-Fosfato</span>
+          <div class="backbone-badges">
+            <span class="bb-chip sugar" title="2'-Desoxirribosa (anillo furanosa)">
+              <span class="bb-dot s-dot"></span>D: {{ validationData.backbone_info?.total_sugars ?? validationData.length }} Azúcares
+            </span>
+            <span class="bb-chip phosphate" title="Grupos Fosfato PO4^3-">
+              <span class="bb-dot p-dot"></span>P: {{ validationData.backbone_info?.total_phosphates ?? validationData.length }} Fosfatos
+            </span>
+          </div>
+        </div>
         <div class="metric-tile">
           <span class="m-k">Estado de Calidad</span>
           <span :class="['status-chip', validationData.is_valid ? 'valid' : 'invalid']">
@@ -134,39 +145,83 @@
       </div>
     </div>
 
-    <!-- Barra de Flujo Experimental Guiado (Paso 1 -> Paso 2 -> Paso 3 -> Paso 4 -> Paso 5) -->
+    <!-- Barra de Flujo Experimental Guiado por Fases del Ciclo Celular -->
     <div class="pipeline-stepper-card md3-card-outlined" v-if="validationData?.is_valid">
       <div class="stepper-header">
         <div class="stepper-title-box">
           <Icon name="science" size="18" class="stepper-icon" />
-          <span class="stepper-tag">Flujo Científico Experimental (Fase 1):</span>
+          <span class="stepper-tag">Ciclo Celular & Flujo Experimental:</span>
+          <span :class="['phase-badge-pill', currentCellPhase.toLowerCase()]">
+            {{ currentCellPhaseName }}
+          </span>
+          <button class="stepper-help-link" @click="showManualDialog = true" title="Abrir manual completo y guía del flujo experimental">
+            <Icon name="help_outline" size="14" />
+            <span>Guía del Flujo</span>
+          </button>
         </div>
         <span class="stepper-status font-mono">Paso {{ currentStep }} de 5: <strong>{{ currentStepName }}</strong></span>
       </div>
-      <div class="stepper-track">
-        <div :class="['step-pill', { active: currentStep === 1, done: currentStep > 1 }]">
-          <span class="step-num">1</span>
-          <span class="step-label">Molde Inicial</span>
+
+      <!-- Pistas de Fases Celulares -->
+      <div class="cell-cycle-stepper-track">
+        <!-- Fase G1 -->
+        <div :class="['cycle-phase-section', { active: currentCellPhase === 'G1' }]">
+          <div class="phase-section-title">
+            <span class="phase-code">FASE G1</span>
+            <span class="phase-subtitle">Molde & Checkpoint G1/S (Punto R)</span>
+          </div>
+          <div class="phase-steps-container">
+            <div :class="['step-pill', { active: currentStep === 1, done: currentStep > 1 }]">
+              <span class="step-num">1</span>
+              <span class="step-label">Molde Parental</span>
+            </div>
+            <div class="step-line"></div>
+            <div :class="['step-pill', { active: currentStep === 2, done: currentStep > 2, alert: isMoldDamaged && currentStep === 2 }]">
+              <span class="step-num">2</span>
+              <span class="step-label">Daño / p53-p21</span>
+            </div>
+            <div class="step-line"></div>
+            <div :class="['step-pill', { active: currentStep === 3, done: currentStep > 3 }]">
+              <span class="step-num">3</span>
+              <span class="step-label">Reparación Molde (1.3)</span>
+            </div>
+          </div>
         </div>
-        <div class="step-line"></div>
-        <div :class="['step-pill', { active: currentStep === 2, done: currentStep > 2 }]">
-          <span class="step-num">2</span>
-          <span class="step-label">Copia de Trabajo</span>
+
+        <div class="phase-inter-divider">
+          <Icon name="arrow_forward" size="14" />
         </div>
-        <div class="step-line"></div>
-        <div :class="['step-pill', { active: currentStep === 3, done: currentStep > 3 }]">
-          <span class="step-num">3</span>
-          <span class="step-label">Inducción de Daño</span>
+
+        <!-- Fase S -->
+        <div :class="['cycle-phase-section', { active: currentCellPhase === 'S' }]">
+          <div class="phase-section-title">
+            <span class="phase-code">FASE S</span>
+            <span class="phase-subtitle">Replicación & Triple Filtro (MMR)</span>
+          </div>
+          <div class="phase-steps-container">
+            <div :class="['step-pill', { active: currentStep === 4, done: currentStep > 4 }]">
+              <span class="step-num">4</span>
+              <span class="step-label">Síntesis & MMR (2.1 & 2.2)</span>
+            </div>
+          </div>
         </div>
-        <div class="step-line"></div>
-        <div :class="['step-pill', { active: currentStep === 4, done: currentStep > 4 }]">
-          <span class="step-num">4</span>
-          <span class="step-label">Detección (MMR)</span>
+
+        <div class="phase-inter-divider">
+          <Icon name="arrow_forward" size="14" />
         </div>
-        <div class="step-line"></div>
-        <div :class="['step-pill', { active: currentStep === 5, done: isFullyRepaired }]">
-          <span class="step-num">5</span>
-          <span class="step-label">Reparación Homóloga</span>
+
+        <!-- Fase G2 / M -->
+        <div :class="['cycle-phase-section', { active: currentCellPhase === 'G2' }]">
+          <div class="phase-section-title">
+            <span class="phase-code">FASE G2 / M</span>
+            <span class="phase-subtitle">Supervisión & Roturas DSB</span>
+          </div>
+          <div class="phase-steps-container">
+            <div :class="['step-pill', { active: currentStep === 5, done: isFullyRepaired }]">
+              <span class="step-num">5</span>
+              <span class="step-label">Resolución DSB (3.1 & 3.2)</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -203,9 +258,14 @@
           </div>
         </div>
 
-        <!-- Segmento Gráfico de Bases (5' a 3' y complementaria 3' a 5') -->
+        <!-- Segmento Gráfico de Bases con Esqueleto Azúcar-Fosfato (5' a 3' y complementaria 3' a 5') -->
         <div class="track-viewport">
-          <div class="track-strand-label">5'</div>
+          <div class="track-polarity-col left">
+            <span class="polarity-tag p5" title="Extremo 5' Fosfato libre">5' (P)</span>
+            <div class="polarity-v-link"></div>
+            <span class="polarity-tag p3" title="Extremo 3' Hidroxilo (-OH) complementario">3' (OH)</span>
+          </div>
+
           <div class="bases-filmstrip">
             <div 
               v-for="(base, idx) in cleanSequence" 
@@ -214,20 +274,70 @@
               @click="selectBaseForMutation(idx, base)"
             >
               <span class="pos-index font-mono">{{ idx }}</span>
-              <div class="base-capsule primary-strand">
+
+              <!-- Esqueleto Superior Azúcar-Fosfato (5' -> 3') -->
+              <div class="bb-monomer top" title="Monómero 5': Fosfato (PO4) + 2'-Desoxirribosa">
+                <span class="bb-dot phosphate" title="Grupo Fosfato 5' (PO4^3-)">P</span>
+                <span class="bb-hyphen">—</span>
+                <span class="bb-dot sugar" title="Azúcar 2'-Desoxirribosa (pentosa)">D</span>
+                <div class="bb-stem-down"></div>
+              </div>
+
+              <!-- Base Nitrogenada Sentido (5' -> 3') -->
+              <div class="base-capsule primary-strand" :title="`Base nitrogenada: ${base} (unida al C1' de la desoxirribosa)`">
                 <span class="letter font-mono">{{ base }}</span>
               </div>
-              <div class="hydrogen-bond">
+
+              <!-- Enlaces de Hidrógeno Watson-Crick -->
+              <div class="hydrogen-bond" :title="base === 'C' || base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)'">
                 <span class="h-line"></span>
                 <span class="h-line"></span>
                 <span class="h-line" v-if="base === 'C' || base === 'G'"></span>
               </div>
-              <div class="base-capsule comp-strand">
+
+              <!-- Base Nitrogenada Complementaria (3' -> 5') -->
+              <div class="base-capsule comp-strand" :title="`Base complementaria: ${complementMap[base]}`">
                 <span class="letter font-mono">{{ complementMap[base] }}</span>
+              </div>
+
+              <!-- Esqueleto Inferior Antiparalelo Azúcar-Fosfato (3' -> 5') -->
+              <div class="bb-monomer bottom" title="Monómero 3': 2'-Desoxirribosa + Fosfato (antiparalelo)">
+                <div class="bb-stem-up"></div>
+                <span class="bb-dot sugar" title="Azúcar 2'-Desoxirribosa">D</span>
+                <span class="bb-hyphen">—</span>
+                <span class="bb-dot phosphate" title="Grupo Fosfato (PO4^3-)">P</span>
               </div>
             </div>
           </div>
-          <div class="track-strand-label">3'</div>
+
+          <div class="track-polarity-col right">
+            <span class="polarity-tag p3" title="Extremo 3' Hidroxilo libre (-OH)">3' (OH)</span>
+            <div class="polarity-v-link"></div>
+            <span class="polarity-tag p5" title="Extremo 5' Fosfato libre complementario">5' (P)</span>
+          </div>
+        </div>
+
+        <!-- Leyenda Macromolecular: Monómero de Nucleótido -->
+        <div class="backbone-explanation-bar">
+          <div class="legend-eq-item">
+            <span class="sym-badge p">P</span>
+            <span class="txt">Fosfato (PO₄³⁻)</span>
+          </div>
+          <span class="eq-op">+</span>
+          <div class="legend-eq-item">
+            <span class="sym-badge d">D</span>
+            <span class="txt">2'-Desoxirribosa (Azúcar)</span>
+          </div>
+          <span class="eq-op">+</span>
+          <div class="legend-eq-item">
+            <span class="sym-badge b">Base</span>
+            <span class="txt">A, T, C, G</span>
+          </div>
+          <span class="eq-op">=</span>
+          <div class="legend-eq-item final">
+            <span class="highlight-txt">Nucleótido Completo (dNMP)</span>
+            <small>Cadenas unidas por enlaces fosfodiéster 3'→5' y puentes de H</small>
+          </div>
         </div>
 
         <!-- Telemetría de Codificación y Hebra Antisentido -->
@@ -251,166 +361,424 @@
       />
     </div>
 
-    <!-- Panel de Operaciones Genéticas (Modo 1 Replicación vs Modo 2 Mutación Controlada) -->
-    <div class="operations-container" v-if="cleanSequence">
-      <!-- MODO 2: Mutación Controlada (Precisión CRISPR / Sustitución) -->
-      <div class="op-panel md3-card-outlined mode-controlled">
-        <div class="op-panel-header">
-          <div class="header-icon-mini">
-            <Icon name="content_cut" size="18" />
-          </div>
+    <!-- ========================================================================= -->
+    <!-- ETAPA 1 (FASE G1): VIGILANCIA DEL MOLDE & CHECKPOINT G1/S (PUNTO R)       -->
+    <!-- ========================================================================= -->
+    <div class="phase-block g1-phase-block md3-card-outlined" v-if="cleanSequence">
+      <div class="phase-block-header">
+        <div class="phase-title-group">
+          <div class="phase-avatar g1">G1</div>
           <div>
-            <h4>Modo 2: Edición Dirigida (Intervención CRISPR)</h4>
-            <span class="op-sub">Alteración puntual precisa en coordenadas específicas de la cadena</span>
+            <h3>ETAPA 1 (FASE G1): Vigilancia del Molde Parental & Checkpoint G1/S (Punto R)</h3>
+            <span class="subtext">G1 no duplica ADN · Control de calidad pre-replicativo · Sensor p53 / p21 · Reparación BER / NER y referencia homóloga</span>
+          </div>
+        </div>
+        <div :class="['checkpoint-status-pill', checkpointG1Status.state]">
+          <Icon :name="checkpointG1Status.state === 'cleared' ? 'check_circle' : (checkpointG1Status.state === 'arrested' ? 'warning' : 'info')" size="16" />
+          <span>{{ checkpointG1Status.label }}</span>
+        </div>
+      </div>
+
+      <!-- Módulo 1.2: Telemetría Didáctica del Sensor p53 / p21 y Apoptosis -->
+      <div :class="['p53-checkpoint-card', checkpointG1Status.state]">
+        <div class="card-mini-title">
+          <Icon name="verified_user" size="16" />
+          <span>Módulo 1.2: Dictamen del Punto de Restricción R (Checkpoint G1/S)</span>
+        </div>
+        <div class="checkpoint-telemetry-row">
+          <div class="cp-indicator-box">
+            <span class="cp-label">Sensor Molecular de Daño:</span>
+            <span class="cp-val p53"><strong>p53:</strong> {{ checkpointG1Status.p53 }}</span>
+          </div>
+          <div class="cp-indicator-box">
+            <span class="cp-label">Inhibidor de Ciclina/CDK:</span>
+            <span class="cp-val p21"><strong>p21:</strong> {{ checkpointG1Status.p21 }}</span>
+          </div>
+          <div class="cp-indicator-box full">
+            <span class="cp-label">Decisión Biológica:</span>
+            <span class="cp-val desc">{{ checkpointG1Status.decision }}</span>
+          </div>
+        </div>
+        <div class="checkpoint-risk-alert" v-if="checkpointG1Status.risk">
+          <Icon name="warning" size="18" class="risk-icon" />
+          <span><strong>Regla de Oro (Alberts cap. 9 / Lodish cap. 9):</strong> {{ checkpointG1Status.risk }}</span>
+        </div>
+      </div>
+
+      <!-- Grid de G1: [Módulo 1.1 Daño en el Molde] a la IZQUIERDA, y [Módulo 1.3 Reparación Pre-Replicativa] a la DERECHA -->
+      <div class="g1-actions-grid">
+        <!-- MÓDULO 1.1: INDUCCIÓN DE DAÑO EN EL MOLDE PARENTAL -->
+        <div class="op-panel g1-damage-card">
+          <div class="op-panel-header">
+            <div class="header-icon-mini">
+              <Icon name="bolt" size="18" />
+            </div>
+            <div>
+              <h4>Módulo 1.1: Inducción de Daño en el Molde Parental</h4>
+              <span class="op-sub">Comprueba cómo el daño ambiental o una mutación activa el freno en G1/S</span>
+            </div>
+          </div>
+
+          <!-- Selector de Modo de Daño: Ambiental vs Quirúrgico CRISPR -->
+          <div class="sub-mode-toggle-row">
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: g1DamageMode === 'environmental' }]" 
+              @click="g1DamageMode = 'environmental'"
+            >
+              <Icon name="wb_sunny" size="15" />
+              <span>Daño Ambiental Estocástico</span>
+            </button>
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: g1DamageMode === 'crispr' }]" 
+              @click="g1DamageMode = 'crispr'"
+            >
+              <Icon name="content_cut" size="15" />
+              <span>Edición Quirúrgica CRISPR</span>
+            </button>
+          </div>
+
+          <!-- MODO A: DAÑO AMBIENTAL ESTOCÁSTICO (Luz UV, Estrés Oxidativo, Desaminación) -->
+          <div v-if="g1DamageMode === 'environmental'" class="damage-subpanel">
+            <div class="md3-textfield">
+              <label>Agente Mutagénico Ambiental (Alberts cap. 5):</label>
+              <select v-model="envAgent">
+                <option value="uv_radiation">Radiación Ultravioleta (Luz UV · Dímeros T-T)</option>
+                <option value="oxidative_ros">Estrés Oxidativo (Radicales Libres ROS · 8-oxo-G)</option>
+                <option value="deamination">Desaminación Espontánea (Hidrólisis C → U/T)</option>
+              </select>
+            </div>
+
+            <div class="slider-module">
+              <div class="slider-telemetry">
+                <span class="slider-title">Intensidad / Probabilidad de Lesión:</span>
+                <span class="slider-rate font-mono">{{ Math.round(envIntensity * 100) }}%</span>
+              </div>
+              <input 
+                type="range" 
+                v-model.number="envIntensity" 
+                min="0.10" 
+                max="0.80" 
+                step="0.05" 
+                class="md3-range-slider"
+              />
+              <div class="slider-marks">
+                <span>10% (Baja exposición)</span>
+                <span>40% (Estrés moderado)</span>
+                <span>80% (Sobrecarga de lesiones)</span>
+              </div>
+            </div>
+
+            <button class="md3-button-filled" @click="applyEnvironmentalDamage" :disabled="loading">
+              <Icon name="bolt" size="18" />
+              <span>Inducir Lesiones Ambientales en el Molde</span>
+            </button>
+
+            <!-- Feedback de lesiones ambientales -->
+            <div class="env-damage-feedback" v-if="envDamageResult">
+              <span class="env-tag">{{ envDamageResult.agent_name }}</span>
+              <p class="env-mechanism">{{ envDamageResult.mechanism_description }}</p>
+              <div class="lesions-list font-mono" v-if="envDamageResult.lesions?.length">
+                <span v-for="(les, i) in envDamageResult.lesions" :key="i" class="lesion-chip">
+                  Pos. {{ les.position }}: {{ les.original_base }} → {{ les.damaged_base }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODO B: EDICIÓN QUIRÚRGICA CRISPR -->
+          <div v-else class="damage-subpanel">
+            <div class="op-form-grid">
+              <div class="md3-textfield">
+                <label>Posición Cero-Indexada:</label>
+                <input type="number" v-model.number="controlledForm.position" :min="0" :max="cleanSequence.length" class="font-mono" />
+              </div>
+
+              <div class="md3-textfield">
+                <label>Tipo de Evento:</label>
+                <select v-model="controlledForm.type">
+                  <option value="substitution">Sustitución (Puntual)</option>
+                  <option value="insertion">Inserción (+1 Base)</option>
+                  <option value="deletion">Deleción (-1 Base)</option>
+                </select>
+              </div>
+
+              <div class="md3-textfield full-span" v-if="controlledForm.type !== 'deletion'">
+                <label>Base a Incorporar:</label>
+                <div class="base-segmented-selector">
+                  <button 
+                    v-for="b in ['A', 'T', 'C', 'G']" 
+                    :key="b"
+                    :class="['seg-btn', b.toLowerCase(), { active: controlledForm.newBase === b }]"
+                    @click="controlledForm.newBase = b"
+                    type="button"
+                  >
+                    {{ b }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button class="md3-button-filled" @click="applyControlledMutation" :disabled="loading">
+              <Icon name="content_cut" size="18" />
+              <span>Aplicar Mutación Dirigida CRISPR</span>
+            </button>
           </div>
         </div>
 
-        <div class="op-form-grid">
-          <div class="md3-textfield">
-            <label>Posición Cero-Indexada:</label>
-            <input type="number" v-model.number="controlledForm.position" :min="0" :max="cleanSequence.length" class="font-mono" />
+        <!-- MÓDULO 1.3: REPARACIÓN PRE-REPLICATIVA DEL MOLDE (BER / NER / HOMOLOGÍA) -->
+        <!-- MÓDULO 1.3: REPARACIÓN PRE-REPLICATIVA DEL MOLDE (BER / NER / HOMOLOGÍA) -->
+        <div class="duplex-card g1-repair-card">
+          <div class="card-subtitle">
+            <Icon name="shield" size="18" />
+            <span>Módulo 1.3: Reparación Pre-Replicativa del Molde (BER / NER / Homología)</span>
+          </div>
+          <p class="desc-text">
+            Corrige lesiones o mutaciones en la hebra molde parental utilizando la plantilla de referencia ANTES de entrar en Fase S.
+          </p>
+
+          <!-- Toggle: Modo de Reparación (Control 100% vs Cinética Enzimática Real) -->
+          <div class="repair-mode-toggle-row">
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: repairMode === 'stochastic' }]" 
+              @click="repairMode = 'stochastic'"
+              title="Modela la probabilidad de escisión enzimática in vivo según Alberts cap. 5"
+            >
+              <Icon name="biotech" size="15" />
+              <span>Cinética Enzimática Real (Probabilístico)</span>
+            </button>
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: repairMode === 'deterministic' }]" 
+              @click="repairMode = 'deterministic'"
+              title="Restaura la secuencia completa al 100% como control didáctico limpio"
+            >
+              <Icon name="verified" size="15" />
+              <span>Control Asistido (100% Fiel)</span>
+            </button>
+          </div>
+
+          <!-- Slider de Eficiencia Enzimática de Escisión (Solo en modo estocástico) -->
+          <div class="slider-module repair-eff-slider" v-if="repairMode === 'stochastic'">
+            <div class="slider-telemetry">
+              <span class="slider-title">Capacidad / Eficiencia de Escisión (BER / NER):</span>
+              <span class="slider-rate font-mono highlight-repair">{{ Math.round(repairEfficiency * 100) }}%</span>
+            </div>
+            <input 
+              type="range" 
+              v-model.number="repairEfficiency" 
+              min="0.50" 
+              max="0.98" 
+              step="0.05" 
+              class="md3-range-slider repair-range"
+            />
+            <div class="slider-marks">
+              <span>50% (Saturación/Dosis masiva)</span>
+              <span>85% (Fisiológica normal)</span>
+              <span>98% (Alta concentración)</span>
+            </div>
           </div>
 
           <div class="md3-textfield">
-            <label>Tipo de Evento:</label>
-            <select v-model="controlledForm.type">
-              <option value="substitution">Sustitución (Puntual)</option>
-              <option value="insertion">Inserción (+1 Base)</option>
-              <option value="deletion">Deleción (-1 Base)</option>
-            </select>
+            <label>Secuencia de Referencia Homóloga Fiable:</label>
+            <input 
+              type="text" 
+              v-model="referenceStrand" 
+              placeholder="Secuencia homóloga de referencia..." 
+              class="font-mono sequence-field"
+            />
           </div>
 
-          <div class="md3-textfield full-span" v-if="controlledForm.type !== 'deletion'">
-            <label>Base a Incorporar:</label>
-            <div class="base-segmented-selector">
-              <button 
-                v-for="b in ['A', 'T', 'C', 'G']" 
-                :key="b"
-                :class="['seg-btn', b.toLowerCase(), { active: controlledForm.newBase === b }]"
-                @click="controlledForm.newBase = b"
-                type="button"
-              >
-                {{ b }}
-              </button>
+          <div class="action-buttons-row">
+            <button class="md3-button-tonal" @click="useCurrentAsReference">
+              <Icon name="tag" size="16" />
+              <span>Usar Molde Inicial</span>
+            </button>
+            <button class="md3-button-filled" @click="runReferenceRepair" :disabled="loading">
+              <Icon name="build" size="18" />
+              <span>{{ repairMode === 'stochastic' ? 'Ejecutar Ciclo de Escisión Enzimática' : 'Reparar Molde al 100%' }}</span>
+            </button>
+          </div>
+
+          <!-- Resultado de Reparación G1 -->
+          <div class="repair-feedback" v-if="repairResult && repairResult.repaired_sequence">
+            <div :class="['status-banner', repairResult.matches_reference ? 'success' : 'warning']">
+              <Icon :name="repairResult.matches_reference ? 'check_circle' : 'warning'" size="18" />
+              <div>
+                <strong>Estado: {{ repairResult.matches_reference ? 'Molde Restaurado al 100% · Autorizado a Fase S' : 'Reparación Parcial: Lesiones Escaparon a la Escisión' }}</strong>
+                <p>
+                  {{ repairResult.matches_reference 
+                    ? 'Punto R superado: La hebra molde recuperó su pureza original. El sensor p53 se inactiva y la célula avanza hacia la replicación.' 
+                    : `Se repararon ${repairResult.repaired_positions?.length || 0} lesiones. Sin embargo, ${repairResult.escaped_positions?.length || (repairResult.remaining_divergences || 0)} lesiones escaparon al reconocimiento enzimático en este ciclo. El Punto R sigue bloqueado; ejecuta otro ciclo o usa control asistido.` }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Chips de lesiones que escaparon -->
+            <div class="escaped-lesions-box" v-if="!repairResult.matches_reference && repairResult.escaped_positions?.length">
+              <span class="esc-label">Posiciones que escapan y mantienen activo a p53:</span>
+              <div class="esc-chips font-mono">
+                <span v-for="p in repairResult.escaped_positions" :key="p" class="esc-chip">
+                  Posición {{ p }}
+                </span>
+              </div>
+            </div>
+
+            <div class="repaired-seq-preview">
+              <span class="tag">Molde Consolidado:</span>
+              <code class="font-mono">{{ repairResult.repaired_sequence }}</code>
             </div>
           </div>
         </div>
-
-        <button class="md3-button-filled" @click="applyControlledMutation" :disabled="loading">
-          <Icon name="content_cut" size="18" />
-          <span>Aplicar Mutación Dirigida</span>
-        </button>
-      </div>
-
-      <!-- MODO 1: Replicación Estocástica (Polimerasa con Tasa de Error) -->
-      <div class="op-panel md3-card-outlined mode-stochastic">
-        <div class="op-panel-header">
-          <div class="header-icon-mini">
-            <Icon name="shuffle" size="18" />
-          </div>
-          <div>
-            <h4>Modo 1: Replicación Celular Estocástica</h4>
-            <span class="op-sub">Simulación de duplicación con probabilidad estocástica de error de polimerasa</span>
-          </div>
-        </div>
-
-        <div class="slider-module">
-          <div class="slider-telemetry">
-            <span class="slider-title">Tasa de Error por Base:</span>
-            <span class="slider-rate font-mono">{{ (mutationRate * 100).toFixed(1) }}%</span>
-          </div>
-          <input 
-            type="range" 
-            v-model.number="mutationRate" 
-            min="0" 
-            max="0.20" 
-            step="0.005" 
-            class="md3-range-slider"
-          />
-          <div class="slider-marks">
-            <span>0.0% (Alta Fidelidad)</span>
-            <span>10.0% (Hipermutación)</span>
-            <span>20.0% (Umbral Letal)</span>
-          </div>
-        </div>
-
-        <button class="md3-button-tonal" @click="replicateWithProbabilities" :disabled="loading">
-          <Icon name="restart_alt" size="18" />
-          <span>Simular Duplicación Estocástica</span>
-        </button>
       </div>
     </div>
 
-    <!-- Inspector Comparativo de Mutaciones (Diff Inspector Estilo NCBI BLAST) -->
-    <div class="diff-inspector-card md3-card-outlined" v-if="diffResult">
-      <div class="diff-header">
-        <div class="diff-title-row">
-          <Icon name="compare_arrows" size="24" class="diff-icon" />
+    <!-- ========================================================================= -->
+    <!-- ETAPA 2 (FASE S): REPLICACIÓN CELULAR & TRIPLE FILTRO DE FIDELIDAD (MMR)  -->
+    <!-- ========================================================================= -->
+    <div class="phase-block s-phase-block md3-card-outlined" v-if="cleanSequence">
+      <div class="phase-block-header">
+        <div class="phase-title-group">
+          <div class="phase-avatar s">S</div>
           <div>
-            <h3>Reporte de Mutagénesis y Diferencias de Secuencia</h3>
-            <span class="diff-meta">Alineamiento de extremos apareados (Referencia vs Copia Sintetizada)</span>
-          </div>
-        </div>
-
-        <div :class="['diff-badge-pill', { alert: diffResult.difference_count > 0 }]">
-          <Icon :name="diffResult.difference_count > 0 ? 'warning' : 'check_circle'" size="16" class="pill-icon" />
-          <span>{{ diffResult.difference_count }} mutaciones detectadas</span>
-        </div>
-      </div>
-
-      <!-- Comparador Visual Alineado -->
-      <div class="diff-alignment-table">
-        <div class="alignment-row">
-          <span class="row-tag">REFERENCIA:</span>
-          <code class="font-mono strand-stream">{{ diffResult.reference }}</code>
-        </div>
-        <div class="alignment-row">
-          <span class="row-tag modified">SINTETIZADA:</span>
-          <code class="font-mono strand-stream mod-stream">{{ diffResult.modified }}</code>
-        </div>
-      </div>
-
-      <!-- Lista Detallada de Eventos de Mutación -->
-      <div class="mutation-events-grid" v-if="diffResult.differences.length > 0">
-        <div v-for="(d, i) in diffResult.differences" :key="i" class="mutation-card">
-          <div class="m-top">
-            <span class="m-coord font-mono">Posición {{ d.position }}</span>
-            <span :class="['m-type-chip', d.status]">{{ d.status }}</span>
-          </div>
-          <div class="m-transition">
-            <span class="base-old font-mono">{{ d.reference_base || '∅' }}</span>
-            <Icon name="arrow_forward" size="14" class="arrow" />
-            <span class="base-new font-mono">{{ d.modified_base || '∅' }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 3.1 & 3.2: Detección de Apareamientos Incorrectos & Reparación Guiada por Referencia -->
-    <div class="mismatch-repair-card md3-card-outlined" v-if="cleanSequence">
-      <div class="section-header">
-        <div class="section-title-group">
-          <Icon name="build" size="22" class="section-icon" />
-          <div>
-            <h3>3. Mecanismos de Reparación: Apareamientos Dúplex & Referencia Homóloga</h3>
-            <span class="subtext">Control de calidad de pares canónicos Watson-Crick (A–T, C–G) y corrección asistida por plantilla</span>
+            <h3>ETAPA 2 (FASE S): Replicación Celular Semiconservativa & Triple Filtro de Copia</h3>
+            <span class="subtext">Polimerización 5'→3' con desoxirribonucleótidos (dNTPs) · Triple barrera de fidelidad extrema</span>
           </div>
         </div>
       </div>
 
-      <div class="duplex-work-grid">
-        <!-- Columna 1: Detección de Desapareamientos -->
-        <div class="duplex-card">
+      <!-- Tarjeta Interactiva del Triple Filtro de Fidelidad (Alberts cap. 5 / Lehninger) -->
+      <div class="triple-fidelity-card">
+        <div class="card-subtitle-row">
+          <Icon name="biotech" size="18" class="card-sub-icon" />
+          <span class="card-sub-title">Triple Filtro de Fidelidad de la Copia en Fase S (Alberts et al. 2022, cap. 5; Lehninger 8.ª ed.):</span>
+        </div>
+        <div class="fidelity-filters-grid">
+          <div class="filter-box f1">
+            <div class="filter-num">1</div>
+            <div class="filter-content">
+              <strong>Selección de Base (ADN Polimerasa)</strong>
+              <span class="filter-rate">~1 error cada 10⁵ nt (10⁻⁵)</span>
+              <p>Geometría activa del bolsillo catalítico Watson-Crick en la incorporación del dNTP.</p>
+            </div>
+          </div>
+          <div class="filter-arrow">→</div>
+          <div class="filter-box f2">
+            <div class="filter-num">2</div>
+            <div class="filter-content">
+              <strong>Corrección de Pruebas (Proofreading)</strong>
+              <span class="filter-rate">Baja el error a ~1 cada 10⁷ nt (10⁻⁷)</span>
+              <p>Actividad exonucleasa 3'→5' de la polimerasa: recorta el nucleótido mal incorporado al instante.</p>
+            </div>
+          </div>
+          <div class="filter-arrow">→</div>
+          <div class="filter-box f3">
+            <div class="filter-num">3</div>
+            <div class="filter-content">
+              <strong>Reparación Desapareamientos (MMR)</strong>
+              <span class="filter-rate">Baja el error a ~1 cada 10⁹–10¹⁰ nt (10⁻¹⁰)</span>
+              <p>Complejos MutS/MutL escanean la cadena hija recién hecha post-horquilla y corrigen desajustes.</p>
+            </div>
+          </div>
+        </div>
+        <div class="fidelity-summary-banner">
+          <Icon name="verified" size="16" />
+          <span><strong>Resultado biológico consolidado:</strong> Solo ~1 error por cada mil a diez mil millones de nucleótidos copiados en el genoma celular.</span>
+        </div>
+      </div>
+
+      <!-- Acciones de Replicación: Módulo 2.1 Replicación & Módulo 2.2 MMR -->
+      <div class="s-replication-grid">
+        <!-- MÓDULO 2.1: DUPLICACIÓN CELULAR SEMICONSERVATIVA -->
+        <div class="op-panel mode-stochastic">
+          <div class="op-panel-header">
+            <div class="header-icon-mini">
+              <Icon name="content_copy" size="18" />
+            </div>
+            <div>
+              <h4>Módulo 2.1: Duplicación Celular Semiconservativa (ADN Polimerasa)</h4>
+              <span class="op-sub">Síntesis de la hebra hija mediante polimerización 5'→3'</span>
+            </div>
+          </div>
+
+          <!-- Selector de Modo de Replicación: Fiel vs Estocástica con Error -->
+          <div class="sub-mode-toggle-row">
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: sReplicationMode === 'faithful' }]" 
+              @click="sReplicationMode = 'faithful'"
+            >
+              <Icon name="verified" size="15" />
+              <span>Copia Fiel (Fidelidad Normal)</span>
+            </button>
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: sReplicationMode === 'stochastic' }]" 
+              @click="sReplicationMode = 'stochastic'"
+            >
+              <Icon name="shuffle" size="15" />
+              <span>Replicación con Error Estocástico</span>
+            </button>
+          </div>
+
+          <!-- OPCIÓN A: COPIA FIEL -->
+          <div v-if="sReplicationMode === 'faithful'" class="replication-mode-box">
+            <p class="desc-text">
+              Realiza una duplicación fidedigna de la cadena activa. Comprueba identidad molecular al 100% y genera la copia de trabajo lista para escaneo post-replicativo.
+            </p>
+            <button class="md3-button-filled" @click="replicateFaithful" :disabled="loading">
+              <Icon name="content_copy" size="18" />
+              <span>Sintetizar Hebra Hija Fiel (100% Identidad)</span>
+            </button>
+            <div class="copy-feedback-banner" v-if="copyNotification">
+              <Icon name="check_circle" size="16" />
+              <span>{{ copyNotification }}</span>
+            </div>
+          </div>
+
+          <!-- OPCIÓN B: REPLICACIÓN CON TASA DE ERROR ESTOCÁSTICO -->
+          <div v-else class="replication-mode-box">
+            <div class="slider-module">
+              <div class="slider-telemetry">
+                <span class="slider-title">Tasa de Error por Base de Polimerasa:</span>
+                <span class="slider-rate font-mono">{{ (mutationRate * 100).toFixed(1) }}%</span>
+              </div>
+              <input 
+                type="range" 
+                v-model.number="mutationRate" 
+                min="0" 
+                max="0.20" 
+                step="0.005" 
+                class="md3-range-slider"
+              />
+              <div class="slider-marks">
+                <span>0.0% (Fisiológico)</span>
+                <span>10.0% (Hipermutación)</span>
+                <span>20.0% (Umbral Letal)</span>
+              </div>
+            </div>
+
+            <button class="md3-button-filled" @click="replicateWithProbabilities" :disabled="loading">
+              <Icon name="restart_alt" size="18" />
+              <span>Simular Duplicación con Error de Polimerasa</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- MÓDULO 2.2: DETECCIÓN DE DESAPAREAMIENTOS (MMR DÚPLEX POST-REPLICACIÓN) -->
+        <div class="duplex-card s-mmr-card">
           <div class="card-subtitle">
             <Icon name="science" size="18" />
-            <span>3.1 Detección de Apareamientos Incorrectos (Dúplex)</span>
+            <span>Módulo 2.2: Detección de Apareamientos Incorrectos (Filtro MMR Dúplex)</span>
           </div>
           <p class="desc-text">
-            Compara la hebra codificante con una segunda cadena apareada para identificar pares no canónicos.
+            Inspecciona la complementariedad entre la hebra molde y la hebra sintetizada para identificar pares no canónicos.
           </p>
 
           <div class="md3-textfield">
-            <label>Cadena Apareada a Comprobar:</label>
+            <label>Cadena Sintetizada a Comprobar:</label>
             <div class="input-with-actions">
               <input 
                 type="text" 
@@ -430,17 +798,17 @@
 
           <button class="md3-button-filled" @click="runMismatchDetection" :disabled="loading">
             <Icon name="analytics" size="18" />
-            <span>Escanear Apareamientos Dúplex</span>
+            <span>Escanear Apareamientos Dúplex (MMR)</span>
           </button>
 
           <!-- Resultados de Apareamientos -->
-          <div class="mismatch-feedback" v-if="mismatchResult">
+          <div class="mismatch-feedback" v-if="mismatchResult && Array.isArray(mismatchResult.mismatches)">
             <div :class="['status-banner', mismatchResult.is_fully_canonical ? 'success' : 'warning']">
               <Icon :name="mismatchResult.is_fully_canonical ? 'check_circle' : 'warning'" size="18" />
               <span>
                 {{ mismatchResult.is_fully_canonical 
                   ? 'Apareamiento 100% canónico Watson-Crick.' 
-                  : `${mismatchResult.mismatch_count} apareamiento(s) no canónico(s) detectado(s).` }}
+                  : `${mismatchResult.mismatch_count || 0} apareamiento(s) no canónico(s) detectado(s).` }}
               </span>
             </div>
 
@@ -458,82 +826,78 @@
               </div>
             </div>
 
-            <div class="scientific-disclaimer-mini" v-if="mismatchResult.mismatch_count > 0">
+            <div class="scientific-disclaimer-mini" v-if="(mismatchResult.mismatch_count || 0) > 0">
               <Icon name="info" size="14" />
-              <span>Regla del modelo: El sistema marca el error sin conjeturar automáticamente la base original en ausencia de plantilla fiable.</span>
+              <span>Regla del modelo: El sistema marca el error sin conjeturar arbitrariamente la base original en ausencia de plantilla fiable.</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Columna 2: Reparación Guiada por Referencia -->
-        <div class="duplex-card">
-          <div class="card-subtitle">
-            <Icon name="shield" size="18" />
-            <span>3.2 Reparación Guiada por Referencia Fiable</span>
-          </div>
-          <p class="desc-text">
-            Reemplaza las posiciones alteradas únicamente cuando están autorizadas y respaldadas por una plantilla fiable.
-          </p>
-
-          <div class="md3-textfield">
-            <label>Secuencia de Referencia Homóloga Fiable:</label>
-            <input 
-              type="text" 
-              v-model="referenceStrand" 
-              placeholder="Secuencia homóloga de referencia..." 
-              class="font-mono sequence-field"
-            />
-          </div>
-
-          <div class="action-buttons-row">
-            <button class="md3-button-tonal" @click="useCurrentAsReference">
-              <Icon name="tag" size="16" />
-              <span>Usar Inicial</span>
-            </button>
-            <button class="md3-button-filled" @click="runReferenceRepair" :disabled="loading">
-              <Icon name="build" size="18" />
-              <span>Reparar con Referencia</span>
-            </button>
-          </div>
-
-          <!-- Resultado de Reparación -->
-          <div class="repair-feedback" v-if="repairResult">
-            <div :class="['status-banner', repairResult.matches_reference ? 'success' : 'info']">
-              <Icon :name="repairResult.matches_reference ? 'check_circle' : 'info'" size="18" />
-              <div>
-                <strong>Estado: {{ repairResult.status }}</strong>
-                <p>
-                  {{ repairResult.matches_reference 
-                    ? 'Secuencia completamente restaurada conforme a la plantilla de referencia.' 
-                    : `Reparadas ${repairResult.repaired_positions?.length || 0} posiciones autorizadas.` }}
-                </p>
-              </div>
+      <!-- MÓDULO 2.3: DIFF INSPECTOR EN FASE S -->
+      <div class="diff-inspector-card" v-if="diffResult && Array.isArray(diffResult.differences)">
+        <div class="diff-header">
+          <div class="diff-title-row">
+            <Icon name="compare_arrows" size="24" class="diff-icon" />
+            <div>
+              <h3>Módulo 2.3: Reporte Diferencial de Síntesis (Molde vs Hebra Sintetizada)</h3>
+              <span class="diff-meta">Alineamiento de extremos apareados para auditoría de fidelidad</span>
             </div>
+          </div>
 
-            <div class="repaired-seq-preview">
-              <span class="tag">Secuencia Resultante:</span>
-              <code class="font-mono">{{ repairResult.repaired_sequence }}</code>
+          <div :class="['diff-badge-pill', { alert: (diffResult.difference_count || 0) > 0 }]">
+            <Icon :name="(diffResult.difference_count || 0) > 0 ? 'warning' : 'check_circle'" size="16" class="pill-icon" />
+            <span>{{ diffResult.difference_count || 0 }} mutaciones detectadas</span>
+          </div>
+        </div>
+
+        <div class="diff-alignment-table" v-if="diffResult.reference !== undefined || diffResult.modified !== undefined">
+          <div class="alignment-row">
+            <span class="row-tag">MOLDE REFERENCIA:</span>
+            <code class="font-mono strand-stream">{{ diffResult.reference || '' }}</code>
+          </div>
+          <div class="alignment-row">
+            <span class="row-tag modified">SINTETIZADA:</span>
+            <code class="font-mono strand-stream mod-stream">{{ diffResult.modified || '' }}</code>
+          </div>
+        </div>
+
+        <div class="mutation-events-grid" v-if="diffResult.differences && diffResult.differences.length > 0">
+          <div v-for="(d, i) in (diffResult.differences || [])" :key="i" class="mutation-card">
+            <div class="m-top">
+              <span class="m-coord font-mono">Posición {{ d.position }}</span>
+              <span :class="['m-type-chip', d.status]">
+                {{ d.status === 'changed' ? 'Sustitución' : d.status === 'inserted' ? 'Inserción' : d.status === 'deleted' ? 'Deleción' : d.status }}
+              </span>
+            </div>
+            <div class="m-transition">
+              <span class="base-old font-mono">{{ d.reference_base || '∅' }}</span>
+              <Icon name="arrow_forward" size="14" class="arrow" />
+              <span class="base-new font-mono">{{ d.modified_base || '∅' }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 3.3: Modelo Conceptual de Roturas de ADN (DSB) & Unión de Extremos -->
-    <div class="dsb-card md3-card-outlined" v-if="cleanSequence">
-      <div class="section-header">
-        <div class="section-title-group">
-          <Icon name="content_cut" size="22" class="section-icon alert" />
+    <!-- ========================================================================= -->
+    <!-- ETAPA 3 (FASE G2 / M): ROTURAS BICATENARIAS (DSB) & RESOLUCIÓN PRE-MITOSIS -->
+    <!-- ========================================================================= -->
+    <div class="phase-block g2-phase-block md3-card-outlined" v-if="cleanSequence">
+      <div class="phase-block-header">
+        <div class="phase-title-group">
+          <div class="phase-avatar g2">G2</div>
           <div>
-            <h3>3.3 Extensión Conceptual: Roturas Bicatenarias (DSB) y Vías de Reparación</h3>
-            <span class="subtext">Comparación abstracta entre Homología (HDR) y Unión de Extremos No Homólogos (NHEJ)</span>
+            <h3>ETAPA 3 (FASE G2 / M): Integridad Post-Replicativa & Roturas Bicatenarias (DSB)</h3>
+            <span class="subtext">Genoma ya duplicado (dos cromátidas hermanas presentes en G2) · Recombinación Homóloga (HDR) vs Unión de Extremos (NHEJ)</span>
           </div>
         </div>
       </div>
 
+      <!-- Módulo 3.1 & 3.2 DSB -->
       <div class="dsb-controls-row">
         <div class="md3-textfield break-pos-field">
-          <label>Posición del Punto de Rotura (1 a {{ Math.max(1, cleanSequence.length - 1) }}):</label>
+          <label>Módulo 3.1: Posición de Rotura DSB (1 a {{ Math.max(1, cleanSequence.length - 1) }}):</label>
           <input 
             type="number" 
             v-model.number="breakPosition" 
@@ -546,17 +910,17 @@
         <div class="dsb-action-buttons">
           <button class="md3-button-filled hdr-btn" @click="runBreakSimulation('homology_directed')" :disabled="loading">
             <Icon name="shield" size="18" />
-            <span>Reparar vía HDR (Homología)</span>
+            <span>Módulo 3.2: Reparar vía HDR (Cromátida Hermana · Fiel 100%)</span>
           </button>
           <button class="md3-button-tonal nhej-btn" @click="runBreakSimulation('end_joining')" :disabled="loading">
             <Icon name="build" size="18" />
-            <span>Reparar vía NHEJ (Unión Extremos)</span>
+            <span>Módulo 3.2: Reparar vía NHEJ (Unión Extremos · Cicatriz)</span>
           </button>
         </div>
       </div>
 
       <!-- Visualización de Rotura y Fragmentación -->
-      <div class="dsb-result-panel" v-if="breakResult">
+      <div class="dsb-result-panel" v-if="breakResult && breakResult.fragments && breakResult.fragments.length >= 2">
         <div class="fragments-display">
           <div class="frag-box">
             <span class="frag-label">Extremo 5' (Fragmento Izq):</span>
@@ -564,7 +928,7 @@
           </div>
           <div class="cut-marker">
             <Icon name="content_cut" size="18" />
-            <span>ROTURA</span>
+            <span>ROTURA DSB</span>
           </div>
           <div class="frag-box">
             <span class="frag-label">Extremo 3' (Fragmento Der):</span>
@@ -574,13 +938,103 @@
 
         <div class="recombined-box">
           <div class="rec-header">
-            <span class="rec-title">Secuencia Recombinada ({{ breakResult.repair_method?.toUpperCase() }}):</span>
+            <span class="rec-title">Secuencia Recombinada ({{ formatRepairMethod(breakResult.repair_method) }}):</span>
             <span :class="['scar-badge', breakResult.scar?.includes('deletion') ? 'scarred' : 'clean']">
-              Cicatriz: {{ breakResult.scar }}
+              Cicatriz: {{ formatScarText(breakResult.scar) }}
             </span>
           </div>
           <code class="font-mono rec-seq">{{ breakResult.repaired_sequence }}</code>
-          <p class="rec-desc">{{ breakResult.description }}</p>
+          <p class="rec-desc">{{ formatBreakDescription(breakResult) }}</p>
+        </div>
+
+        <!-- Cascada Enzimática y Complejos Proteicos en Acción -->
+        <div class="protein-cascade-panel">
+          <div class="cascade-header">
+            <div class="cascade-title">
+              <Icon name="biotech" size="20" class="cascade-icon" />
+              <div>
+                <h4>Complejos Proteicos y Cascada Enzimática en Acción</h4>
+                <span class="cascade-subtext">Mecanismo molecular real documentado paso a paso</span>
+              </div>
+            </div>
+            <div :class="['viability-pill', breakResult.repair_method === 'homology_directed' ? 'high' : 'medium']">
+              <Icon :name="breakResult.repair_method === 'homology_directed' ? 'check_circle' : 'shield'" size="16" />
+              <span>
+                {{ breakResult.repair_method === 'homology_directed' 
+                  ? 'Viabilidad: 100% · Célula Intacta (Sin Daño Residual)' 
+                  : 'Viabilidad: Preservada · Unión de Emergencia (Célula Viva)' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Pasos cronológicos de la maquinaria molecular -->
+          <div class="cascade-timeline">
+            <!-- Paso 1: Alarma Sensor común -->
+            <div class="cascade-step completed">
+              <div class="step-num font-mono">1</div>
+              <div class="step-body">
+                <div class="step-head">
+                  <span class="prot-name">Complejo MRN & Quinasa ATM</span>
+                  <span class="prot-role sensor">Sensor y Baliza de Emergencia</span>
+                </div>
+                <p class="step-desc">
+                  El complejo <strong>MRN (Mre11-Rad50-Nbs1)</strong> detecta físicamente los dos cabos rotos y activa a la quinasa <strong>ATM</strong>, que fosforila miles de histonas creando un foco fluorescente de <strong>&gamma;-H2AX</strong> en la coordenada {{ breakPosition }}.
+                </p>
+              </div>
+            </div>
+
+            <!-- Paso 2: Reclutamiento de Maquinaria -->
+            <div class="cascade-step completed" v-if="breakResult.repair_method === 'homology_directed'">
+              <div class="step-num font-mono">2</div>
+              <div class="step-body">
+                <div class="step-head">
+                  <span class="prot-name">BRCA1 / BRCA2 & Nucleoproteína RAD51</span>
+                  <span class="prot-role hdr">Resección y Búsqueda de Homología</span>
+                </div>
+                <p class="step-desc">
+                  <strong>BRCA1/2</strong> facilitan la resección de los extremos 5' y cargan a <strong>RAD51</strong>, formando filamentos helicoidales que invaden la hebra molde de referencia homóloga para copiar su información sin errores.
+                </p>
+              </div>
+            </div>
+            <div class="cascade-step completed" v-else>
+              <div class="step-num font-mono">2</div>
+              <div class="step-body">
+                <div class="step-head">
+                  <span class="prot-name">Dímero Ku70 / Ku80 & DNA-PKcs</span>
+                  <span class="prot-role nhej">Abrazadera y Alineación a Ciegas</span>
+                </div>
+                <p class="step-desc">
+                  Las proteínas <strong>Ku70/Ku80</strong> se deslizan en forma de anillo sobre los extremos rotos para protegerlos de degradación, y reclutan a <strong>DNA-PKcs</strong> para mantener los dos fragmentos alineados.
+                </p>
+              </div>
+            </div>
+
+            <!-- Paso 3: Resolución y Sellado -->
+            <div class="cascade-step completed" v-if="breakResult.repair_method === 'homology_directed'">
+              <div class="step-num font-mono">3</div>
+              <div class="step-body">
+                <div class="step-head">
+                  <span class="prot-name">ADN Polimerasa & ADN Ligasa I</span>
+                  <span class="prot-role success">Síntesis de Alta Fidelidad y Sellado</span>
+                </div>
+                <p class="step-desc">
+                  La <strong>ADN Polimerasa</strong> re-sintetiza las bases idénticas al molde original y la <strong>Ligasa I</strong> sella el enlace fosfodiéster. <em>El guardián p53 desactiva la alarma: genoma restaurado al 100%.</em>
+                </p>
+              </div>
+            </div>
+            <div class="cascade-step completed" v-else>
+              <div class="step-num font-mono">3</div>
+              <div class="step-body">
+                <div class="step-head">
+                  <span class="prot-name">Endonucleasa Artemis & ADN Ligasa IV / XRCC4</span>
+                  <span class="prot-role warning">Procesamiento de Extremos y Unión Rápida</span>
+                </div>
+                <p class="step-desc">
+                  <strong>Artemis</strong> recorta nucleótidos no compatibles (posible microdeleción) y el complejo <strong>ADN Ligasa IV / XRCC4</strong> sella directamente los extremos. <em>La célula evita la catástrofe mitótica y sobrevive.</em>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -591,7 +1045,7 @@
         <div class="section-title-group">
           <Icon name="history" size="22" class="section-icon" />
           <div>
-            <h3>7. Registro de Experimentos & Trazabilidad de Operaciones</h3>
+            <h3>Módulo 4: Registro de Experimentos & Trazabilidad de Operaciones</h3>
             <span class="subtext">Auditoría inmutable de secuencias, mutaciones, métodos y resoluciones</span>
           </div>
         </div>
@@ -619,28 +1073,42 @@
         <table class="events-table">
           <thead>
             <tr>
-              <th>ID Experimento</th>
+              <th>ID Ensayo</th>
               <th>Operación</th>
+              <th>Detalle Molecular</th>
               <th>Secuencia Inicial</th>
-              <th>Secuencia Final</th>
-              <th>Referencia</th>
-              <th>Resultado</th>
+              <th>Secuencia Resultante</th>
+              <th>Plantilla Guía</th>
+              <th>Conclusión / Estado</th>
               <th>Acción</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="ev in experimentLogs" :key="ev.experiment_id">
-              <td><code class="font-mono exp-id">{{ ev.experiment_id }}</code></td>
-              <td><span class="op-chip">{{ ev.operation_type }}</span></td>
+              <td>
+                <code class="font-mono exp-id">{{ ev.experiment_id }}</code>
+                <div v-if="ev.parameters?.saved_name" class="exp-custom-name" title="Nombre asignado por el usuario">
+                  <Icon name="bookmark" size="11" />
+                  <span>{{ ev.parameters.saved_name }}</span>
+                </div>
+              </td>
+              <td>
+                <span :class="['op-chip', getOpBadgeClass(ev.operation_type)]">
+                  {{ formatOperationName(ev.operation_type) }}
+                </span>
+              </td>
+              <td>
+                <span class="event-detail-text">{{ formatEventDetails(ev) }}</span>
+              </td>
               <td><code class="font-mono seq-cell">{{ ev.initial_sequence }}</code></td>
               <td><code class="font-mono seq-cell">{{ ev.final_sequence }}</code></td>
               <td>
                 <span v-if="ev.reference_used" class="font-mono ref-text">{{ ev.reference_used }}</span>
-                <span v-else class="no-ref">Sin plantilla</span>
+                <span v-else class="no-ref">Sin plantilla homóloga</span>
               </td>
               <td>
-                <span :class="['res-status', ev.repair_result?.status || 'ok']">
-                  {{ ev.repair_result?.status || 'registrado' }}
+                <span :class="['res-status', getResultBadgeClass(ev)]">
+                  {{ formatResultName(ev) }}
                 </span>
               </td>
               <td>
@@ -652,6 +1120,74 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Diálogo Modal: Guardar Experimento con Nombre Personalizado -->
+    <div class="md3-dialog-backdrop" v-if="showSaveDialog" @click.self="showSaveDialog = false">
+      <div class="md3-dialog-surface md3-card-outlined save-dialog-surface">
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <Icon name="save" size="24" class="dialog-icon highlight" />
+            <div>
+              <h3>Guardar Experimento en Bitácora</h3>
+              <span class="dialog-sub">Asigna un nombre descriptivo y notas científicas a este ensayo</span>
+            </div>
+          </div>
+          <button class="dialog-close-btn" @click="showSaveDialog = false" title="Cerrar">✕</button>
+        </div>
+
+        <div class="dialog-body save-dialog-body">
+          <!-- Resumen rápido del estado actual a guardar -->
+          <div class="save-preview-card">
+            <div class="preview-row">
+              <span class="preview-label">Secuencia Actual (Resultante):</span>
+              <code class="font-mono preview-code">{{ cleanSequence || sequenceInput }}</code>
+            </div>
+            <div class="preview-row" v-if="initialMoldSequence">
+              <span class="preview-label">Molde Original:</span>
+              <code class="font-mono preview-code-dim">{{ initialMoldSequence }}</code>
+            </div>
+            <div class="preview-row" v-if="lastMutationApplied">
+              <span class="preview-label">Último Proceso Aplicado:</span>
+              <span class="preview-tag">{{ formatMutationLabel(lastMutationApplied) }}</span>
+            </div>
+          </div>
+
+          <div class="md3-textfield form-group">
+            <label for="save-exp-name-input">Nombre del Experimento <span class="required-star">*</span>:</label>
+            <input 
+              id="save-exp-name-input"
+              type="text" 
+              v-model="saveExpForm.name" 
+              placeholder="Ej: Ensayo de corte DSB y unión por extremos NHEJ..."
+              class="save-input-name"
+              @keydown.enter.prevent="confirmSaveExperiment"
+              autofocus
+            />
+          </div>
+
+          <div class="md3-textfield form-group">
+            <label for="save-exp-notes-input">Notas / Observaciones del Investigador (Opcional):</label>
+            <textarea 
+              id="save-exp-notes-input"
+              v-model="saveExpForm.notes" 
+              rows="3"
+              placeholder="Añade observaciones, condiciones del ensayo o justificación biológica..."
+              class="save-input-notes"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="dialog-footer save-dialog-footer">
+          <button class="md3-button-outlined" type="button" @click="showSaveDialog = false">
+            <span>Cancelar</span>
+          </button>
+          <button class="md3-button-filled save-confirm-btn" type="button" @click="confirmSaveExperiment" :disabled="loading || !saveExpForm.name.trim()">
+            <Icon name="check" size="18" />
+            <span>Confirmar y Guardar</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -686,9 +1222,10 @@
                 <div class="exp-id-row">
                   <span class="exp-badge font-mono">{{ exp.experiment_id }}</span>
                   <span class="exp-date">{{ formatDate(exp.created_at) }}</span>
-                  <span :class="['exp-status-chip', exp.status]">{{ exp.status }}</span>
+                  <span :class="['exp-status-chip', exp.status]">{{ formatStatusText(exp.status) }}</span>
                 </div>
                 <h4 class="exp-title">{{ exp.name }}</h4>
+                <p class="exp-notes-snippet" v-if="exp.notes">{{ exp.notes }}</p>
 
                 <div class="exp-sequences-summary">
                   <div class="summary-line">
@@ -738,14 +1275,14 @@
             @click="manualActiveTab = 'flow'"
           >
             <Icon name="science" size="16" />
-            <span>1. Flujo Paso a Paso (1 a 5)</span>
+            <span>1. Flujo del Ciclo (G1-S-G2)</span>
           </button>
           <button 
             :class="['manual-tab-btn', { active: manualActiveTab === 'buttons' }]" 
             @click="manualActiveTab = 'buttons'"
           >
             <Icon name="build" size="16" />
-            <span>2. Guía de Cada Botón ("Pa' qué")</span>
+            <span>2. Guía de Botones</span>
           </button>
           <button 
             :class="['manual-tab-btn', { active: manualActiveTab === 'protocols' }]" 
@@ -754,203 +1291,584 @@
             <Icon name="biotech" size="16" />
             <span>3. Protocolos de Ensayo</span>
           </button>
+          <button 
+            :class="['manual-tab-btn', { active: manualActiveTab === 'faq' }]" 
+            @click="manualActiveTab = 'faq'"
+          >
+            <Icon name="psychology" size="16" />
+            <span>4. Fundamentos & FAQ</span>
+          </button>
         </div>
 
         <div class="dialog-body manual-dialog-body">
           <!-- Pestaña 1: Flujo Experimental Paso a Paso -->
           <div v-if="manualActiveTab === 'flow'" class="manual-section-content">
             <div class="manual-hero-banner">
-              <Icon name="science" size="22" />
+              <Icon name="science" size="24" />
               <div>
-                <h4>Filosofía del Flujo Científico In Silico</h4>
-                <p>En la biología y en este software, un error de apareamiento (ej: A–G) marca una discordancia pero no revela por sí solo cuál es la base correcta original. La corrección requiere obligatoriamente una <strong>hebra molde parental o referencia homóloga</strong>.</p>
+                <h4>Arquitectura Científica del Flujo Experimental (Ciclo Celular G1 → S → G2/M)</h4>
+                <p>Basado en <strong>Alberts et al. (Molecular Biology of the Cell 7.ª ed. cap. 5 y 9)</strong>, <strong>Lodish et al. (9.ª ed.)</strong> y <strong>Lehninger (8.ª ed.)</strong>: La célula no copia ADN a ciegas. El control de calidad genómico avanza por puntos de control estrictos donde cada error tiene su momento biológico, causa físico-química y maquinaria de resolución especializada.</p>
               </div>
             </div>
 
+            <!-- Mapa Visual de Transición por Fases del Ciclo Celular -->
+            <div class="manual-pipeline-roadmap">
+              <div class="roadmap-phase g1">
+                <div class="rm-header">
+                  <span class="rm-tag">FASE G1</span>
+                  <h5>Vigilancia del Molde</h5>
+                </div>
+                <div class="rm-content">
+                  <span>1. Molde Parental Inmutable</span>
+                  <span class="rm-arrow">↓</span>
+                  <span>2. Daño Físico-Químico / CRISPR</span>
+                  <span class="rm-arrow">↓</span>
+                  <span class="rm-alert">Checkpoint G1/S (Freno p53 / p21)</span>
+                  <span class="rm-arrow">↓</span>
+                  <span>3. Reparación Pre-Replicativa (BER/NER)</span>
+                </div>
+                <div class="rm-footer cleared">Punto R Despejado → Pase a Fase S</div>
+              </div>
+
+              <div class="roadmap-connector">
+                <Icon name="arrow_forward" size="20" />
+              </div>
+
+              <div class="roadmap-phase s">
+                <div class="rm-header">
+                  <span class="rm-tag">FASE S</span>
+                  <h5>Síntesis Semiconservativa</h5>
+                </div>
+                <div class="rm-content">
+                  <span>4. Horquilla de Replicación 5'→3'</span>
+                  <span class="rm-arrow">↓</span>
+                  <span>Triple Filtro de Fidelidad:</span>
+                  <small>• Polimerasa (~10⁻⁵)</small>
+                  <small>• Proofreading 3'→5' (~10⁻⁷)</small>
+                  <small>• Escaneo MMR MutS/MutL (~10⁻¹⁰)</small>
+                  <span class="rm-arrow">↓</span>
+                  <span>Reporte Diff de Mutaciones</span>
+                </div>
+                <div class="rm-footer s-done">Genoma Duplicado al 100%</div>
+              </div>
+
+              <div class="roadmap-connector">
+                <Icon name="arrow_forward" size="20" />
+              </div>
+
+              <div class="roadmap-phase g2">
+                <div class="rm-header">
+                  <span class="rm-tag">FASE G2 / M</span>
+                  <h5>Integridad Pre-Mitótica</h5>
+                </div>
+                <div class="rm-content">
+                  <span>5. Detección Roturas Bicatenarias (DSB)</span>
+                  <span class="rm-arrow">↓</span>
+                  <span>Cromatida Hermana Disponible:</span>
+                  <small>• Vía HDR: Fiel sin cicatriz (RAD51/BRCA)</small>
+                  <small>• Vía NHEJ: Emergencia con cicatriz (Ku70/80)</small>
+                </div>
+                <div class="rm-footer mit-done">Aprobación para Mitosis (M)</div>
+              </div>
+            </div>
+
+            <!-- Acordeón Detallado de los 5 Pasos -->
             <div class="flow-steps-accordion">
               <div class="flow-step-item">
                 <div class="step-badge step-1">Paso 1</div>
                 <div class="step-info">
-                  <h5>Molde Inicial Validado (Hebra Parental)</h5>
-                  <p>La cadena de entrada que escribes o seleccionas se fija como el <strong>molde de referencia inmutable</strong>. El sistema valida las bases (A, T, C, G) en tiempo real, bloqueando el render 3D si hay caracteres espurios (ej: 'O' o 'X') para garantizar la integridad estequiométrica.</p>
+                  <h5>Paso 1 (Fase G1): Establecimiento y Validación del Molde Parental Inmutable</h5>
+                  <p>
+                    <strong>Dónde ocurre:</strong> En el núcleo de la célula antes de cualquier evento de duplicación genómica.
+                    <br>
+                    <strong>Fundamento Biológico:</strong> En G1 la célula crece metabólicamente y cuenta únicamente con una copia de cada molécula de ADN bicatenario. La cadena ingresada en el laboratorio se establece como la <strong>plantilla parental de referencia inmutable</strong>. El motor valida reactivamente las bases nitrogenadas (A, T, C, G), calcula la longitud en pares de bases (bp), el porcentaje GC y la complementaria antiparalela Watson-Crick (5'→3' frente a 3'→5'), generando la doble hélice B-DNA tridimensional reactiva.
+                  </p>
                 </div>
               </div>
 
               <div class="flow-step-item">
                 <div class="step-badge step-2">Paso 2</div>
                 <div class="step-info">
-                  <h5>Generación de Copia de Trabajo</h5>
-                  <p>Al pulsar <em>"Copiar Secuencia"</em>, la maquinaria celular clona la hebra asegurando una identidad del 100%. Las mutaciones posteriores se realizan sobre esta copia de trabajo, protegiendo el molde original.</p>
+                  <h5>Paso 2 (Fase G1): Daño en el Molde y Freno del Checkpoint G1/S (Sensor p53 / p21)</h5>
+                  <p>
+                    <strong>Dónde y cuándo ocurre:</strong> En la doble hebra parental intacta antes de ingresar a la síntesis.
+                    <br>
+                    <strong>Cómo ocurre el error (Módulo 1.1):</strong>
+                    <br>
+                    • <em>Radiación Ultravioleta (Luz UV):</em> Los fotones UV provocan dímeros covalentes de ciclobutano entre timinas adyacentes (T-T) o citosinas (C→T), distorsionando físicamente la hélice.
+                    <br>
+                    • <em>Estrés Oxidativo (ROS):</em> Los radicales libres del metabolismo mitocondrial oxidan la guanina a 8-oxo-7,8-dihidroguanina (8-oxo-G), que aparea incorrectamente con adenina y genera transversiones G→T.
+                    <br>
+                    • <em>Desaminación Espontánea:</em> Ataque hidrolítico que arranca el grupo amino (-NH₂) de la citosina, transformándola en uracilo (U), que se lee como timina (transición C→T).
+                    <br>
+                    • <em>Edición Quirúrgica CRISPR:</em> Endonucleasas Cas9 dirigidas por ARN guía que generan una alteración diana específica (sustitución, inserción o deleción).
+                    <br>
+                    <strong>Respuesta Biológica (Módulo 1.2):</strong> El guardián del genoma <strong>p53 es fosforilado y estabilizado por quinasas sensoras ATM/ATR</strong>. p53 transcribe de inmediato el inhibidor de quinasas dependientes de ciclina <strong>p21</strong>, el cual inactiva al complejo Ciclina E/CDK2. Esto <strong>congela el ciclo celular en el Punto de Restricción R (G1/S)</strong>, impidiendo terminantemente que la célula replique un ADN dañado. Si el daño no es corregido, p53 conduce a la célula a senescencia o apoptosis programada.
+                  </p>
                 </div>
               </div>
 
               <div class="flow-step-item">
                 <div class="step-badge step-3">Paso 3</div>
                 <div class="step-info">
-                  <h5>Inducción de Daño Molecular</h5>
-                  <p>Se induce una lesión o alteración sobre la copia de trabajo mediante 3 vías: mutación dirigida CRISPR (sustitución, inserción, deleción), replicación estocástica celular con tasa de error de polimerasa, o rotura bicatenaria (DSB).</p>
+                  <h5>Paso 3 (Fase G1): Reparación Pre-Replicativa del Molde (Módulo 1.3 - BER / NER / Homología)</h5>
+                  <p>
+                    <strong>Cómo se resuelve:</strong> Durante el arresto en G1, la célula activa vías de reparación por escisión:
+                    <br>
+                    • <em>Reparación por Escisión de Bases (BER):</em> ADN glicosilasas eliminan bases oxidadas o desaminadas (como uracilos u 8-oxo-G), una AP endonucleasa corta el esqueleto de azúcar y la ADN polimerasa β rellena el hueco guiada por la hebra complementaria intacta.
+                    <br>
+                    • <em>Reparación por Escisión de Nucleótidos (NER):</em> Complejos escinucleasa cortan un oligonucleótido de 24-32 bases alrededor del dímero UV distorsionado y la polimerasa sintetiza el parche.
+                    <br>
+                    <strong>Cinética Enzimática Real vs Control Asistido:</strong> En la célula real, las enzimas de escisión no reparan mágicamente al 100% de golpe; tienen una probabilidad de reconocimiento y pueden saturarse ante dosis elevadas. Por ello, el laboratorio incorpora el modo <em>"Cinética Enzimática Real (Probabilístico)"</em> con slider de <strong>Capacidad / Eficiencia de Escisión (50% a 98%)</strong>:
+                    <br>
+                    • Si alguna lesión escapa a la escisión en ese ciclo, <strong>el sensor p53 y p21 permanecen en alerta roja</strong> y el Punto R sigue bloqueado.
+                    <br>
+                    • La célula puede ejecutar un segundo ciclo enzimático o recurrir al <em>Control Asistido (100% Fiel)</em> para restaurar el molde al 100%, desactivando p53/p21 y autorizando el ingreso a Fase S.
+                  </p>
                 </div>
               </div>
 
               <div class="flow-step-item">
                 <div class="step-badge step-4">Paso 4</div>
                 <div class="step-info">
-                  <h5>Detección Automática de Daño (MMR & Diff)</h5>
-                  <p>Al ocurrir cualquier mutación, el motor compara instantáneamente la cadena mutada contra la <strong>complementaria canónica del molde inicial</strong>. Detecta apareamientos erróneos no canónicos (A-G, C-T) y calcula el reporte Diff sin intervención manual.</p>
+                  <h5>Paso 4 (Fase S): Duplicación Celular Semiconservativa y Triple Filtro de Fidelidad</h5>
+                  <p>
+                    <strong>Dónde y cuándo ocurre:</strong> En la horquilla de replicación durante la Fase S de síntesis.
+                    <br>
+                    <strong>Módulo 2.1:</strong> La ADN polimerasa abre la doble hélice y sintetiza la hebra hija complementaria $5'\rightarrow3'$. El usuario puede optar por <em>Copia Fiel</em> (100% de pureza) o <em>Replicación Estocástica</em> modulando la tasa de error de polimerasa mediante el slider.
+                    <br>
+                    <strong>El Triple Filtro Biológico de Fidelidad Celular (Alberts cap. 5):</strong>
+                    <br>
+                    1. <em>Selección de Base por ADN Polimerasa (~10⁻⁵):</em> La geometría del bolsillo catalítico selecciona dNTPs complementarios Watson-Crick. Tasa de error inicial: ~1 error cada 100.000 bases.
+                    <br>
+                    2. <em>Corrección de Pruebas ("Proofreading" ~10⁻⁷):</em> El dominio exonucleasa 3'→5' de la polimerasa retrocede y extirpa monómeros mal apareados en el extremo 3'-OH.
+                    <br>
+                    3. <em>Reparación de Apareamientos Incorrectos Post-Replicativo (MMR ~10⁻¹⁰):</em> Las proteínas <strong>MutS y MutL</strong> escanean la hebra recién sintetizada reconociendo desajustes (ej. pares A-G o C-T), cortan la hebra hija y la resintetizan con fidelidad perfecta.
+                    <br>
+                    <strong>Módulos 2.2 y 2.3:</strong> Al pulsar <strong>"Escanear Apareamientos Dúplex (MMR)"</strong>, el sistema señala pares canónicos y no canónicos, y el <strong>Módulo 2.3 (Diff Inspector)</strong> desglosa cada mutación por posición, tipo y base alterada.
+                  </p>
                 </div>
               </div>
 
               <div class="flow-step-item">
                 <div class="step-badge step-5">Paso 5</div>
                 <div class="step-info">
-                  <h5>Reparación Guiada por Homología / Resolución de Cicatriz</h5>
-                  <p>Se utiliza la referencia homóloga para restaurar las bases alteradas bajo verificación estricta de fidelidad. En roturas DSB, se compara la vía HDR (alta fidelidad, sin cicatriz) con la vía NHEJ (unión directa propensa a microdeleciones).</p>
+                  <h5>Paso 5 (Fase G2 / M): Roturas Bicatenarias (DSB) y Control Pre-Mitótico (Módulos 3.1 y 3.2)</h5>
+                  <p>
+                    <strong>Dónde y cuándo ocurre:</strong> En la fase G2, después de que el genoma ha sido totalmente duplicado y antes de dividirse en mitosis (M).
+                    <br>
+                    <strong>Módulo 3.1:</strong> Se establece la coordenada de corte de una <em>Rotura de Doble Cadena (Double-Strand Break - DSB)</em> provocada por radiación ionizante o colapso de horquillas.
+                    <br>
+                    <strong>Módulo 3.2 (Resolución Mecanística):</strong>
+                    <br>
+                    • <strong>Vía HDR (Recombinación Homóloga Asistida por Cromátida Hermana):</strong> Dado que en Fase G2 <strong>la cromátida hermana idéntica recién sintetizada en Fase S está físicamente adyacente</strong>, las nucleasas resecan los extremos 5' y la recombinasa <strong>RAD51 con BRCA1/2</strong> invade la cromátida hermana para copiar fielmente la secuencia perdida. <em>Resultado: Reconstrucción molecular pura al 100% sin dejar cicatriz.</em>
+                    <br>
+                    • <strong>Vía NHEJ (Unión de Extremos No Homólogos):</strong> Si no se dispone de plantilla homóloga o la lesión ocurre en emergencia, el dímero <strong>Ku70/Ku80 con DNA-PKcs y Ligasa IV</strong> unen directamente los extremos rotos a ciegas tras un recorte nucleolítico. <em>Resultado: Resolución rápida pero propensa a pérdida de bases y cicatriz mutacional (microdeleciones).</em>
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Pestaña 2: Diccionario de Cada Botón -->
+          <!-- Pestaña 2: Diccionario Exhaustivo de Cada Botón -->
           <div v-if="manualActiveTab === 'buttons'" class="manual-section-content">
             <div class="button-guide-grid">
-              <!-- Header y Sesión -->
+              <!-- Header y Gestión de Sesión -->
               <div class="button-guide-card">
-                <div class="card-tag">Cabecera & Sesión</div>
+                <div class="card-tag">1. Cabecera, Muestras y Persistencia</div>
                 <div class="btn-entry">
                   <span class="btn-name filled"><Icon name="save" size="14" /> Guardar Experimento</span>
-                  <p>Guarda en memoria y disco (<code>saved_experiments.json</code>) el ensayo completo: molde inicial, copia, mutaciones, resultado MMR, reparación, secuencia final y diffs.</p>
+                  <p>Persiste en disco inmutable del backend el ciclo de vida completo del ensayo: molde parental, daño sufrido, activación de p53/p21, reparación ejecutada, cadena sintetizada en Fase S y reporte diff.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name tonal"><Icon name="history" size="14" /> Cargar Experimento</span>
-                  <p>Abre el catálogo de experimentos guardados para restaurar con un solo clic el estado exacto en el visor 3D, mapas y campos de edición.</p>
+                  <span class="btn-name tonal"><Icon name="history" size="14" /> Cargar Experimento (N)</span>
+                  <p>Despliega el catálogo de ensayos archivados para restaurar instantáneamente el estado molecular en el modelo 3D y todos los campos de análisis.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Restaurar a Molde</span>
-                  <p>Descarta mutaciones y roturas acumuladas en la sesión y regresa de inmediato al molde parental de partida.</p>
+                  <p>Limpia mutaciones, roturas y lesiones activas, restableciendo la doble hélice al estado inicial del molde parental.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="menu_book" size="14" /> Manual del Lab</span>
+                  <p>Abre este manual interactivo con la guía biológica paso a paso, diccionario de botones y protocolos experimentales.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="tag" size="14" /> Chips Muestras Estándar</span>
+                  <p>Cargan secuencias patrón predefinidas: <em>Control Corto (12bp)</em> equilibrado, <em>Gen Sintético (20bp)</em> representativo de un ORF, y <em>Rica en GC (64.7%)</em> para ensayar estabilidad termodinámica.</p>
                 </div>
               </div>
 
-              <!-- Entrada y Métricas -->
+              <!-- Secuenciación y Entrada -->
               <div class="button-guide-card">
-                <div class="card-tag">Entrada & Secuenciador</div>
+                <div class="card-tag">2. Secuenciación & Entrada de Datos</div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Procesar Secuencia</span>
-                  <p>Re-calcula en el backend las métricas biofísicas (longitud, %GC, distribución), actualiza la hebra antisentido y el modelo 3D.</p>
+                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Validar Molde</span>
+                  <p>Evalúa reactivamente la hebra de entrada, regenera la cadena complementaria antiparalela, calcula el porcentaje GC, conteo estequiométrico y actualiza la hélice 3D.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name tonal"><Icon name="content_copy" size="14" /> Copiar Secuencia</span>
-                  <p>Genera la copia fidedigna de trabajo con verificación de identidad al 100%, avanzando el flujo al Paso 2.</p>
+                  <span class="btn-name tonal"><Icon name="content_copy" size="14" /> Generar Copia de Trabajo</span>
+                  <p>Copia de forma fidedigna la secuencia actual para experimentar libremente sobre ella manteniendo el molde parental como referencia inmutable.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="tag" size="14" /> Muestras Estándar</span>
-                  <p>Carga instantáneamente secuencias calibradas: Control Corto (12bp), Gen Sintético (20bp) o Rica en GC (64.7%).</p>
+                  <span class="btn-name chip"><Icon name="help_outline" size="14" /> Guía del Flujo (en Stepper)</span>
+                  <p>Acceso directo desde la barra de ciclo celular al manual técnico para consultar en qué paso se encuentra el ensayo.</p>
                 </div>
               </div>
 
-              <!-- Visor 3D -->
+              <!-- Visor 3D y Controles de Cámara -->
               <div class="button-guide-card">
-                <div class="card-tag">Visor 3D (B-DNA)</div>
+                <div class="card-tag">3. Visor Macromolecular 3D & Cámara</div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="dna" size="14" /> Modo Curva / Lineal</span>
-                  <p>Alterna la forma espacial entre la ondulación orgánica natural <em>in vivo</em> o un eje rectilíneo de difracción cristalográfica.</p>
+                  <span class="btn-name chip"><Icon name="visibility" size="14" /> Curva In Vivo / Eje Lineal</span>
+                  <p>Alterna la conformación espacial del B-DNA entre curvatura molecular natural en solución acuosa nuclear y un eje recto para medición cristalográfica.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name icon-btn"><Icon name="rotate" size="14" /> Giro 360°</span>
-                  <p>Pausa o reanuda la rotación orbital continua de la macromolécula para inspección estática de enlaces.</p>
+                  <span class="btn-name icon-btn"><Icon name="fullscreen" size="14" /> Expandir / Contraer Visor</span>
+                  <p>Amplía el canvas molecular a modo cinematográfico a pantalla completa para inspeccionar detalladamente surcos mayores y menores.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name icon-btn"><Icon name="zoom" size="14" /> Zoom + / -</span>
-                  <p>Acerca o aleja la cámara virtual respecto al centro de masa de la molécula.</p>
+                  <span class="btn-name icon-btn"><Icon name="play_arrow" size="14" /> Pausar / Reanudar Rotación</span>
+                  <p>Detiene o reactiva el giro orbital automático de la doble hélice para examinar pares de bases en un ángulo fijo.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name icon-btn"><Icon name="restart_alt" size="14" /> Perspectiva Cenital</span>
-                  <p>Restablece el encuadre, inclinación y orientación inicial de la cámara 3D.</p>
+                  <span class="btn-name icon-btn"><Icon name="add" size="14" /> Zoom + / Zoom -</span>
+                  <p>Aproxima o aleja la cámara virtual respecto al centroide de la macromolécula (también disponible con la rueda del ratón).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name icon-btn"><Icon name="restart_alt" size="14" /> Resetear Perspectiva Cenital</span>
+                  <p>Centra la cámara virtual y restablece la inclinación y distancia orbital óptimas.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="touch_app" size="14" /> Clic en Peldaño / Base 3D</span>
+                  <p>Selecciona el par de bases en la escena, despliega el anillo iluminado y activa el HUD con el detalle de puentes de hidrógeno Watson-Crick.</p>
                 </div>
               </div>
 
-              <!-- Mutación y Recombinación -->
+              <!-- Track 2D y Esqueleto Azúcar-Fosfato -->
               <div class="button-guide-card">
-                <div class="card-tag">Mutagénesis</div>
+                <div class="card-tag">4. Mapa 2D & Esqueleto Azúcar-Fosfato</div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="content_cut" size="14" /> Aplicar Mutación Dirigida</span>
-                  <p>Ejecuta una edición quirúrgica (sustitución, inserción o deleción) en la coordenada seleccionada mediante tecnología conceptual CRISPR.</p>
+                  <span class="btn-name chip"><Icon name="touch_app" size="14" /> Clic en Columna de Base</span>
+                  <p>Selecciona el nucleótido exacto, enfoca la cámara 3D sobre él y auto-rellena la posición en el formulario de edición quirúrgica CRISPR.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name tonal"><Icon name="shuffle" size="14" /> Simular Duplicación Estocástica</span>
-                  <p>Sintetiza una nueva generación replicando la hebra con una probabilidad de error por base configurable del 0% al 20%.</p>
+                  <span class="btn-name chip">Esqueleto 5' [P]-[D] y 3' [D]-[P]</span>
+                  <p>Visualiza los enlaces fosfodiéster covalentes entre el grupo fosfato (P) y la desoxirribosa (D) con polaridad antiparalela estricta.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip">Puentes H (2 vs 3 líneas)</span>
+                  <p>Representa físicamente 2 puentes de hidrógeno para el par A=T y 3 puentes de hidrógeno para el par C≡G.</p>
                 </div>
               </div>
 
-              <!-- Reparación y Roturas -->
+              <!-- Fase G1: Módulos 1.1 a 1.3 -->
               <div class="button-guide-card">
-                <div class="card-tag">Reparación & Roturas (DSB)</div>
+                <div class="card-tag">5. Fase G1 · Módulos 1.1, 1.2 y 1.3</div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="wb_sunny" size="14" /> Daño Ambiental Estocástico</span>
+                  <p>Activa el inductor de lesiones ambientales: Luz UV (dímeros TT), Estrés Oxidativo ROS (8-oxo-G) o Desaminación espontánea (C→U).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="content_cut" size="14" /> Edición Quirúrgica CRISPR</span>
+                  <p>Modo de alteración dirigida con precisión de nucleótido único: sustitución puntual, inserción (+1 base) o deleción (-1 base).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="bolt" size="14" /> Inducir Lesiones / Aplicar CRISPR</span>
+                  <p>Inyecta la alteración en el molde y dispara de inmediato la alarma en el Checkpoint G1/S (p53 fosforilado y p21 activo frenando el Punto R).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="biotech" size="14" /> Cinética Enzimática Real vs Control Asistido</span>
+                  <p>Switcher en Módulo 1.3: Alterna entre el modelo biológico estocástico (probabilidad finita de escisión) y el control didáctico al 100%.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip">Slider Eficiencia de Escisión (50% - 98%)</span>
+                  <p>Regula la afinidad catalítica de las enzimas BER/NER. Si lesiones escapan al reconocimiento, p53 y p21 retienen el arresto en el Punto R.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name tonal"><Icon name="tag" size="14" /> Usar Molde Inicial</span>
+                  <p>Carga la secuencia parental original limpia en el campo de referencia homóloga para la reparación pre-replicativa.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="build" size="14" /> Ciclo de Escisión / Reparar Molde</span>
+                  <p>Ejecuta la ronda de reparación BER/NER. Reporta lesiones reparadas y posiciones que escapan, desbloqueando el Punto R al completar el 100%.</p>
+                </div>
+              </div>
+
+              <!-- Fase S: Módulos 2.1 a 2.3 -->
+              <div class="button-guide-card">
+                <div class="card-tag">6. Fase S · Módulos 2.1, 2.2 y 2.3</div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="content_copy" size="14" /> Sintetizar Hebra Hija Fiel</span>
+                  <p>Duplica la hebra con 100% de pureza y fidelidad enzimática en la horquilla de replicación semiconservativa.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="restart_alt" size="14" /> Simular con Error de Polimerasa</span>
+                  <p>Sintetiza la cadena hija incorporando errores estocásticos de polimerasa según el porcentaje ajustado en el slider (0.0% a 20.0%).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error / Complementaria</span>
+                  <p>Permite alternar entre la complementaria exacta canonizada o inyectar deliberadamente una base no apareada en el módulo MMR.</p>
+                </div>
                 <div class="btn-entry">
                   <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos Dúplex</span>
-                  <p>Comprueba cada par de bases en la doble cadena dúplex para identificar desajustes no canónicos (MMR).</p>
+                  <p>Simula el escaneo del complejo MutS/MutL post-replicativo identificando pares canónicos (verdes) y desajustes no canónicos (rojos).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error</span>
-                  <p>Introduce a propósito un apareamiento erróneo en el centro del dúplex para poner a prueba el sistema de detección.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="build" size="14" /> Reparar con Referencia</span>
-                  <p>Sustituye únicamente las bases erróneas autorizadas y respaldadas por la secuencia de referencia homóloga.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name filled hdr-color"><Icon name="shield" size="14" /> Reparar vía HDR</span>
-                  <p>Reconstruye la rotura de doble cadena con alta fidelidad asistida por plantilla homóloga (sin cicatriz).</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name tonal nhej-color"><Icon name="build" size="14" /> Reparar vía NHEJ</span>
-                  <p>Une directamente los extremos rotos sin plantilla, introduciendo cicatrices mutacionales o microdeleciones.</p>
+                  <span class="btn-name chip">Diff Inspector (Módulo 2.3)</span>
+                  <p>Muestra el contraste nucleótido a nucleótido entre el molde y la hebra sintetizada, detallando cada mutación producida durante la síntesis.</p>
                 </div>
               </div>
 
-              <!-- Auditoría y Bitácora -->
+              <!-- Fase G2/M: Módulos 3.1 & 3.2 -->
               <div class="button-guide-card">
-                <div class="card-tag">Auditoría & Trazabilidad</div>
+                <div class="card-tag">7. Fase G2/M · Módulos 3.1 & 3.2</div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Refrescar Registro</span>
-                  <p>Actualiza la bitácora con los eventos moleculares procesados más recientes por el servidor.</p>
+                  <span class="btn-name filled hdr-color"><Icon name="shield" size="14" /> Reparar vía HDR (Cromátida Hermana)</span>
+                  <p>Utiliza la cromátida hermana idéntica disponible en Fase G2 (asistida por RAD51 y BRCA1/2) para reconstruir la rotura bicatenaria limpia y sin cicatriz.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="arrow_forward" size="14" /> Cargar (en fila)</span>
-                  <p>Restaura al instante en el laboratorio la secuencia y parámetros exactos del evento seleccionado.</p>
+                  <span class="btn-name tonal nhej-color"><Icon name="build" size="14" /> Reparar vía NHEJ (Unión Extremos)</span>
+                  <p>Simula la ligación de emergencia directa sin plantilla asistida por Ku70/80, propensa a pérdida de bases y cicatriz mutacional (microdeleción).</p>
+                </div>
+              </div>
+
+              <!-- Auditoría y Diálogos -->
+              <div class="button-guide-card">
+                <div class="card-tag">8. Módulo 4 · Auditoría & Modales</div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Refrescar Registro</span>
+                  <p>Recarga desde el backend la tabla de auditoría con la trazabilidad completa de eventos, secuencias y dictámenes moleculares.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="arrow_forward" size="14" /> Cargar (en fila de tabla)</span>
+                  <p>Restaura al instante en la pantalla de simulación el estado exacto de ese evento auditado.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled">Confirmar y Guardar (Modal)</span>
+                  <p>Registra en el archivo permanente JSON el experimento con título personalizado y notas de laboratorio del investigador.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled">Cargar en Lab (Modal)</span>
+                  <p>Restaura el experimento guardado completo: secuencias, conformación 3D, mutaciones y reporte diff.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Pestaña 3: Protocolos de Ensayo -->
+          <!-- Pestaña 3: Protocolos de Ensayo Guiados -->
           <div v-if="manualActiveTab === 'protocols'" class="manual-section-content">
             <div class="protocol-card">
-              <h4>Protocolo A: Ensayo de Mutación Quirúrgica y Reparación por Homología</h4>
+              <div class="protocol-card-header">
+                <span class="proto-tag g1">Protocolo A (Fase G1)</span>
+                <h4>Daño Ambiental en G1, Cinética Enzimática de Escisión y Checkpoint G1/S</h4>
+              </div>
               <ol class="protocol-steps-list">
-                <li>Verifica que la secuencia inicial esté validada (Paso 1).</li>
-                <li>Pulsa <strong>"Copiar Secuencia"</strong> para fijar la copia de trabajo (Paso 2).</li>
-                <li>Haz clic en la base 4 del Mapa 2D o de la hélice 3D.</li>
-                <li>Selecciona el tipo <em>"Sustitución"</em> y la base <em>"G"</em> en el panel CRISPR.</li>
-                <li>Pulsa <strong>"Aplicar Mutación Dirigida"</strong> (el sistema detecta el error en el Paso 4 automáticamente).</li>
-                <li>Baja al panel <em>3.2 Reparación Guiada por Referencia</em> y pulsa <strong>"Usar Inicial"</strong> y luego <strong>"Reparar con Referencia"</strong>.</li>
-                <li>La secuencia vuelve a quedar restaurada al 100% (Paso 5). Pulsa <strong>"Guardar Experimento"</strong> para conservarlo.</li>
+                <li>En la cabecera, haz clic en el chip <strong>"Control Corto (12bp)"</strong> para fijar un molde parental limpio.</li>
+                <li>Observa el Stepper superior en <em>"Paso 1: Molde Parental Validado"</em> y el Checkpoint G1/S en verde (Punto R despejado).</li>
+                <li>En el <strong>Módulo 1.1</strong>, selecciona <em>"Daño Ambiental Estocástico"</em> y el agente <em>"Radiación Ultravioleta (Luz UV)"</em> con intensidad al 40%.</li>
+                <li>Pulsa <strong>"Inducir Lesiones Ambientales en el Molde"</strong>.</li>
+                <li>Observa el <strong>Módulo 1.2</strong>: El Checkpoint G1/S pasa a estado de alerta roja con p53 fosforilado y p21 activo frenando el ciclo en G1 para impedir replicar un molde lesionado.</li>
+                <li>Desplázate al <strong>Módulo 1.3</strong> a la derecha, pulsa <strong>"Usar Molde Inicial"</strong>.</li>
+                <li>Deja activo el modo <strong>"Cinética Enzimática Real"</strong> y ajusta la eficiencia al 75%.</li>
+                <li>Pulsa <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong>: comprueba cómo se reparan lesiones pero algunas escapan por saturación, manteniendo el Punto R en alerta.</li>
+                <li>Pulsa de nuevo <strong>"Ejecutar Ciclo"</strong> (segunda ronda de escisión celular) o cambia a <strong>"Control Asistido"</strong>: al alcanzar el 100%, p53/p21 se inactivan y el Punto R autoriza el avance a Fase S.</li>
               </ol>
             </div>
 
             <div class="protocol-card">
-              <h4>Protocolo B: Roturas Bicatenarias (DSB) y Comparación HDR vs NHEJ</h4>
+              <div class="protocol-card-header">
+                <span class="proto-tag s">Protocolo B (Fase S)</span>
+                <h4>Replicación en Fase S, Filtro de Fidelidad MMR y Reporte Diff Inspector</h4>
+              </div>
               <ol class="protocol-steps-list">
-                <li>Carga la muestra <em>"Gen Sintético (20bp)"</em> y pulsa <em>"Copiar Secuencia"</em>.</li>
-                <li>En la sección 3.3, fija la rotura en la posición 8.</li>
-                <li>Pulsa <strong>"Reparar vía NHEJ"</strong>: observa la escisión de fragmentos y la cicatriz molecular resultante.</li>
-                <li>Pulsa <strong>"Restaurar a Molde"</strong> en la cabecera para restablecer el gen intacto.</li>
-                <li>Ahora pulsa <strong>"Reparar vía HDR"</strong>: observa la reconstitución limpia y perfecta asistida por la referencia homóloga.</li>
+                <li>Con el molde reparado en G1, desplázate a la <strong>Etapa 2 (Fase S)</strong>.</li>
+                <li>En el <strong>Módulo 2.1</strong>, selecciona <em>"Replicación con Error Estocástico"</em> y ajusta la tasa de error al 5.0%.</li>
+                <li>Pulsa <strong>"Simular Duplicación con Error de Polimerasa"</strong>.</li>
+                <li>La nueva hebra sintetizada se carga de inmediato en el <strong>Módulo 2.2</strong> (Filtro MMR Dúplex).</li>
+                <li>Pulsa <strong>"Escanear Apareamientos Dúplex (MMR)"</strong>: comprueba las bases no canónicas detectadas por la maquinaria MutS/MutL post-horquilla.</li>
+                <li>Revisa el <strong>Módulo 2.3 (Diff Inspector)</strong> para ver el desglose exacto de las sustituciones, inserciones o deleciones ocurridas en la copia.</li>
               </ol>
+            </div>
+
+            <div class="protocol-card">
+              <div class="protocol-card-header">
+                <span class="proto-tag g2">Protocolo C (Fase G2/M)</span>
+                <h4>Roturas Bicatenarias (DSB) en G2/M y Comparación Mecanística HDR vs NHEJ</h4>
+              </div>
+              <ol class="protocol-steps-list">
+                <li>Desplázate a la <strong>Etapa 3 (Fase G2/M)</strong> donde el genoma se encuentra completamente duplicado y cada cromosoma dispone de su cromátida hermana.</li>
+                <li>En el <strong>Módulo 3.1</strong>, define el punto de rotura en la posición 4 u 8.</li>
+                <li>Pulsa <strong>"Reparar vía NHEJ"</strong>: observa la ligación directa de emergencia y la aparición de la cicatriz molecular o microdeleción.</li>
+                <li>Pulsa <strong>"Restaurar a Molde"</strong> en la cabecera para regresar al estado intacto.</li>
+                <li>Ahora pulsa <strong>"Reparar vía HDR"</strong>: observa la reconstitución limpia y perfecta sin cicatriz, asistida por la cromátida hermana presente en G2.</li>
+                <li>Pulsa el botón superior <strong>"Guardar Experimento"</strong> para registrar el ensayo completo en el <strong>Módulo 4 (Auditoría)</strong>.</li>
+              </ol>
+            </div>
+
+            <div class="protocol-card">
+              <div class="protocol-card-header">
+                <span class="proto-tag crispr">Protocolo D (CRISPR & Auditoría)</span>
+                <h4>Edición Quirúrgica CRISPR, Desfase del Marco (Frameshift) y Auditoría Inmutable</h4>
+              </div>
+              <ol class="protocol-steps-list">
+                <li>Haz clic sobre la base en la posición 2 del <strong>Mapa de Alineamiento 2D</strong>.</li>
+                <li>En el <strong>Módulo 1.1</strong>, cambia al modo <em>"Edición Quirúrgica CRISPR"</em>.</li>
+                <li>Comprueba que la posición se rellenó automáticamente en 2. Selecciona tipo <em>"Inserción (+1 Base)"</em> y escoge la base <strong>"A"</strong>.</li>
+                <li>Pulsa <strong>"Aplicar Mutación Dirigida CRISPR"</strong>: comprueba el desfase (frameshift) en la cadena y la alerta del sensor p53 en el Punto R.</li>
+                <li>Abre el <strong>Módulo 4 (Auditoría)</strong> para comprobar la bitácora criptográfica inmutable con el registro del evento EXP.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Pestaña 4: Fundamentos, FAQ & Bibliografía -->
+          <div v-if="manualActiveTab === 'faq'" class="manual-section-content">
+            <div class="faq-container">
+              <!-- Nueva FAQ sobre Probabilidad y Cinética de Reparación -->
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿La reparación del molde (BER/NER) se hace con probabilidad según la realidad biológica?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    <strong>Fundamento Bioquímico (Alberts cap. 5; Lehninger cap. 25):</strong>
+                    <br>
+                    <strong>SÍ.</strong> En la célula viva, las enzimas de reparación (ADN glicosilasas para BER y complejos TFIIH/XPC para NER) no tienen un interruptor mágico que repare al 100% de manera instantánea.
+                    <br>
+                    Operan bajo <strong>cinética enzimática de colisión (Km, kcat)</strong>:
+                    <br>
+                    1. <em>Probabilidad finita de escisión:</em> Cada aducto o fotodímero tiene una probabilidad estocástica de ser reconocido y extirpado por unidad de tiempo.
+                    <br>
+                    2. <em>Saturación por sobrecarga:</em> Si la exposición a luz UV o ROS es alta, la concentración nuclear de glicosilasas y polimerasa β se satura. Algunas lesiones <strong>escapan</strong> a la primera ronda de inspección.
+                    <br>
+                    3. <em>Respuesta del Checkpoint G1/S:</em> Esta es precisamente la razón de ser de <strong>p53 y p21</strong>. Si una sola lesión escapa a la escisión, el sensor p53 permanece fosforilado y retiene a la célula en G1. Si la célula no consigue limpiar el molde tras varios ciclos, p53 activa la apoptosis para evitar colapsos letales en la horquilla de replicación de Fase S.
+                  </p>
+                </div>
+              </div>
+
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Por qué el laboratorio está ordenado en G1 → S → G2/M y qué pasaba con el "3.2 arriba y 3.1 abajo" de antes?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    <strong>Resolución Biológica:</strong> En versiones tempranas del software existía una confusión estructural: el módulo de reparación con molde se colocó antes del escaneo de desapareamientos, pero con numeraciones desfasadas ("3.2 arriba y 3.1 abajo").
+                    <br>
+                    Esto era biológicamente incorrecto porque mezclaba eventos pre-replicativos con post-replicativos. En la célula real:
+                    <br>
+                    • <strong>Fase G1 (Módulos 1.1 a 1.3):</strong> La célula solo tiene el molde parental sin duplicar. Las lesiones son ambientales o mutagenéticas, y la célula las repara antes de replicar mediante BER/NER para no transferir el error a la descendencia.
+                    <br>
+                    • <strong>Fase S (Módulos 2.1 a 2.3):</strong> Ocurre la replicación activa. Aquí y solo aquí la ADN polimerasa comete errores al incorporar dNTPs en la horquilla, y actúa el filtro MMR post-replicativo.
+                    <br>
+                    • <strong>Fase G2/M (Módulos 3.1 y 3.2):</strong> El ADN ya se duplicó. Si hay roturas bicatenarias (DSB), la célula puede usar la cromátida hermana idéntica para hacer Recombinación Homóloga (HDR) limpia, o recurrir a NHEJ si hay emergencia.
+                    <br>
+                    La numeración actual refleja con precisión cristalina esta cronología biológica canónica.
+                  </p>
+                </div>
+              </div>
+
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Por qué es matemáticamente imposible que un sistema repare un desapareamiento (mismatch) sin hebra molde?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    <strong>Regla de Oro de la Biología Molecular:</strong> Cuando el sistema detecta un desapareamiento, por ejemplo un par erróneo <strong>A — C</strong>, físicamente ambos nucleótidos son bases químicas normales.
+                    <br>
+                    El complejo de reparación no tiene forma física de "adivinar" si la secuencia original era un par canónico <strong>A — T</strong> (donde la C es la equivocada) o un par canónico <strong>G — C</strong> (donde la A es la equivocada).
+                    <br>
+                    Por esta razón, la naturaleza utiliza marcadores epigenéticos (como hemimetilación de adeninas por la metilasa Dam en procariotas o mellas en la hebra retardada por PCNA en eucariotas) para identificar cuál es la hebra molde parental auténtica. Sin una <em>hebra molde parental o referencia homóloga</em>, el sistema tendría un 50% de probabilidad de fijar la mutación en vez de corregirla.
+                  </p>
+                </div>
+              </div>
+
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Cómo logra la célula copiar 3.000 millones de nucleótidos con solo ~3 errores? (El Triple Filtro)</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    Basado en <strong>Alberts cap. 5</strong>: Ningún proceso químico aislado tiene la energía libre suficiente para distinguir pares de bases con una precisión de 1 en 1.000 millones. La fidelidad extrema se consigue multiplicando tres filtros probabilísticos independientes:
+                    <br>
+                    1. <em>Apareamiento de bases en el sitio activo de la polimerasa:</em> Error de ~1 cada 10⁵ nt.
+                    <br>
+                    2. <em>Corrección de pruebas exonucleolítica 3'→5' (Proofreading):</em> Reduce el error en 100 veces, alcanzando ~1 cada 10⁷ nt.
+                    <br>
+                    3. <em>Reparación post-replicativa de desapareamientos (MMR):</em> Las enzimas MutS/MutL rastrean distorsiones en la hebra hija y reducen el error residual en otro factor de 100 a 1.000, logrando una fidelidad global de <strong>~1 error cada 10⁹ a 10¹⁰ nucleótidos</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Por qué la Recombinación Homóloga (HDR) solo puede operar en Fase G2/S y no en G1?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    <strong>Fundamento Celular:</strong> Para que la vía HDR reconstruya una rotura de doble cadena (DSB) sin perder información, necesita una molécula de ADN idéntica que actúe como molde de copia.
+                    <br>
+                    En Fase G1, la célula solo dispone del cromosoma homólogo de origen materno o paterno, el cual contiene polimorfismos alélicos y no está alineado físicamente.
+                    <br>
+                    En contraste, tras la replicación en Fase S y durante la Fase G2, <strong>cada cromosoma dispone de su cromátida hermana perfectamente idéntica</strong>, mantenida a escasos nanómetros mediante anillos proteicos de <em>cohesina</em>. Esto permite que RAD51 y BRCA1/2 invadan la cromátida hermana y restauren el ADN con 100% de fidelidad sin cicatriz.
+                  </p>
+                </div>
+              </div>
+
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Qué ocurre si la célula elude el Punto de Restricción R en G1/S sin reparar el daño?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    Si el sensor <strong>p53 está mutado</strong> (la alteración genética más común en neoplasias humanas, presente en más del 50% de tumores) o la proteína p21 no se expresa, la célula ingresa a Fase S portando lesiones en el molde.
+                    <br>
+                    Al llegar la horquilla de replicación, la ADN polimerasa colapsa frente a los dímeros de timina o las 8-oxo-guaninas, provocando síntesis translesión altamente mutagénica, roturas cromosómicas descontroladas, aneuploidías e inestabilidad genómica masiva.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Fuentes Bibliográficas -->
+              <div class="biblio-box">
+                <div class="biblio-header">
+                  <Icon name="menu_book" size="20" />
+                  <h6>Referencias Bibliográficas Canónicas del Modelo</h6>
+                </div>
+                <ul class="biblio-list">
+                  <li>
+                    <strong>Alberts, B., Johnson, A., Lewis, J., Morgan, D., Raff, M., Roberts, K., & Walter, P. (2022).</strong>
+                    <em>Molecular Biology of the Cell</em> (7.ª edición). W. W. Norton & Company.
+                    <br>
+                    <small>• Capítulo 5: "DNA Replication, Repair, and Recombination" (mecanismos de polimerasas, MMR MutS/MutL, BER, NER, DSB, HDR y NHEJ).</small>
+                    <br>
+                    <small>• Capítulo 9: "The Cell Cycle" (sistema de control del ciclo celular, sensor p53, inhibidor p21, complejos Ciclina-CDK y punto de restricción G1/S).</small>
+                  </li>
+                  <li>
+                    <strong>Lodish, H., Berk, A., Kaiser, C. A., Krieger, M., Bretscher, A., Ploegh, H., Martin, K. C., Yaffe, M. B., & Amon, A. (2021).</strong>
+                    <em>Molecular Cell Biology</em> (9.ª edición). Macmillan Learning.
+                    <br>
+                    <small>• Capítulo 5: "Molecular Genetic Mechanisms" (fidelidad de replicación y mutagénesis).</small>
+                    <br>
+                    <small>• Capítulo 9: "Cell Cycle Control and Checkpoints" (regulación del punto de restricción R y respuesta al daño en el ADN).</small>
+                  </li>
+                  <li>
+                    <strong>Nelson, D. L., & Cox, M. M. (2021).</strong>
+                    <em>Lehninger Principles of Biochemistry</em> (8.ª edición). W. H. Freeman.
+                    <br>
+                    <small>• Capítulo 25: "DNA Metabolism: Replication, Repair, and Recombination" (estequiometría de enlaces de hidrógeno, química de la polimerización 5'→3' y termodinámica del B-DNA).</small>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="dialog-footer">
-          <span class="doc-file-hint font-mono">Documento completo persistido en: MANUAL_LABORATORIO_ADN.txt</span>
+          <span class="doc-file-hint font-mono">Manual completo persistido en: MANUAL_LABORATORIO_ADN.txt</span>
           <button class="md3-button-filled" @click="showManualDialog = false">
             <span>Entendido, Volver al Laboratorio</span>
           </button>
@@ -985,6 +1903,14 @@ const controlledForm = ref({
   newBase: 'G'
 });
 
+// Modos de daño G1 (Ambiental vs CRISPR)
+const g1DamageMode = ref('environmental'); // 'environmental' | 'crispr'
+const envAgent = ref('uv_radiation'); // 'uv_radiation' | 'oxidative_ros' | 'deamination'
+const envIntensity = ref(0.25);
+const envDamageResult = ref(null);
+
+// Modos de Replicación Fase S (Fiel vs Estocástica)
+const sReplicationMode = ref('stochastic'); // 'faithful' | 'stochastic'
 const mutationRate = ref(0.02);
 const diffResult = ref(null);
 
@@ -996,6 +1922,8 @@ const duplexStrand = ref('');
 const mismatchResult = ref(null);
 const referenceStrand = ref('');
 const repairResult = ref(null);
+const repairMode = ref('stochastic'); // 'stochastic' | 'deterministic'
+const repairEfficiency = ref(0.85); // 85% de capacidad de escisión por defecto
 
 // Fase 1: Roturas Bicatenarias (DSB)
 const breakPosition = ref(4);
@@ -1005,6 +1933,11 @@ const breakResult = ref(null);
 const experimentLogs = ref([]);
 const savedExperimentsList = ref([]);
 const showLoadDialog = ref(false);
+const showSaveDialog = ref(false);
+const saveExpForm = ref({
+  name: '',
+  notes: ''
+});
 const showManualDialog = ref(false);
 const manualActiveTab = ref('flow');
 const experimentNotification = ref(null);
@@ -1014,21 +1947,72 @@ const isFullyRepaired = computed(() => {
   return repairResult.value?.matches_reference === true || (breakResult.value?.matches_initial === true && diffResult.value?.difference_count === 0);
 });
 
+const isMoldDamaged = computed(() => {
+  if (!initialMoldSequence.value) return false;
+  return sequenceInput.value.trim().toUpperCase() !== initialMoldSequence.value.trim().toUpperCase();
+});
+
+const currentCellPhase = computed(() => {
+  if (breakResult.value) return 'G2';
+  if (copyNotification.value || (lastMutationApplied.value && lastMutationApplied.value.type === 'stochastic_replication') || (mismatchResult.value && mismatchResult.value.strand2)) return 'S';
+  return 'G1';
+});
+
+const currentCellPhaseName = computed(() => {
+  switch (currentCellPhase.value) {
+    case 'G1': return 'Fase G1 · Molde & Checkpoint G1/S (Punto R)';
+    case 'S': return 'Fase S · Replicación & Triple Filtro MMR';
+    case 'G2': return 'Fase G2 / M · Integridad Post-Replicativa & DSB';
+    default: return 'Fase G1';
+  }
+});
+
+const checkpointG1Status = computed(() => {
+  if (!cleanSequence.value || !validationData.value?.is_valid) {
+    return {
+      state: 'idle',
+      label: 'Sin validar',
+      p53: 'Inactivo',
+      p21: 'Inactivo',
+      decision: 'Introduce una secuencia válida de molde.',
+      risk: null
+    };
+  }
+  if (isMoldDamaged.value) {
+    return {
+      state: 'arrested',
+      label: 'Freno en G1/S (Punto R Activo)',
+      p53: 'Estabilizado / Activo (Sensor de Daño)',
+      p21: 'Transcripción Inducida (Inhibidor CDK)',
+      decision: 'El ciclo celular se detiene en G1 para dar tiempo a reparar el molde.',
+      risk: 'Alberts cap. 9 / Lodish cap. 9: La célula no copia un ADN dañado a ciegas. Si la lesión no se repara, p53 activa Apoptosis para no replicar un genoma roto.'
+    };
+  }
+  return {
+    state: 'cleared',
+    label: 'Punto R Superado (Molde Fiel)',
+    p53: 'Nivel basal constitutivo',
+    p21: 'Inactivo (CDKs operativas)',
+    decision: 'Molde íntegro verificado. Célula autorizada a entrar en Fase S (Replicación).',
+    risk: null
+  };
+});
+
 const currentStep = computed(() => {
-  if (repairResult.value || (breakResult.value && breakResult.value.status.includes('repaired'))) return 5;
-  if ((diffResult.value && diffResult.value.difference_count > 0) || (mismatchResult.value && mismatchResult.value.mismatch_count > 0)) return 4;
-  if (lastMutationApplied.value) return 3;
-  if (copyNotification.value) return 2;
+  if ((breakResult.value && breakResult.value.status) || isFullyRepaired.value) return 5;
+  if ((diffResult.value && (diffResult.value.difference_count || 0) > 0) || (mismatchResult.value && (mismatchResult.value.mismatch_count || 0) > 0)) return 4;
+  if (repairResult.value && repairResult.value.status) return 3;
+  if (isMoldDamaged.value || (lastMutationApplied.value && lastMutationApplied.value.type !== 'stochastic_replication')) return 2;
   return 1;
 });
 
 const currentStepName = computed(() => {
   switch (currentStep.value) {
-    case 1: return 'Molde Inicial Validado';
-    case 2: return 'Copia de Trabajo Activa';
-    case 3: return 'Daño Molecular Inducido';
-    case 4: return 'Detección de Daño (MMR/Diff)';
-    case 5: return isFullyRepaired.value ? 'Restaurado por Homología' : 'Reparación / Cicatriz';
+    case 1: return 'G1: Molde Inicial Validado';
+    case 2: return 'G1: Freno Checkpoint G1/S (p53 / p21)';
+    case 3: return 'G1: Molde Reparado (Vía Homología / BER)';
+    case 4: return 'S: Replicación & Triple Filtro MMR';
+    case 5: return 'G2/M: Supervisión Post-Replicativa & DSB';
     default: return 'Inicio';
   }
 });
@@ -1046,6 +2030,28 @@ function formatDate(isoStr) {
   }
 }
 
+function formatStatusText(status) {
+  if (!status) return 'Completado';
+  const s = status.toUpperCase();
+  switch (s) {
+    case 'COMPLETED': return 'Completado';
+    case 'REPAIRED_HIGH_FIDELITY':
+    case 'REPAIRED_CLEAN_HDR': return 'Restaurado (HDR)';
+    case 'REPAIRED_PRONE_TO_SCAR':
+    case 'REPAIRED_SCARRED_NHEJ': return 'Cicatriz (NHEJ)';
+    case 'FULLY_REPAIRED':
+    case 'REPAIRED_MATCH':
+    case 'REPAIRED_FULL_MATCH': return 'Restaurado 100%';
+    case 'PARTIAL_REPAIR':
+    case 'PARTIALLY_REPAIRED': return 'Reparación Parcial';
+    case 'MUTATED': return 'Secuencia Mutada';
+    case 'ALTERED': return 'Secuencia Alterada';
+    case 'INTACT':
+    case 'COPIED_EXACT': return 'Molde Intacto';
+    default: return status.replace(/_/g, ' ');
+  }
+}
+
 function formatMutationLabel(mut) {
   if (!mut) return 'Sin mutación';
   if (mut.type === 'substitution') {
@@ -1060,8 +2066,15 @@ function formatMutationLabel(mut) {
   if (mut.type === 'stochastic_replication') {
     return `Replicación estocástica (${(mut.rate * 100).toFixed(1)}% tasa de error)`;
   }
+  if (mut.type === 'faithful_replication') {
+    return 'Copia fiel (100% fidelidad)';
+  }
+  if (mut.type === 'environmental_damage') {
+    return `${mut.agent_name || 'Daño ambiental'}: ${mut.count || 0} lesión(es)`;
+  }
   if (mut.type === 'double_strand_break') {
-    return `Rotura de ADN (DSB) en pos ${mut.break_position}`;
+    const m = (mut.method || '').includes('homology') ? 'HDR' : 'NHEJ';
+    return `Rotura de ADN (DSB) en pos ${mut.break_position} (Vía ${m})`;
   }
   return mut.type || 'Alteración puntual';
 }
@@ -1080,13 +2093,50 @@ function openLoadDialog() {
   fetchSavedExperiments();
 }
 
-async function saveCurrentExperiment() {
+function openSaveDialog() {
   const current = sequenceInput.value.trim().toUpperCase();
   if (!current) {
     alert("Introduce primero una secuencia válida para poder guardar un experimento.");
     return;
   }
 
+  let suggestedName = '';
+  if (breakResult.value) {
+    const isHDR = (breakResult.value.repair_method || '').includes('homology');
+    suggestedName = `Rotura DSB en pos. ${breakResult.value.break_position} (${isHDR ? 'Reparación HDR' : 'Unión NHEJ'})`;
+  } else if (lastMutationApplied.value) {
+    if (lastMutationApplied.value.type === 'substitution') {
+      suggestedName = `Sustitución pos ${lastMutationApplied.value.position} (${lastMutationApplied.value.original_base || '∅'} → ${lastMutationApplied.value.new_base})`;
+    } else if (lastMutationApplied.value.type === 'insertion') {
+      suggestedName = `Inserción pos ${lastMutationApplied.value.position} (+${lastMutationApplied.value.new_base})`;
+    } else if (lastMutationApplied.value.type === 'deletion') {
+      suggestedName = `Deleción pos ${lastMutationApplied.value.position}`;
+    } else if (lastMutationApplied.value.type === 'stochastic_replication') {
+      suggestedName = `Replicación estocástica (${lastMutationApplied.value.count || 0} mutaciones)`;
+    } else {
+      suggestedName = `Ensayo genético [${current.slice(0, 8)}...]`;
+    }
+  } else if (diffResult.value && diffResult.value.difference_count > 0) {
+    suggestedName = `Edición genética (${diffResult.value.difference_count} variantes)`;
+  } else {
+    suggestedName = `Control de referencia [${current.slice(0, 8)}...]`;
+  }
+
+  saveExpForm.value = {
+    name: suggestedName,
+    notes: ''
+  };
+  showSaveDialog.value = true;
+}
+
+async function confirmSaveExperiment() {
+  const nameToSave = saveExpForm.value.name.trim();
+  if (!nameToSave) {
+    alert("Por favor ingresa un nombre para el experimento.");
+    return;
+  }
+
+  const current = sequenceInput.value.trim().toUpperCase();
   try {
     loading.value = true;
     const initial = initialMoldSequence.value || referenceStrand.value || current;
@@ -1103,12 +2153,14 @@ async function saveCurrentExperiment() {
       mutationInfo = {
         type: 'double_strand_break',
         break_position: breakResult.value.break_position,
-        method: breakResult.value.repair_method
+        method: breakResult.value.repair_method,
+        scar: breakResult.value.scar
       };
     }
 
     const payload = {
-      name: `Ensayo ${current.slice(0, 10)} (${mutationInfo ? mutationInfo.type : 'control'})`,
+      name: nameToSave,
+      notes: saveExpForm.value.notes?.trim() || 'Ensayo guardado en BioSim Lab.',
       initial_sequence: initial,
       working_copy: current,
       mutation_applied: mutationInfo,
@@ -1124,13 +2176,15 @@ async function saveCurrentExperiment() {
     await fetchSavedExperiments();
     await fetchLogs();
 
+    showSaveDialog.value = false;
+
     experimentNotification.value = {
-      title: `Experimento guardado [${saved.experiment_id}]`,
-      message: `El proceso completo ha quedado registrado con éxito en el sistema.`
+      title: `Experimento guardado: "${saved.name}"`,
+      message: `Asignado código [${saved.experiment_id}]. Registrado con éxito en el cuaderno de bitácora.`
     };
     setTimeout(() => {
       experimentNotification.value = null;
-    }, 4500);
+    }, 5000);
   } catch (err) {
     alert(err.message || 'Error al guardar experimento');
   } finally {
@@ -1148,7 +2202,7 @@ function loadExperiment(exp) {
     referenceStrand.value = exp.initial_sequence;
   }
 
-  if (exp.mutation_applied) {
+  if (exp.mutation_applied && Object.keys(exp.mutation_applied).length > 0 && exp.mutation_applied.type) {
     lastMutationApplied.value = exp.mutation_applied;
     if (exp.mutation_applied.position !== undefined) {
       controlledForm.value.position = exp.mutation_applied.position;
@@ -1160,16 +2214,24 @@ function loadExperiment(exp) {
     if (exp.mutation_applied.new_base) {
       controlledForm.value.newBase = exp.mutation_applied.new_base;
     }
+  } else {
+    lastMutationApplied.value = null;
   }
 
-  if (exp.detection_result) {
+  if (exp.detection_result && Object.keys(exp.detection_result).length > 0 && Array.isArray(exp.detection_result.mismatches)) {
     mismatchResult.value = exp.detection_result;
+  } else {
+    mismatchResult.value = null;
   }
-  if (exp.repair_applied) {
+  if (exp.repair_applied && Object.keys(exp.repair_applied).length > 0 && exp.repair_applied.repaired_sequence) {
     repairResult.value = exp.repair_applied;
+  } else {
+    repairResult.value = null;
   }
-  if (exp.diff_result) {
+  if (exp.diff_result && Object.keys(exp.diff_result).length > 0 && Array.isArray(exp.diff_result.differences)) {
     diffResult.value = exp.diff_result;
+  } else {
+    diffResult.value = null;
   }
 
   validateAndProcess();
@@ -1199,11 +2261,20 @@ function loadEventOrExperiment(ev) {
     referenceStrand.value = ev.initial_sequence;
   }
 
-  if (ev.repair_result) {
+  if (ev.repair_result && Object.keys(ev.repair_result).length > 0 && ev.repair_result.repaired_sequence) {
     repairResult.value = ev.repair_result;
+  } else {
+    repairResult.value = null;
   }
-  if (ev.detection_result) {
+  if (ev.detection_result && Object.keys(ev.detection_result).length > 0 && Array.isArray(ev.detection_result.mismatches)) {
     mismatchResult.value = ev.detection_result;
+  } else {
+    mismatchResult.value = null;
+  }
+  if (ev.diff_result && Object.keys(ev.diff_result).length > 0 && Array.isArray(ev.diff_result.differences)) {
+    diffResult.value = ev.diff_result;
+  } else {
+    diffResult.value = null;
   }
 
   validateAndProcess();
@@ -1216,6 +2287,160 @@ function loadEventOrExperiment(ev) {
     experimentNotification.value = null;
   }, 4500);
 }
+
+function formatOperationName(op) {
+  switch (op) {
+    case 'environmental_damage': return 'Daño Ambiental (G1)';
+    case 'mismatch_detection': return 'Detección Dúplex (MMR)';
+    case 'copy':
+    case 'faithful_replication': return 'Duplicación Fiel (Fase S)';
+    case 'controlled_mutation': return 'Edición Dirigida (CRISPR)';
+    case 'stochastic_replication': return 'Replicación Celular (Fase S)';
+    case 'reference_guided_repair': return 'Reparación por Molde';
+    case 'dna_break_and_repair':
+    case 'double_strand_break_simulation': return 'Rotura Doble Hebra (DSB)';
+    case 'save_experiment':
+    case 'full_experiment_save': return 'Guardado de Ensayo';
+    default: {
+      if (!op) return 'Operación';
+      return op.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+  }
+}
+
+function getOpBadgeClass(op) {
+  switch (op) {
+    case 'environmental_damage': return 'crispr';
+    case 'mismatch_detection': return 'mmr';
+    case 'copy':
+    case 'faithful_replication': return 'copy';
+    case 'controlled_mutation': return 'crispr';
+    case 'dna_break_and_repair':
+    case 'double_strand_break_simulation': return 'dsb';
+    case 'reference_guided_repair': return 'repair';
+    case 'save_experiment':
+    case 'full_experiment_save': return 'save';
+    default: return 'default';
+  }
+}
+
+function formatEventDetails(ev) {
+  if (!ev) return 'Sin datos adicionales';
+  const op = ev.operation_type;
+  const p = ev.parameters || {};
+  const d = ev.detection_result || {};
+
+  if (op === 'mismatch_detection') {
+    const count = p.mismatch_count !== undefined ? p.mismatch_count : d.mismatch_count;
+    if (count > 0) {
+      return `${count} apareamiento(s) erróneo(s) detectado(s) en la doble hélice`;
+    }
+    return 'Apareamiento 100% canónico Watson-Crick (A-T, C-G)';
+  }
+  if (op === 'copy') {
+    return `Clonación fidedigna de la hebra molde (${ev.initial_sequence?.length || 0} bp)`;
+  }
+  if (op === 'controlled_mutation') {
+    const t = p.mutation_type === 'substitution' ? 'Sustitución' : p.mutation_type === 'insertion' ? 'Inserción' : 'Deleción';
+    return `${t} en posición ${p.position ?? 0} (${p.original_base || '∅'} → ${p.new_base || '∅'})`;
+  }
+  if (op === 'stochastic_replication') {
+    const rate = ((p.mutation_rate || 0) * 100).toFixed(0);
+    return `Tasa de error ${rate}% · ${p.mutations_occurred || 0} mutación(es) acumulada(s)`;
+  }
+  if (op === 'reference_guided_repair') {
+    return 'Corrección asistida por secuencia de referencia homóloga (Fidelidad 100%)';
+  }
+  if (op === 'dna_break_and_repair' || op === 'double_strand_break_simulation') {
+    const m = (p.repair_method || '').toLowerCase();
+    const isHDR = m.includes('homology') || m.includes('hdr');
+    const method = isHDR ? 'HDR (Homología limpia)' : 'NHEJ (Unión directa)';
+    const scarInfo = p.scar_type ? (p.scar_type.includes('micro_deletion') ? ' · Cicatriz: Microdeleción (-1 bp)' : (p.scar_type.includes('blunt') ? ' · Ligación directa' : ' · Sin cicatriz')) : '';
+    return `Rotura en pos. ${p.break_position ?? '?'} · Resuelta vía ${method}${scarInfo}`;
+  }
+  if (op === 'full_experiment_save' || op === 'save_experiment') {
+    return `Ensayo guardado: "${p.saved_name || 'Registro del ensayo'}"`;
+  }
+  return 'Operación completada con éxito';
+}
+
+function formatResultName(ev) {
+  const status = (ev.repair_result?.status || ev.detection_result?.status || ev.status || '').toUpperCase();
+  switch (status) {
+    case 'COPIED_EXACT': return 'Copia Idéntica (100%)';
+    case 'DETECTED_ONLY': return 'Error Marcado (Sin Plantilla)';
+    case 'CANONICAL_MATCH': return '100% Canónico (Sin Errores)';
+    case 'MISMATCH_DETECTED': return 'Apareamiento Erróneo Detectado';
+    case 'REPAIRED_MATCH':
+    case 'REPAIRED_FULL_MATCH':
+    case 'FULLY_REPAIRED': return 'Restaurado al 100%';
+    case 'PARTIAL_REPAIR':
+    case 'PARTIALLY_REPAIRED': return 'Reparación Parcial';
+    case 'REPAIRED_HIGH_FIDELITY':
+    case 'REPAIRED_CLEAN_HDR': return 'Reparado sin Cicatriz (HDR)';
+    case 'REPAIRED_PRONE_TO_SCAR':
+    case 'REPAIRED_SCARRED_NHEJ': return 'Cicatriz / Microdeleción (NHEJ)';
+    case 'DIRECT_BLUNT_LIGATION': return 'Ligación Directa (NHEJ)';
+    case 'MUTATION_INTRODUCED': return 'Mutación Incorporada';
+    case 'MUTATED': return 'Secuencia Mutada';
+    case 'IDENTICAL': return 'Sin Mutaciones (Intacto)';
+    case 'ALTERED': return 'Secuencia Alterada';
+    case 'COMPLETED': return 'Completado con Éxito';
+    case 'INTACT': return 'Secuencia Intacta';
+    default: {
+      if (!status) return 'Registrado con Éxito';
+      return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    }
+  }
+}
+
+function getResultBadgeClass(ev) {
+  const status = (ev.repair_result?.status || ev.detection_result?.status || ev.status || '').toUpperCase();
+  if (['COPIED_EXACT', 'CANONICAL_MATCH', 'REPAIRED_MATCH', 'REPAIRED_FULL_MATCH', 'FULLY_REPAIRED', 'REPAIRED_CLEAN_HDR', 'REPAIRED_HIGH_FIDELITY', 'IDENTICAL', 'COMPLETED', 'INTACT'].includes(status)) {
+    return 'success';
+  }
+  if (['DETECTED_ONLY', 'MISMATCH_DETECTED', 'REPAIRED_SCARRED_NHEJ', 'REPAIRED_PRONE_TO_SCAR', 'PARTIAL_REPAIR', 'PARTIALLY_REPAIRED', 'MUTATED', 'ALTERED', 'MUTATION_INTRODUCED'].includes(status)) {
+    return 'warning';
+  }
+  return 'info';
+}
+
+function formatRepairMethod(method) {
+  if (!method) return '';
+  const m = method.toLowerCase();
+  if (m.includes('homology') || m.includes('hdr')) return 'Vía HDR (Homología Guiada)';
+  if (m.includes('joining') || m.includes('nhej')) return 'Vía NHEJ (Unión de Extremos)';
+  return method;
+}
+
+function formatScarText(scar) {
+  if (!scar) return 'Sin cicatriz';
+  const s = scar.toLowerCase();
+  if (s.includes('none') || s.includes('fidelity')) {
+    return 'Sin cicatriz (Fidelidad 100%)';
+  }
+  if (s.includes('direct') || s.includes('blunt')) {
+    return 'Ligación directa (Extremos romos, sin pérdida de bases)';
+  }
+  if (s.includes('micro_deletion')) {
+    const pos = scar.replace(/[^0-9]/g, '');
+    return `Microdeleción mutacional (Pérdida de 1 base en pos. ${pos})`;
+  }
+  return scar;
+}
+
+function formatBreakDescription(res) {
+  if (!res) return '';
+  const m = (res.repair_method || '').toLowerCase();
+  if (m.includes('homology') || m.includes('hdr')) {
+    return 'Reconstrucción de alta fidelidad asistida por plantilla homóloga (HDR). No deja mutaciones ni cicatriz.';
+  }
+  if (res.scar?.includes('micro_deletion')) {
+    return 'Unión directa de extremos rotos sin plantilla (NHEJ). Se produjo una microdeleción (pérdida de un nucleótido), alterando la secuencia original.';
+  }
+  return 'Unión directa de extremos rotos sin plantilla (NHEJ). Los fragmentos se unieron directamente de extremo a extremo sin pérdida de bases, pero sin verificación por molde.';
+}
+
 
 
 const duplexPairsDisplay = computed(() => {
@@ -1385,18 +2610,18 @@ function useCurrentAsReference() {
 async function runReferenceRepair() {
   const current = sequenceInput.value.trim().toUpperCase();
   const moldRef = initialMoldSequence.value || referenceStrand.value || current;
+  const eff = repairMode.value === 'deterministic' ? 1.0 : repairEfficiency.value;
   try {
     loading.value = true;
-    const res = await api.repairWithReference(current, moldRef);
+    const res = await api.repairWithReference(current, moldRef, null, eff);
     repairResult.value = res;
-    if (res.matches_reference) {
-      sequenceInput.value = res.repaired_sequence;
-      await validateAndProcess();
-      diffResult.value = await api.compareDNA(moldRef, res.repaired_sequence);
-      const compMold = await api.complementDNA(moldRef);
-      mismatchResult.value = await api.detectMismatches(res.repaired_sequence, compMold.complement);
-      duplexStrand.value = compMold.complement;
-    }
+    // Sincronizar siempre la secuencia resultante (sea completa o parcial)
+    sequenceInput.value = res.repaired_sequence;
+    await validateAndProcess();
+    diffResult.value = await api.compareDNA(moldRef, res.repaired_sequence);
+    const compMold = await api.complementDNA(moldRef);
+    mismatchResult.value = await api.detectMismatches(res.repaired_sequence, compMold.complement);
+    duplexStrand.value = compMold.complement;
     await fetchLogs();
   } catch (err) {
     alert(err.message || 'Error en reparación guiada');
@@ -1458,6 +2683,41 @@ function handleHelixBaseSelect(index) {
   }
 }
 
+async function applyEnvironmentalDamage() {
+  const currentWorking = cleanSequence.value;
+  if (!initialMoldSequence.value) {
+    initialMoldSequence.value = currentWorking;
+  }
+  const moldRef = initialMoldSequence.value;
+
+  try {
+    loading.value = true;
+    const res = await api.simulateEnvironmentalDamage(currentWorking, envAgent.value, envIntensity.value);
+    envDamageResult.value = res;
+    sequenceInput.value = res.damaged_sequence;
+    lastMutationApplied.value = {
+      type: 'environmental_damage',
+      agent: res.agent,
+      agent_name: res.agent_name,
+      lesions: res.lesions,
+      count: res.lesion_count
+    };
+    repairResult.value = null;
+    await validateAndProcess();
+
+    diffResult.value = await api.compareDNA(moldRef, res.damaged_sequence);
+    const compMold = await api.complementDNA(moldRef);
+    duplexStrand.value = compMold.complement;
+    mismatchResult.value = await api.detectMismatches(res.damaged_sequence, compMold.complement);
+
+    await fetchLogs();
+  } catch (err) {
+    alert(err.message || 'Error al aplicar daño ambiental');
+  } finally {
+    loading.value = false;
+  }
+}
+
 async function applyControlledMutation() {
   const currentWorking = cleanSequence.value;
   if (!initialMoldSequence.value) {
@@ -1490,6 +2750,36 @@ async function applyControlledMutation() {
     await fetchLogs();
   } catch (err) {
     alert(err.message || 'Error al aplicar mutación controlada');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function replicateFaithful() {
+  const currentWorking = cleanSequence.value;
+  if (!initialMoldSequence.value) {
+    initialMoldSequence.value = currentWorking;
+  }
+  const moldRef = initialMoldSequence.value;
+
+  try {
+    loading.value = true;
+    const res = await api.copyDNA(currentWorking);
+    copyNotification.value = 'Hebra hija duplicada con 100% de fidelidad (sin mutaciones).';
+    setTimeout(() => { copyNotification.value = ''; }, 4500);
+
+    lastMutationApplied.value = {
+      type: 'faithful_replication',
+      rate: 0,
+      count: 0
+    };
+    diffResult.value = await api.compareDNA(moldRef, res.copy);
+    const compMold = await api.complementDNA(res.copy);
+    duplexStrand.value = compMold.complement;
+    mismatchResult.value = await api.detectMismatches(res.copy, compMold.complement);
+    await fetchLogs();
+  } catch (err) {
+    alert(err.message || 'Error en síntesis fiel');
   } finally {
     loading.value = false;
   }
@@ -2525,6 +3815,164 @@ onMounted(() => {
   margin: 0;
 }
 
+/* Cascada Enzimática y Complejos Proteicos */
+.protein-cascade-panel {
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cascade-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding-bottom: 0.75rem;
+}
+
+.cascade-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.cascade-icon {
+  color: #38bdf8;
+}
+
+.cascade-title h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.cascade-subtext {
+  font-size: 0.72rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.viability-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.viability-pill.high {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.viability-pill.medium {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.cascade-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  position: relative;
+}
+
+.cascade-step {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border-left: 3px solid #38bdf8;
+}
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.prot-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #70d6ff;
+}
+
+.prot-role {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.prot-role.sensor {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+}
+
+.prot-role.hdr {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.prot-role.nhej {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.prot-role.success {
+  background: rgba(16, 185, 129, 0.22);
+  color: #10b981;
+}
+
+.prot-role.warning {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+}
+
+.step-desc {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.4;
+  margin: 0;
+}
+
 /* 7 & 10: Auditoría y Nota Científica */
 .scientific-notice-banner {
   display: flex;
@@ -2587,6 +4035,19 @@ onMounted(() => {
   font-weight: 600;
 }
 
+.exp-custom-name {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: #38bdf8;
+  margin-top: 0.25rem;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .op-chip {
   font-size: 0.68rem;
   padding: 0.15rem 0.45rem;
@@ -2612,13 +4073,171 @@ onMounted(() => {
 
 .res-status.fully_repaired,
 .res-status.repaired_high_fidelity,
-.res-status.copied_exact {
+.res-status.copied_exact,
+.res-status.success {
   color: #10b981;
 }
 
 .res-status.partially_repaired,
-.res-status.repaired_prone_to_scar {
+.res-status.repaired_prone_to_scar,
+.res-status.warning {
   color: #f59e0b;
+}
+
+.res-status.info {
+  color: #38bdf8;
+}
+
+.event-detail-text {
+  font-size: 0.76rem;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.35;
+  display: block;
+  max-width: 250px;
+}
+
+.op-chip.mmr {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+}
+
+.op-chip.copy {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.op-chip.crispr {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+.op-chip.dsb {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.op-chip.repair {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.op-chip.save {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+/* Modal de Guardar Experimento con Nombre */
+.save-dialog-surface {
+  max-width: 560px;
+}
+
+.save-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.save-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.preview-label {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.74rem;
+}
+
+.preview-code {
+  color: var(--md-sys-color-primary);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+}
+
+.preview-code-dim {
+  color: var(--md-sys-color-outline);
+  letter-spacing: 0.8px;
+}
+
+.preview-tag {
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.required-star {
+  color: #ef4444;
+}
+
+.save-input-name,
+.save-input-notes {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  font-family: inherit;
+  font-size: 0.88rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.save-input-name:focus,
+.save-input-notes:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+}
+
+.save-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  padding: 1.1rem 1.6rem;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.save-confirm-btn {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.exp-notes-snippet {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.74rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.35;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Alerta de Validación de Símbolos No Permitidos */
@@ -3143,48 +4762,75 @@ onMounted(() => {
 }
 
 .manual-tabs-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   background: var(--md-sys-color-surface-container-low);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding: 0 1.2rem;
+  padding: 0.5rem 1rem;
   gap: 0.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .manual-tab-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.1rem;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 0.6rem;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
   color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  text-align: center;
 }
 
 .manual-tab-btn:hover {
   color: var(--md-sys-color-on-surface);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--md-sys-color-surface-container-high);
+  border-color: rgba(56, 189, 248, 0.35);
 }
 
 .manual-tab-btn.active {
   color: #38bdf8;
-  border-bottom-color: #38bdf8;
-  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.12);
+}
+
+@media (max-width: 768px) {
+  .manual-tabs-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .manual-dialog-body {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-sys-color-outline-variant) transparent;
   padding: 1.4rem;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+}
+
+.manual-dialog-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.manual-dialog-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.manual-dialog-body::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 999px;
 }
 
 .manual-hero-banner {
@@ -3325,6 +4971,27 @@ onMounted(() => {
   gap: 0.6rem;
 }
 
+.protocol-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.proto-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.proto-tag.g1 { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
+.proto-tag.s { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.proto-tag.g2 { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.proto-tag.crispr { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+
 .protocol-card h4 {
   margin: 0;
   color: #38bdf8;
@@ -3340,6 +5007,225 @@ onMounted(() => {
   font-size: 0.82rem;
   color: var(--md-sys-color-on-surface);
   line-height: 1.45;
+}
+
+/* Roadmap Visual de Fases */
+.manual-pipeline-roadmap {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: 1rem;
+}
+
+.roadmap-phase {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 210px;
+}
+
+.roadmap-phase.g1 { border-top: 3px solid #818cf8; }
+.roadmap-phase.s { border-top: 3px solid #ef4444; }
+.roadmap-phase.g2 { border-top: 3px solid #10b981; }
+
+.rm-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding-bottom: 0.4rem;
+}
+
+.rm-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.roadmap-phase.g1 .rm-tag { color: #818cf8; }
+.roadmap-phase.s .rm-tag { color: #ef4444; }
+.roadmap-phase.g2 .rm-tag { color: #10b981; }
+
+.rm-header h5 {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.rm-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.35;
+}
+
+.rm-arrow {
+  text-align: center;
+  color: var(--md-sys-color-outline);
+  font-size: 0.7rem;
+}
+
+.rm-alert {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.rm-content small {
+  font-size: 0.69rem;
+  color: var(--md-sys-color-outline);
+}
+
+.rm-footer {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.rm-footer.cleared { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.rm-footer.s-done { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.rm-footer.mit-done { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+
+.roadmap-connector {
+  color: var(--md-sys-color-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 860px) {
+  .manual-pipeline-roadmap {
+    grid-template-columns: 1fr;
+  }
+  .roadmap-connector {
+    transform: rotate(90deg);
+    padding: 0.2rem 0;
+  }
+}
+
+/* Stepper Enlace de Ayuda Rápida */
+.stepper-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 999px;
+  color: #38bdf8;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.stepper-help-link:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  transform: translateY(-1px);
+}
+
+/* FAQ y Fundamentos */
+.faq-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.faq-card {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: 1.1rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.faq-q {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.faq-q .q-icon {
+  color: #38bdf8;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+.faq-q h5 {
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.faq-a p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Bibliografía */
+.biblio-box {
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--md-sys-shape-corner-medium);
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.biblio-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #38bdf8;
+}
+
+.biblio-header h6 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.biblio-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.45;
+}
+
+.biblio-list li {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.biblio-list strong {
+  color: var(--md-sys-color-on-surface);
+}
+
+.biblio-list small {
+  color: var(--md-sys-color-outline);
 }
 
 .dialog-footer {
@@ -3362,5 +5248,579 @@ onMounted(() => {
   .molecular-workbench-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Esqueleto de Azúcar-Fosfato en Métricas */
+.backbone-metric-tile {
+  grid-column: span 1;
+}
+.backbone-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+.bb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--md-sys-shape-corner-small);
+  font-family: var(--md-ref-typeface-mono);
+}
+.bb-chip.sugar {
+  background: rgba(6, 182, 212, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+.bb-chip.phosphate {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.bb-dot.s-dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; }
+.bb-dot.p-dot { width: 6px; height: 6px; border-radius: 50%; background: #fbbf24; }
+
+/* 2D Track con Esqueleto Azúcar-Fosfato */
+.track-polarity-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.35rem;
+  height: 140px;
+}
+.polarity-tag {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.polarity-tag.p5 {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.polarity-tag.p3 {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+.polarity-v-link {
+  width: 1px;
+  flex: 1;
+  background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 3px, transparent 3px, transparent 6px);
+  margin: 4px 0;
+}
+.bb-monomer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+  width: 100%;
+}
+.bb-monomer.top {
+  margin-bottom: 5px;
+}
+.bb-monomer.bottom {
+  margin-top: 5px;
+}
+.bb-dot {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bb-dot.phosphate {
+  background: #f59e0b;
+  color: #000;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+.bb-dot.sugar {
+  background: #0284c7;
+  color: #fff;
+  border-radius: 3px;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.5);
+}
+.bb-hyphen {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--md-sys-color-outline);
+}
+.bb-stem-down {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 1px;
+  height: 5px;
+  background: var(--md-sys-color-outline-variant);
+}
+.bb-stem-up {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 1px;
+  height: 5px;
+  background: var(--md-sys-color-outline-variant);
+}
+
+.backbone-explanation-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-small);
+  margin-top: 0.8rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+.legend-eq-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.legend-eq-item.final {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+.legend-eq-item.final .highlight-txt {
+  font-weight: 700;
+  color: #38bdf8;
+  font-size: 0.8rem;
+}
+.legend-eq-item.final small {
+  font-size: 0.68rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.sym-badge {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+.sym-badge.p { background: #f59e0b; color: #000; }
+.sym-badge.d { background: #0284c7; color: #fff; }
+.sym-badge.b { background: rgba(255, 255, 255, 0.1); color: var(--md-sys-color-on-surface); }
+.eq-op {
+  font-weight: 700;
+  color: var(--md-sys-color-outline);
+}
+
+/* Stepper del Ciclo Celular */
+.cell-cycle-stepper-track {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  overflow-x: auto;
+  padding: 0.5rem 0.2rem;
+}
+.cycle-phase-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.25s ease;
+}
+.cycle-phase-section.active {
+  border-color: var(--md-sys-color-primary);
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.15);
+}
+.phase-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.phase-code {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-primary);
+}
+.phase-subtitle {
+  font-size: 0.7rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+.phase-steps-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.phase-inter-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--md-sys-color-outline);
+}
+.phase-badge-pill {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+.phase-badge-pill.g1 { color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.1); }
+.phase-badge-pill.s { color: #4ade80; border-color: rgba(74, 222, 128, 0.4); background: rgba(74, 222, 128, 0.1); }
+.phase-badge-pill.g2 { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.1); }
+
+/* Bloques de Fases */
+.phase-block {
+  padding: 1.4rem 1.6rem;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+.phase-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.phase-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.phase-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--md-sys-shape-corner-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+.phase-avatar.g1 { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+.phase-avatar.s { background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); }
+.phase-avatar.g2 { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+
+.checkpoint-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.checkpoint-status-pill.cleared { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+.checkpoint-status-pill.arrested { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
+.checkpoint-status-pill.idle { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant); }
+
+.p53-checkpoint-card {
+  padding: 1.1rem 1.4rem;
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.p53-checkpoint-card.cleared { background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3); }
+.p53-checkpoint-card.arrested { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.35); }
+
+.checkpoint-telemetry-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 1rem;
+}
+@media (max-width: 900px) {
+  .checkpoint-telemetry-row { grid-template-columns: 1fr; }
+}
+.cp-indicator-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.cp-label {
+  font-size: 0.7rem;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+}
+.cp-val {
+  font-size: 0.85rem;
+  color: var(--md-sys-color-on-surface);
+}
+.cp-val.p53 { color: #38bdf8; }
+.cp-val.p21 { color: #f59e0b; }
+.cp-val.desc { font-weight: 500; }
+
+.checkpoint-risk-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: #fca5a5;
+  font-size: 0.78rem;
+}
+
+.g1-actions-grid, .s-replication-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+@media (max-width: 900px) {
+  .g1-actions-grid, .s-replication-grid { grid-template-columns: 1fr; }
+}
+
+.triple-fidelity-card {
+  padding: 1.1rem 1.4rem;
+  background: rgba(74, 222, 128, 0.04);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--md-sys-shape-corner-medium);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.card-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4ade80;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.fidelity-filters-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+@media (max-width: 800px) {
+  .fidelity-filters-grid { flex-direction: column; align-items: stretch; }
+}
+.filter-box {
+  flex: 1;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+.filter-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.filter-content strong {
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface);
+}
+.filter-rate {
+  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+.filter-content p {
+  font-size: 0.7rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.25;
+}
+.filter-arrow {
+  font-weight: 800;
+  color: #4ade80;
+  font-size: 1.2rem;
+}
+.fidelity-summary-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--md-sys-color-on-surface);
+  background: rgba(74, 222, 128, 0.1);
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.card-mini-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--md-sys-color-primary);
+}
+
+.sub-mode-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.3rem;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.sub-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--md-sys-shape-corner-small);
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sub-toggle-btn:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.sub-toggle-btn.active {
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.damage-subpanel, .replication-mode-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.env-damage-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.env-tag {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.env-mechanism {
+  font-size: 0.74rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.lesions-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.lesion-chip {
+  font-size: 0.72rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+/* Modos y Cinética de Reparación G1 */
+.repair-mode-toggle-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.3rem;
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-sys-shape-corner-medium);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  margin-bottom: 0.3rem;
+}
+
+.repair-eff-slider {
+  background: rgba(56, 189, 248, 0.05);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: var(--md-sys-shape-corner-small);
+  padding: 0.75rem 0.9rem;
+}
+
+.highlight-repair {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.repair-range::-webkit-slider-thumb {
+  background: #38bdf8;
+}
+
+.escaped-lesions-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+.esc-label {
+  font-size: 0.74rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.esc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.esc-chip {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
 }
 </style>

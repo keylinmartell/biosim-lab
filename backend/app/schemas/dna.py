@@ -12,6 +12,7 @@ class ValidateSequenceResponse(BaseModel):
     base_counts: Dict[str, int]
     invalid_chars: List[str] = []
     error_message: Optional[str] = None
+    backbone_info: Optional[Dict[str, Any]] = None
 
 class ComplementRequest(BaseModel):
     sequence: str
@@ -20,6 +21,7 @@ class ComplementResponse(BaseModel):
     original: str
     complement: str
     binary_repr: str
+    backbone_structure: Optional[Dict[str, Any]] = None
 
 class ControlledMutationRequest(BaseModel):
     sequence: str
@@ -38,6 +40,8 @@ class ReplicateResponse(BaseModel):
     mutations: List[Dict[str, Any]]
     mutation_count: int
     is_identical: bool
+    event_id: Optional[str] = None
+    fidelity_filters: Optional[Dict[str, Any]] = None
 
 class CompareRequest(BaseModel):
     reference: str
@@ -92,16 +96,21 @@ class RepairWithReferenceRequest(BaseModel):
     altered: str = Field(..., description="Secuencia de ADN que contiene errores o mutaciones")
     reference: str = Field(..., description="Secuencia de referencia homologa fiable")
     positions: Optional[List[int]] = Field(None, description="Posiciones autorizadas a reparar. Si es None, repara todas las divergencias detectadas.")
+    efficiency: Optional[float] = Field(1.0, ge=0.1, le=1.0, description="Eficiencia enzimática de reparación (1.0 = 100% determinista, < 1.0 = cinética estocástica)")
 
 class RepairWithReferenceResponse(BaseModel):
     altered_sequence: str
     reference_sequence: str
     repaired_sequence: str
     repaired_positions: List[int]
+    escaped_positions: Optional[List[int]] = []
+    efficiency: Optional[float] = 1.0
     matches_reference: bool
     status: str
     remaining_divergences: int
     event_id: str
+    cell_cycle_phase: Optional[str] = "G1"
+    checkpoint_status: Optional[Dict[str, Any]] = None
 
 class BreakRepairRequest(BaseModel):
     sequence: str = Field(..., description="Secuencia que sufre una rotura bicatenaria (DSB)")
@@ -172,5 +181,23 @@ class FullExperimentReport(BaseModel):
 class SavedExperimentListResponse(BaseModel):
     experiments: List[FullExperimentReport]
     total: int
+
+class EnvironmentalDamageRequest(BaseModel):
+    sequence: str = Field(..., description="Cadena de ADN molde a someter a daño ambiental")
+    agent: str = Field("uv_radiation", description="'uv_radiation' (dímeros TT), 'oxidative_ros' (8-oxo-G) o 'deamination' (C->T/U)")
+    intensity: float = Field(0.25, ge=0.0, le=1.0, description="Intensidad / probabilidad estocástica de lesión por sitio susceptible")
+
+class EnvironmentalDamageResponse(BaseModel):
+    original_sequence: str
+    damaged_sequence: str
+    agent: str
+    agent_name: str
+    lesions: List[Dict[str, Any]]
+    lesion_count: int
+    is_damaged: bool
+    mechanism_description: str
+    checkpoint_consequence: str
+    event_id: str
+
 
 
