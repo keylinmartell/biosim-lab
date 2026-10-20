@@ -237,12 +237,15 @@ async def save_full_experiment_endpoint(payload: SaveFullExperimentRequest, db: 
 @router.get("/experiment/list", response_model=SavedExperimentListResponse)
 async def list_saved_experiments_endpoint(db: AsyncSession = Depends(get_db)):
     """Lista todos los experimentos completos guardados en la base de datos."""
-    result = await db.execute(select(SavedExperiment).order_by(SavedExperiment.created_at.desc()))
-    exps = [r.to_dict() for r in result.scalars().all()]
-    return SavedExperimentListResponse(
-        experiments=exps,
-        total=len(exps)
-    )
+    try:
+        result = await db.execute(select(SavedExperiment).order_by(SavedExperiment.created_at.desc()))
+        exps = [r.to_dict() for r in result.scalars().all()]
+        return SavedExperimentListResponse(
+            experiments=exps,
+            total=len(exps)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {type(e).__name__}: {str(e)}")
 
 @router.get("/experiment/{experiment_id}", response_model=FullExperimentReport)
 async def get_saved_experiment_endpoint(experiment_id: str, db: AsyncSession = Depends(get_db)):
