@@ -5411,4 +5411,45 @@ onMounted(() => {
   border: 1px solid rgba(245, 158, 11, 0.4);
   color: #f59e0b;
 }
+
+/* ===================== RESPONSIVO ===================== */
+.dna-lab-layout { min-width: 0; max-width: 100%; }
+.dna-lab-layout > * { min-width: 0; max-width: 100%; }
+.dna-lab-layout code, .dna-lab-layout .font-mono { overflow-wrap: anywhere; word-break: break-all; }
+.events-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+.pairs-visual-strip { flex-wrap: wrap; }
+.sub-mode-toggle-row, .repair-mode-toggle-row, .action-buttons-row, .dsb-action-buttons { flex-wrap: wrap; }
+.phase-block-header, .section-header, .diff-header { flex-wrap: wrap; gap: 0.75rem; }
+.manual-tab-btn { white-space: normal; }
+.manual-dialog-body { min-width: 0; }
+.manual-dialog-body img, .manual-dialog-body table { max-width: 100%; }
+
+@media (max-width: 1100px) {
+  .molecular-workbench-grid { grid-template-columns: minmax(0, 1fr); }
+  .button-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g1-actions-grid { grid-template-columns: minmax(0, 1fr); }
+  .manual-pipeline-roadmap { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 820px) {
+  .manual-dialog-surface { width: 98vw; max-height: 94vh; border-radius: 16px; }
+  .manual-dialog-body { padding: 0.9rem; gap: 0.9rem; }
+  .manual-tabs-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0.5rem; }
+  .button-guide-grid { grid-template-columns: minmax(0, 1fr); }
+  .flow-step-item { flex-direction: column; gap: 0.5rem; }
+  .op-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .input-with-actions { flex-wrap: wrap; }
+  .input-with-actions input { flex: 1 1 100%; min-width: 0; }
+  .dsb-controls-row { flex-direction: column; align-items: stretch; }
+  .mutation-events-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .phase-block, .audit-log-card, .sequence-track-card { padding: 0.9rem; }
+  .manual-tabs-bar { grid-template-columns: minmax(0, 1fr); }
+  .manual-tab-btn { padding: 0.55rem; font-size: 0.78rem; }
+  .sub-toggle-btn, .md3-button-filled, .md3-button-tonal { width: 100%; justify-content: center; }
+  .phase-title-group h3, .section-header h3 { font-size: 0.98rem; }
+  .slider-marks { font-size: 0.62rem; gap: 0.25rem; }
+}
 </style>
