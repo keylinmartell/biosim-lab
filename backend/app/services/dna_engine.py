@@ -720,50 +720,16 @@ class DNAEngine:
     def get_events(cls, limit: int = 50) -> List[Dict[str, Any]]:
         return list(reversed(cls._events_log[-limit:]))
 
-    _saved_experiments: List[Dict[str, Any]] = []
-
     @classmethod
-    def _get_storage_file(cls) -> str:
-        import os
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        data_dir = os.path.join(base_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
-        return os.path.join(data_dir, "saved_experiments.json")
-
-    @classmethod
-    def _load_saved_from_disk(cls):
-        import os, json
-        filepath = cls._get_storage_file()
-        if os.path.exists(filepath):
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    cls._saved_experiments = json.load(f)
-            except Exception:
-                pass
-
-    @classmethod
-    def _persist_saved_to_disk(cls):
-        import json
-        filepath = cls._get_storage_file()
-        try:
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(cls._saved_experiments, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
-
-    @classmethod
-    def save_full_experiment(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def build_experiment_record(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Guarda un informe integral y completo del experimento de laboratorio:
-        secuencia inicial, copia, mutación aplicada, detección, reparación, secuencia final y diff.
+        Construye (sin persistir) el informe integral del experimento de laboratorio:
+        secuencia inicial, copia, mutacion aplicada, deteccion, reparacion, secuencia final y diff.
+        La persistencia se realiza en la base de datos (tabla saved_experiments).
         """
         import uuid, datetime
-        if not cls._saved_experiments:
-            cls._load_saved_from_disk()
 
-        exp_id = data.get("experiment_id")
-        if not exp_id:
-            exp_id = f"EXP-{len(cls._saved_experiments)+1:04d}-{str(uuid.uuid4())[:6].upper()}"
+        exp_id = data.get("experiment_id") or f"EXP-{uuid.uuid4().hex[:10].upper()}"
 
         record = {
             "experiment_id": exp_id,
@@ -782,16 +748,7 @@ class DNAEngine:
             "code_version": "v1.1-phase1-closed"
         }
 
-        # Actualizar si ya existe con ese ID, o añadir al inicio
-        existing_idx = next((i for i, x in enumerate(cls._saved_experiments) if x["experiment_id"] == exp_id), None)
-        if existing_idx is not None:
-            cls._saved_experiments[existing_idx] = record
-        else:
-            cls._saved_experiments.insert(0, record)
-
-        cls._persist_saved_to_disk()
-
-        # También registrar en events_log para auditoría
+        # Tambien registrar en events_log para auditoria
         cls.log_event(
             operation_type="full_experiment_save",
             initial_sequence=record["initial_sequence"],
@@ -802,18 +759,6 @@ class DNAEngine:
             repair_result=record["repair_applied"]
         )
         return record
-
-    @classmethod
-    def list_saved_experiments(cls) -> List[Dict[str, Any]]:
-        if not cls._saved_experiments:
-            cls._load_saved_from_disk()
-        return cls._saved_experiments
-
-    @classmethod
-    def get_saved_experiment(cls, exp_id: str) -> Optional[Dict[str, Any]]:
-        if not cls._saved_experiments:
-            cls._load_saved_from_disk()
-        return next((x for x in cls._saved_experiments if x["experiment_id"] == exp_id), None)
 
 dna_engine = DNAEngine()
 

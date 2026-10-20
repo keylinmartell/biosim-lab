@@ -108,7 +108,7 @@ class TestDNAPhase1(unittest.TestCase):
         self.assertEqual(latest["code_version"], "v1.1-phase1-closed")
 
     def test_11_guardar_y_cargar_experimento_completo(self):
-        """Prueba 11: Guardado completo del experimento y recuperación intacta desde persistencia."""
+        """Prueba 11: Construccion del informe completo (la persistencia se hace en la BD, no en JSON)."""
         exp_data = {
             "name": "Ensayo de Replicación y Reparación MMR",
             "initial_sequence": "ATCGATCGATCG",
@@ -120,21 +120,12 @@ class TestDNAPhase1(unittest.TestCase):
             "final_sequence": "ATCGATCGATCG",
             "status": "repaired_full_match"
         }
-        saved = self.engine.save_full_experiment(exp_data)
+        saved = self.engine.build_experiment_record(exp_data)
         self.assertTrue(saved["experiment_id"].startswith("EXP-"))
         self.assertEqual(saved["name"], "Ensayo de Replicación y Reparación MMR")
         self.assertEqual(saved["initial_sequence"], "ATCGATCGATCG")
         self.assertEqual(saved["final_sequence"], "ATCGATCGATCG")
-
-        # Verificar listado
-        saved_list = self.engine.list_saved_experiments()
-        self.assertTrue(any(e["experiment_id"] == saved["experiment_id"] for e in saved_list))
-
-        # Verificar obtención individual
-        retrieved = self.engine.get_saved_experiment(saved["experiment_id"])
-        self.assertIsNotNone(retrieved)
-        self.assertEqual(retrieved["experiment_id"], saved["experiment_id"])
-        self.assertEqual(retrieved["mutation_applied"]["new_base"], "G")
+        self.assertEqual(saved["mutation_applied"]["new_base"], "G")
 
     def test_12_triple_filtro_fase_s_y_checkpoint_g1(self):
         """

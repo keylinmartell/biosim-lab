@@ -1,5 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from collections import Counter
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.models.saved_experiment import SavedExperiment
 from app.services.dna_engine import dna_engine
 from app.schemas.dna import (
     ValidateSequenceRequest,
@@ -204,29 +208,48 @@ def get_dna_events(limit: int = 50):
     )
 
 @router.post("/experiment/save", response_model=FullExperimentReport)
-def save_full_experiment_endpoint(payload: SaveFullExperimentRequest):
-    """Guarda el informe integral del experimento (proceso completo de inicio a fin)."""
+async def save_full_experiment_endpoint(payload: SaveFullExperimentRequest, db: AsyncSession = Depends(get_db)):
+    """Guarda el informe integral del experimento en la base de datos (Supabase/Postgres)."""
     try:
-        saved = dna_engine.save_full_experiment(payload.dict())
-        return FullExperimentReport(**saved)
+        record = dna_engine.build_experiment_record(payload.dict())
+        row = await db.get(SavedExperiment, record["experiment_id"])
+        if row is None:
+            row = SavedExperiment(experiment_id=record["experiment_id"])
+            db.add(row)
+        row.name = record["name"]
+        row.initial_sequence = record["initial_sequence"]
+        row.working_copy = record["working_copy"]
+        row.mutation_applied = record["mutation_applied"]
+        row.altered_sequence = record["altered_sequence"]
+        row.detection_result = record["detection_result"]
+        row.repair_applied = record["repair_applied"]
+        row.final_sequence = record["final_sequence"]
+        row.diff_result = record["diff_result"]
+        row.status = record["status"]
+        row.notes = record["notes"]
+        row.code_version = record["code_version"]
+        await db.flush()
+        await db.refresh(row)
+        return FullExperimentReport(**row.to_dict())
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/experiment/list", response_model=SavedExperimentListResponse)
-def list_saved_experiments_endpoint():
-    """Lista todos los experimentos completos guardados."""
-    exps = dna_engine.list_saved_experiments()
+async def list_saved_experiments_endpoint(db: AsyncSession = Depends(get_db)):
+    """Lista todos los experimentos completos guardados en la base de datos."""
+    result = await db.execute(select(SavedExperiment).order_by(SavedExperiment.created_at.desc()))
+    exps = [r.to_dict() for r in result.scalars().all()]
     return SavedExperimentListResponse(
         experiments=exps,
         total=len(exps)
     )
 
 @router.get("/experiment/{experiment_id}", response_model=FullExperimentReport)
-def get_saved_experiment_endpoint(experiment_id: str):
+async def get_saved_experiment_endpoint(experiment_id: str, db: AsyncSession = Depends(get_db)):
     """Obtiene el informe completo de un experimento para restaurar su estado en la UI."""
-    exp = dna_engine.get_saved_experiment(experiment_id)
-    if not exp:
+    row = await db.get(SavedExperiment, experiment_id)
+    if not row:
         raise HTTPException(status_code=404, detail=f"Experimento {experiment_id} no encontrado")
-    return FullExperimentReport(**exp)
+    return FullExperimentReport(**row.to_dict())
 
 
