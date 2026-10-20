@@ -1089,7 +1089,7 @@
                 <div class="card-tag">1. Cabecera, Muestras y Persistencia</div>
                 <div class="btn-entry">
                   <span class="btn-name filled"><Icon name="save" size="14" /> Guardar Experimento</span>
-                  <p>Persiste en disco inmutable del backend el ciclo de vida completo del ensayo: molde parental, daño sufrido, activación de p53/p21, reparación ejecutada, cadena sintetizada en Fase S y reporte diff.</p>
+                  <p>Persiste en disco inmutable del backend el ciclo de vida completo del ensayo: molde original, daño aplicado, apareamientos detectados, reparación ejecutada y reporte diff.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name tonal"><Icon name="history" size="14" /> Cargar Experimento (N)</span>
@@ -1119,10 +1119,6 @@
                 <div class="btn-entry">
                   <span class="btn-name tonal"><Icon name="content_copy" size="14" /> Generar Copia de Trabajo</span>
                   <p>Copia de forma fidedigna la secuencia actual para experimentar libremente sobre ella manteniendo el molde parental como referencia inmutable.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="help_outline" size="14" /> Guía del Flujo (en Stepper)</span>
-                  <p>Acceso directo desde la barra de ciclo celular al manual técnico para consultar en qué paso se encuentra el ensayo.</p>
                 </div>
               </div>
 
@@ -1172,80 +1168,59 @@
                 </div>
               </div>
 
-              <!-- Fase G1: Módulos 1.1 a 1.3 -->
+              <!-- Módulo 1 -->
               <div class="button-guide-card">
-                <div class="card-tag">5. Fase G1 · Módulos 1.1, 1.2 y 1.3</div>
+                <div class="card-tag">5. Módulo 1 · Mutagénesis, Detección y Reparación</div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="wb_sunny" size="14" /> Daño Ambiental Estocástico</span>
                   <p>Activa el inductor de lesiones ambientales: Luz UV (dímeros TT), Estrés Oxidativo ROS (8-oxo-G) o Desaminación espontánea (C→U).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="content_cut" size="14" /> Edición Quirúrgica CRISPR</span>
-                  <p>Modo de alteración dirigida con precisión de nucleótido único: sustitución puntual, inserción (+1 base) o deleción (-1 base).</p>
+                  <span class="btn-name chip"><Icon name="content_cut" size="14" /> Herramienta Exógena (CRISPR-Cas9)</span>
+                  <p>Modo de alteración dirigida en una posición: sustitución puntual, inserción (+1 base) o deleción (-1 base).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="bolt" size="14" /> Inducir Lesiones / Aplicar CRISPR</span>
-                  <p>Inyecta la alteración en el molde y dispara de inmediato la alarma en el Checkpoint G1/S (p53 fosforilado y p21 activo frenando el Punto R).</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="biotech" size="14" /> Cinética Enzimática Real vs Control Asistido</span>
-                  <p>Switcher en Módulo 1.3: Alterna entre el modelo biológico estocástico (probabilidad finita de escisión) y el control didáctico al 100%.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name chip">Slider Eficiencia de Escisión (50% - 98%)</span>
-                  <p>Regula la afinidad catalítica de las enzimas BER/NER. Si lesiones escapan al reconocimiento, p53 y p21 retienen el arresto en el Punto R.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name tonal"><Icon name="tag" size="14" /> Usar Molde Inicial</span>
-                  <p>Carga la secuencia parental original limpia en el campo de referencia homóloga para la reparación pre-replicativa.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="build" size="14" /> Ciclo de Escisión / Reparar Molde</span>
-                  <p>Ejecuta la ronda de reparación BER/NER. Reporta lesiones reparadas y posiciones que escapan, desbloqueando el Punto R al completar el 100%.</p>
-                </div>
-              </div>
-
-              <!-- Fase S: Módulos 2.1 a 2.3 -->
-              <div class="button-guide-card">
-                <div class="card-tag">6. Fase S · Módulos 2.1, 2.2 y 2.3</div>
-                <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="content_copy" size="14" /> Sintetizar Hebra Hija Fiel</span>
-                  <p>Duplica la hebra con 100% de pureza y fidelidad enzimática en la horquilla de replicación semiconservativa.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="restart_alt" size="14" /> Simular con Error de Polimerasa</span>
-                  <p>Sintetiza la cadena hija incorporando errores estocásticos de polimerasa según el porcentaje ajustado en el slider (0.0% a 20.0%).</p>
+                  <span class="btn-name filled"><Icon name="bolt" size="14" /> Inducir Lesiones / Inducir Lesión Dirigida</span>
+                  <p>Aplica la alteración sobre el molde (Módulo 1.1). El Módulo 1.2 revisa de inmediato los apareamientos.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error / Complementaria</span>
-                  <p>Permite alternar entre la complementaria exacta canonizada o inyectar deliberadamente una base no apareada en el módulo MMR.</p>
+                  <p>Alterna entre la complementaria exacta o inyectar deliberadamente una base no apareada para probar la detección.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos Dúplex</span>
-                  <p>Simula el escaneo del complejo MutS/MutL post-replicativo identificando pares canónicos (verdes) y desajustes no canónicos (rojos).</p>
+                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos (Módulo 1.2)</span>
+                  <p>Compara la cadena con la complementaria del molde y marca pares canónicos (verdes) y no canónicos (rojos).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip">Diff Inspector (Módulo 2.3)</span>
-                  <p>Muestra el contraste nucleótido a nucleótido entre el molde y la hebra sintetizada, detallando cada mutación producida durante la síntesis.</p>
+                  <span class="btn-name chip"><Icon name="biotech" size="14" /> Cinética Enzimática Real vs Control Asistido</span>
+                  <p>Switcher del Módulo 1.3: alterna entre reparación probabilística (puede dejar lesiones sin reparar) y reparación al 100%.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip">Slider Eficiencia de Escisión (50% - 98%)</span>
+                  <p>Regula la probabilidad de que cada lesión sea reparada en un ciclo.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name tonal"><Icon name="tag" size="14" /> Usar Molde Inicial</span>
+                  <p>Carga la secuencia original limpia en el campo de referencia para la reparación.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="build" size="14" /> Ciclo de Escisión / Reparar Molde</span>
+                  <p>Ejecuta la ronda de reparación. Reporta lesiones reparadas y posiciones que escaparon.</p>
                 </div>
               </div>
 
-              <!-- Fase G2/M: Módulos 3.1 & 3.2 -->
+              <!-- Módulo 2 -->
               <div class="button-guide-card">
-                <div class="card-tag">7. Fase G2/M · Módulos 3.1 & 3.2</div>
+                <div class="card-tag">6. Módulo 2 · Reporte Diferencial</div>
                 <div class="btn-entry">
-                  <span class="btn-name filled hdr-color"><Icon name="shield" size="14" /> Reparar vía HDR (Cromátida Hermana)</span>
-                  <p>Utiliza la cromátida hermana idéntica disponible en Fase G2 (asistida por RAD51 y BRCA1/2) para reconstruir la rotura bicatenaria limpia y sin cicatriz.</p>
-                </div>
-                <div class="btn-entry">
-                  <span class="btn-name tonal nhej-color"><Icon name="build" size="14" /> Reparar vía NHEJ (Unión Extremos)</span>
-                  <p>Simula la ligación de emergencia directa sin plantilla asistida por Ku70/80, propensa a pérdida de bases y cicatriz mutacional (microdeleción).</p>
+                  <span class="btn-name chip">Diff Inspector (Módulo 2)</span>
+                  <p>Muestra el contraste base a base entre el molde original y la secuencia modificada, con posición y tipo de cambio.</p>
                 </div>
               </div>
 
               <!-- Auditoría y Diálogos -->
               <div class="button-guide-card">
-                <div class="card-tag">8. Módulo 4 · Auditoría & Modales</div>
+                <div class="card-tag">7. Módulo 3 · Auditoría & Modales</div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Refrescar Registro</span>
                   <p>Recarga desde el backend la tabla de auditoría con la trazabilidad completa de eventos, secuencias y dictámenes moleculares.</p>
