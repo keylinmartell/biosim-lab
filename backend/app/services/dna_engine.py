@@ -255,9 +255,9 @@ class DNAEngine:
         )
 
         checkpoint_msg = (
-            "PUNTO R BLOQUEADO: El sensor p53 detectó distorsión del molde por daño ambiental. Se activa p21, arrestando el ciclo en G1 para dar tiempo a BER/NER. Si no se repara, procede a apoptosis."
+            "ARRESTO EN G1 (ATM/ATR -> p53 -> p21): Daño detectado en el ADN. Quinasas ATM/ATR fosforilan a p53 (Ser15/Ser20) impidiendo su degradación continua por MDM2 (vida media normal ~20 min). p53 se estabiliza e induce p21, inhibiendo CDK2/CDK4-6 para mantener a Rb hipofosforilado (E2F secuestrado) y detener el ciclo antes de entrar a Fase S. Esto da tiempo a reparación por BER/NER. Si el daño es irreparable o masivo, p53 activará apoptosis (BAX/PUMA/NOXA)."
             if is_damaged else
-            "PUNTO R DESPEJADO: No se detectaron aductos ni lesiones en el molde parental."
+            "MOLDE ÍNTEGRO: Sin lesiones detectadas. MDM2 mantiene a p53 en nivel basal bajo por recambio continuo. Rb se fosforila normalmente y autoriza el ingreso a Fase S."
         )
 
         return {
@@ -576,11 +576,11 @@ class DNAEngine:
 
         checkpoint_status = {
             "phase": "G1",
-            "checkpoint_name": "Punto de Control G1/S (Punto de Restriccion R)",
-            "sensor": "Eje p53 -> p21 (Inhibidor de CDK)",
-            "p53_state": "Inactivo / Basal (Genoma íntegro)" if matches_reference else "Fosforilado / Activo (Señal de alarma por lesiones no reparadas)",
-            "outcome": "Autorizado a Fase S (Molde Fiel Homologo)" if matches_reference else f"Punto R Bloqueado ({len(escaped_positions)} lesiones escaparon a la maquinaria enzimática en este ciclo)",
-            "biological_rule": "La celula no copia un molde danado a ciegas. Si el dano no se repara en G1, p53 induce apoptosis para evitar replicar un genoma roto."
+            "checkpoint_name": "Control de Calidad Pre-Replicativo en G1",
+            "sensor": "Sensores ATM/ATR -> Estabilización de p53 (inhibe degradación por MDM2) -> p21",
+            "p53_state": "Nivel basal bajo / Degradado por MDM2 (vida media ~20 min)" if matches_reference else "Fosforilado (Ser15/Ser20) por ATM/ATR · Estabilizado frente a MDM2",
+            "outcome": "Autorizado a Fase S (Molde Fiel Homologo)" if matches_reference else f"Freno en G1 por p21 ({len(escaped_positions)} lesiones remanentes impiden el cruce a Fase S)",
+            "biological_rule": "El Punto R integra mitógenos (Ciclina D-CDK4/6-Rb-E2F); el daño en el ADN activa ATM/ATR para estabilizar a p53 e inducir p21, manteniendo a Rb secuestrando a E2F. La mutación solo se consumará si la lesión no es reparada y la polimerasa la replica en Fase S."
         }
 
         return {
