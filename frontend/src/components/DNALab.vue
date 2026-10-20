@@ -145,86 +145,7 @@
       </div>
     </div>
 
-    <!-- Barra de Flujo Experimental Guiado por Fases del Ciclo Celular -->
-    <div class="pipeline-stepper-card md3-card-outlined" v-if="validationData?.is_valid">
-      <div class="stepper-header">
-        <div class="stepper-title-box">
-          <Icon name="science" size="18" class="stepper-icon" />
-          <span class="stepper-tag">Ciclo Celular & Flujo Experimental:</span>
-          <span :class="['phase-badge-pill', currentCellPhase.toLowerCase()]">
-            {{ currentCellPhaseName }}
-          </span>
-          <button class="stepper-help-link" @click="showManualDialog = true" title="Abrir manual completo y guía del flujo experimental">
-            <Icon name="help_outline" size="14" />
-            <span>Guía del Flujo</span>
-          </button>
-        </div>
-        <span class="stepper-status font-mono">Paso {{ currentStep }} de 5: <strong>{{ currentStepName }}</strong></span>
-      </div>
 
-      <!-- Pistas de Fases Celulares -->
-      <div class="cell-cycle-stepper-track">
-        <!-- Fase G1 -->
-        <div :class="['cycle-phase-section', { active: currentCellPhase === 'G1' }]">
-          <div class="phase-section-title">
-            <span class="phase-code">FASE G1</span>
-            <span class="phase-subtitle">Molde & Checkpoint G1/S (Punto R)</span>
-          </div>
-          <div class="phase-steps-container">
-            <div :class="['step-pill', { active: currentStep === 1, done: currentStep > 1 }]">
-              <span class="step-num">1</span>
-              <span class="step-label">Molde Parental</span>
-            </div>
-            <div class="step-line"></div>
-            <div :class="['step-pill', { active: currentStep === 2, done: currentStep > 2, alert: isMoldDamaged && currentStep === 2 }]">
-              <span class="step-num">2</span>
-              <span class="step-label">Daño / p53-p21</span>
-            </div>
-            <div class="step-line"></div>
-            <div :class="['step-pill', { active: currentStep === 3, done: currentStep > 3 }]">
-              <span class="step-num">3</span>
-              <span class="step-label">Reparación Molde (1.3)</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="phase-inter-divider">
-          <Icon name="arrow_forward" size="14" />
-        </div>
-
-        <!-- Fase S -->
-        <div :class="['cycle-phase-section', { active: currentCellPhase === 'S' }]">
-          <div class="phase-section-title">
-            <span class="phase-code">FASE S</span>
-            <span class="phase-subtitle">Replicación & Triple Filtro (MMR)</span>
-          </div>
-          <div class="phase-steps-container">
-            <div :class="['step-pill', { active: currentStep === 4, done: currentStep > 4 }]">
-              <span class="step-num">4</span>
-              <span class="step-label">Síntesis & MMR (2.1 & 2.2)</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="phase-inter-divider">
-          <Icon name="arrow_forward" size="14" />
-        </div>
-
-        <!-- Fase G2 / M -->
-        <div :class="['cycle-phase-section', { active: currentCellPhase === 'G2' }]">
-          <div class="phase-section-title">
-            <span class="phase-code">FASE G2 / M</span>
-            <span class="phase-subtitle">Supervisión & Roturas DSB</span>
-          </div>
-          <div class="phase-steps-container">
-            <div :class="['step-pill', { active: currentStep === 5, done: isFullyRepaired }]">
-              <span class="step-num">5</span>
-              <span class="step-label">Resolución DSB (3.1 & 3.2)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Aviso si la secuencia actual no es válida -->
     <div class="invalid-sequence-placeholder md3-card-outlined" v-if="validationData && !validationData.is_valid">
@@ -362,46 +283,16 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- ETAPA 1 (FASE G1): VIGILANCIA DEL MOLDE & CHECKPOINT G1/S (PUNTO R)       -->
+    <!-- MÓDULO 1: MUTAGÉNESIS Y REPARACIÓN CONTROLADA                             -->
     <!-- ========================================================================= -->
     <div class="phase-block g1-phase-block md3-card-outlined" v-if="cleanSequence">
       <div class="phase-block-header">
         <div class="phase-title-group">
-          <div class="phase-avatar g1">G1</div>
+          <div class="phase-avatar g1">1</div>
           <div>
-            <h3>ETAPA 1 (FASE G1): Vigilancia del Molde Parental & Checkpoint G1/S (Punto R)</h3>
-            <span class="subtext">G1 no duplica ADN · Control de calidad pre-replicativo · Sensor p53 / p21 · Reparación BER / NER y referencia homóloga</span>
+            <h3>Módulo 1: Mutagénesis y Reparación de ADN</h3>
+            <span class="subtext">Modificaciones puntuales en coordenadas específicas y reparación guiada con plantilla</span>
           </div>
-        </div>
-        <div :class="['checkpoint-status-pill', checkpointG1Status.state]">
-          <Icon :name="checkpointG1Status.state === 'cleared' ? 'check_circle' : (checkpointG1Status.state === 'arrested' ? 'warning' : 'info')" size="16" />
-          <span>{{ checkpointG1Status.label }}</span>
-        </div>
-      </div>
-
-      <!-- Módulo 1.2: Telemetría Didáctica del Sensor p53 / p21 y Apoptosis -->
-      <div :class="['p53-checkpoint-card', checkpointG1Status.state]">
-        <div class="card-mini-title">
-          <Icon name="verified_user" size="16" />
-          <span>Módulo 1.2: Dictamen del Punto de Restricción R (Checkpoint G1/S)</span>
-        </div>
-        <div class="checkpoint-telemetry-row">
-          <div class="cp-indicator-box">
-            <span class="cp-label">Sensor Molecular de Daño:</span>
-            <span class="cp-val p53"><strong>p53:</strong> {{ checkpointG1Status.p53 }}</span>
-          </div>
-          <div class="cp-indicator-box">
-            <span class="cp-label">Inhibidor de Ciclina/CDK:</span>
-            <span class="cp-val p21"><strong>p21:</strong> {{ checkpointG1Status.p21 }}</span>
-          </div>
-          <div class="cp-indicator-box full">
-            <span class="cp-label">Decisión Biológica:</span>
-            <span class="cp-val desc">{{ checkpointG1Status.decision }}</span>
-          </div>
-        </div>
-        <div class="checkpoint-risk-alert" v-if="checkpointG1Status.risk">
-          <Icon name="warning" size="18" class="risk-icon" />
-          <span><strong>Regla de Oro (Alberts cap. 9 / Lodish cap. 9):</strong> {{ checkpointG1Status.risk }}</span>
         </div>
       </div>
 
@@ -414,12 +305,12 @@
               <Icon name="bolt" size="18" />
             </div>
             <div>
-              <h4>Módulo 1.1: Inducción de Daño en el Molde Parental</h4>
-              <span class="op-sub">Comprueba cómo el daño ambiental o una mutación activa el freno en G1/S</span>
+              <h4>Módulo 1.1: Inducción de Daño en el Molde</h4>
+              <span class="op-sub">Comprueba cómo las lesiones físicas/químicas o la intervención dirigida sobre la secuencia</span>
             </div>
           </div>
 
-          <!-- Selector de Modo de Daño: Ambiental vs Quirúrgico CRISPR -->
+          <!-- Selector de Modo de Daño: Ambiental vs Herramienta Exógena CRISPR -->
           <div class="sub-mode-toggle-row">
             <button 
               type="button" 
@@ -435,7 +326,7 @@
               @click="g1DamageMode = 'crispr'"
             >
               <Icon name="content_cut" size="15" />
-              <span>Edición Quirúrgica CRISPR</span>
+              <span>Herramienta Exógena (CRISPR-Cas9)</span>
             </button>
           </div>
 
@@ -522,8 +413,74 @@
 
             <button class="md3-button-filled" @click="applyControlledMutation" :disabled="loading">
               <Icon name="content_cut" size="18" />
-              <span>Aplicar Mutación Dirigida CRISPR</span>
+              <span>Inducir Lesión Dirigida (CRISPR-Cas9)</span>
             </button>
+          </div>
+        </div>
+
+        <!-- MÓDULO 1.2: DETECCIÓN DE APAREAMIENTOS INCORRECTOS (junto al 1.1) -->
+        <div class="duplex-card s-mmr-card">
+          <div class="card-subtitle">
+            <Icon name="science" size="18" />
+            <span>Módulo 1.2: Detección de Apareamientos Incorrectos</span>
+          </div>
+          <p class="desc-text">
+            Compara la hebra alterada con la complementaria del molde original e identifica los pares no canónicos.
+          </p>
+
+          <div class="md3-textfield">
+            <label>Cadena a Comprobar:</label>
+            <div class="input-with-actions">
+              <input 
+                type="text" 
+                v-model="duplexStrand" 
+                placeholder="Cadena apareada (A, T, C, G)..." 
+                class="font-mono sequence-field"
+              />
+              <button class="md3-chip" type="button" @click="fillDuplexWithCanonical" title="Usar complementaria estándar">
+                <span>Complementaria</span>
+              </button>
+              <button class="md3-chip" type="button" @click="insertDuplexMismatch" title="Introducir un apareamiento erróneo">
+                <Icon name="shuffle" size="14" />
+                <span>Inducir Error</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="md3-button-filled" @click="runMismatchDetection" :disabled="loading">
+            <Icon name="analytics" size="18" />
+            <span>Escanear Apareamientos</span>
+          </button>
+
+          <!-- Resultados de Apareamientos -->
+          <div class="mismatch-feedback" v-if="mismatchResult && Array.isArray(mismatchResult.mismatches)">
+            <div :class="['status-banner', mismatchResult.is_fully_canonical ? 'success' : 'warning']">
+              <Icon :name="mismatchResult.is_fully_canonical ? 'check_circle' : 'warning'" size="18" />
+              <span>
+                {{ mismatchResult.is_fully_canonical 
+                  ? 'Apareamiento 100% canónico Watson-Crick.' 
+                  : `${mismatchResult.mismatch_count || 0} apareamiento(s) no canónico(s) detectado(s).` }}
+              </span>
+            </div>
+
+            <div class="pairs-visual-strip">
+              <div 
+                v-for="(pair, idx) in duplexPairsDisplay" 
+                :key="idx" 
+                :class="['pair-pill', pair.is_canonical ? 'canonical' : 'non-canonical']"
+                :title="pair.note"
+              >
+                <span class="p-idx font-mono">{{ idx }}</span>
+                <span class="p-b1 font-mono">{{ pair.b1 }}</span>
+                <span class="p-conn">:</span>
+                <span class="p-b2 font-mono">{{ pair.b2 }}</span>
+              </div>
+            </div>
+
+            <div class="scientific-disclaimer-mini" v-if="(mismatchResult.mismatch_count || 0) > 0">
+              <Icon name="info" size="14" />
+              <span>Regla del modelo: El sistema marca el error sin conjeturar arbitrariamente la base original en ausencia de plantilla fiable.</span>
+            </div>
           </div>
         </div>
 
@@ -532,10 +489,10 @@
         <div class="duplex-card g1-repair-card">
           <div class="card-subtitle">
             <Icon name="shield" size="18" />
-            <span>Módulo 1.3: Reparación Pre-Replicativa del Molde (BER / NER / Homología)</span>
+            <span>Módulo 1.3: Reparación del Molde (BER / NER / Homología)</span>
           </div>
           <p class="desc-text">
-            Corrige lesiones o mutaciones en la hebra molde parental utilizando la plantilla de referencia ANTES de entrar en Fase S.
+            Corrige lesiones o mutaciones en la hebra molde parental utilizando la plantilla de referencia.
           </p>
 
           <!-- Toggle: Modo de Reparación (Control 100% vs Cinética Enzimática Real) -->
@@ -607,18 +564,18 @@
             <div :class="['status-banner', repairResult.matches_reference ? 'success' : 'warning']">
               <Icon :name="repairResult.matches_reference ? 'check_circle' : 'warning'" size="18" />
               <div>
-                <strong>Estado: {{ repairResult.matches_reference ? 'Molde Restaurado al 100% · Autorizado a Fase S' : 'Reparación Parcial: Lesiones Escaparon a la Escisión' }}</strong>
+                <strong>Estado: {{ repairResult.matches_reference ? 'Molde Restaurado al 100%' : 'Reparación Parcial: Lesiones Escaparon a la Escisión' }}</strong>
                 <p>
                   {{ repairResult.matches_reference 
-                    ? 'Punto R superado: La hebra molde recuperó su pureza original. El sensor p53 se inactiva y la célula avanza hacia la replicación.' 
-                    : `Se repararon ${repairResult.repaired_positions?.length || 0} lesiones. Sin embargo, ${repairResult.escaped_positions?.length || (repairResult.remaining_divergences || 0)} lesiones escaparon al reconocimiento enzimático en este ciclo. El Punto R sigue bloqueado; ejecuta otro ciclo o usa control asistido.` }}
+                    ? 'La hebra molde recuperó su secuencia original.' 
+                    : `Se repararon ${repairResult.repaired_positions?.length || 0} lesiones. Sin embargo, ${repairResult.escaped_positions?.length || (repairResult.remaining_divergences || 0)} lesiones escaparon al reconocimiento enzimático en este ciclo. Ejecuta otro ciclo o usa control asistido.` }}
                 </p>
               </div>
             </div>
 
             <!-- Chips de lesiones que escaparon -->
             <div class="escaped-lesions-box" v-if="!repairResult.matches_reference && repairResult.escaped_positions?.length">
-              <span class="esc-label">Posiciones que escapan y mantienen activo a p53:</span>
+              <span class="esc-label">Posiciones que escaparon a la reparación:</span>
               <div class="esc-chips font-mono">
                 <span v-for="p in repairResult.escaped_positions" :key="p" class="esc-chip">
                   Posición {{ p }}
@@ -635,213 +592,14 @@
       </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- ETAPA 2 (FASE S): REPLICACIÓN CELULAR & TRIPLE FILTRO DE FIDELIDAD (MMR)  -->
-    <!-- ========================================================================= -->
-    <div class="phase-block s-phase-block md3-card-outlined" v-if="cleanSequence">
-      <div class="phase-block-header">
-        <div class="phase-title-group">
-          <div class="phase-avatar s">S</div>
-          <div>
-            <h3>ETAPA 2 (FASE S): Replicación Celular Semiconservativa & Triple Filtro de Copia</h3>
-            <span class="subtext">Polimerización 5'→3' con desoxirribonucleótidos (dNTPs) · Triple barrera de fidelidad extrema</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tarjeta Interactiva del Triple Filtro de Fidelidad (Alberts cap. 5 / Lehninger) -->
-      <div class="triple-fidelity-card">
-        <div class="card-subtitle-row">
-          <Icon name="biotech" size="18" class="card-sub-icon" />
-          <span class="card-sub-title">Triple Filtro de Fidelidad de la Copia en Fase S (Alberts et al. 2022, cap. 5; Lehninger 8.ª ed.):</span>
-        </div>
-        <div class="fidelity-filters-grid">
-          <div class="filter-box f1">
-            <div class="filter-num">1</div>
-            <div class="filter-content">
-              <strong>Selección de Base (ADN Polimerasa)</strong>
-              <span class="filter-rate">~1 error cada 10⁵ nt (10⁻⁵)</span>
-              <p>Geometría activa del bolsillo catalítico Watson-Crick en la incorporación del dNTP.</p>
-            </div>
-          </div>
-          <div class="filter-arrow">→</div>
-          <div class="filter-box f2">
-            <div class="filter-num">2</div>
-            <div class="filter-content">
-              <strong>Corrección de Pruebas (Proofreading)</strong>
-              <span class="filter-rate">Baja el error a ~1 cada 10⁷ nt (10⁻⁷)</span>
-              <p>Actividad exonucleasa 3'→5' de la polimerasa: recorta el nucleótido mal incorporado al instante.</p>
-            </div>
-          </div>
-          <div class="filter-arrow">→</div>
-          <div class="filter-box f3">
-            <div class="filter-num">3</div>
-            <div class="filter-content">
-              <strong>Reparación Desapareamientos (MMR)</strong>
-              <span class="filter-rate">Baja el error a ~1 cada 10⁹–10¹⁰ nt (10⁻¹⁰)</span>
-              <p>Complejos MutS/MutL escanean la cadena hija recién hecha post-horquilla y corrigen desajustes.</p>
-            </div>
-          </div>
-        </div>
-        <div class="fidelity-summary-banner">
-          <Icon name="verified" size="16" />
-          <span><strong>Resultado biológico consolidado:</strong> Solo ~1 error por cada mil a diez mil millones de nucleótidos copiados en el genoma celular.</span>
-        </div>
-      </div>
-
-      <!-- Acciones de Replicación: Módulo 2.1 Replicación & Módulo 2.2 MMR -->
-      <div class="s-replication-grid">
-        <!-- MÓDULO 2.1: DUPLICACIÓN CELULAR SEMICONSERVATIVA -->
-        <div class="op-panel mode-stochastic">
-          <div class="op-panel-header">
-            <div class="header-icon-mini">
-              <Icon name="content_copy" size="18" />
-            </div>
-            <div>
-              <h4>Módulo 2.1: Duplicación Celular Semiconservativa (ADN Polimerasa)</h4>
-              <span class="op-sub">Síntesis de la hebra hija mediante polimerización 5'→3'</span>
-            </div>
-          </div>
-
-          <!-- Selector de Modo de Replicación: Fiel vs Estocástica con Error -->
-          <div class="sub-mode-toggle-row">
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: sReplicationMode === 'faithful' }]" 
-              @click="sReplicationMode = 'faithful'"
-            >
-              <Icon name="verified" size="15" />
-              <span>Copia Fiel (Fidelidad Normal)</span>
-            </button>
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: sReplicationMode === 'stochastic' }]" 
-              @click="sReplicationMode = 'stochastic'"
-            >
-              <Icon name="shuffle" size="15" />
-              <span>Replicación con Error Estocástico</span>
-            </button>
-          </div>
-
-          <!-- OPCIÓN A: COPIA FIEL -->
-          <div v-if="sReplicationMode === 'faithful'" class="replication-mode-box">
-            <p class="desc-text">
-              Realiza una duplicación fidedigna de la cadena activa. Comprueba identidad molecular al 100% y genera la copia de trabajo lista para escaneo post-replicativo.
-            </p>
-            <button class="md3-button-filled" @click="replicateFaithful" :disabled="loading">
-              <Icon name="content_copy" size="18" />
-              <span>Sintetizar Hebra Hija Fiel (100% Identidad)</span>
-            </button>
-            <div class="copy-feedback-banner" v-if="copyNotification">
-              <Icon name="check_circle" size="16" />
-              <span>{{ copyNotification }}</span>
-            </div>
-          </div>
-
-          <!-- OPCIÓN B: REPLICACIÓN CON TASA DE ERROR ESTOCÁSTICO -->
-          <div v-else class="replication-mode-box">
-            <div class="slider-module">
-              <div class="slider-telemetry">
-                <span class="slider-title">Tasa de Error por Base de Polimerasa:</span>
-                <span class="slider-rate font-mono">{{ (mutationRate * 100).toFixed(1) }}%</span>
-              </div>
-              <input 
-                type="range" 
-                v-model.number="mutationRate" 
-                min="0" 
-                max="0.20" 
-                step="0.005" 
-                class="md3-range-slider"
-              />
-              <div class="slider-marks">
-                <span>0.0% (Fisiológico)</span>
-                <span>10.0% (Hipermutación)</span>
-                <span>20.0% (Umbral Letal)</span>
-              </div>
-            </div>
-
-            <button class="md3-button-filled" @click="replicateWithProbabilities" :disabled="loading">
-              <Icon name="restart_alt" size="18" />
-              <span>Simular Duplicación con Error de Polimerasa</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- MÓDULO 2.2: DETECCIÓN DE DESAPAREAMIENTOS (MMR DÚPLEX POST-REPLICACIÓN) -->
-        <div class="duplex-card s-mmr-card">
-          <div class="card-subtitle">
-            <Icon name="science" size="18" />
-            <span>Módulo 2.2: Detección de Apareamientos Incorrectos (Filtro MMR Dúplex)</span>
-          </div>
-          <p class="desc-text">
-            Inspecciona la complementariedad entre la hebra molde y la hebra sintetizada para identificar pares no canónicos.
-          </p>
-
-          <div class="md3-textfield">
-            <label>Cadena Sintetizada a Comprobar:</label>
-            <div class="input-with-actions">
-              <input 
-                type="text" 
-                v-model="duplexStrand" 
-                placeholder="Cadena apareada (A, T, C, G)..." 
-                class="font-mono sequence-field"
-              />
-              <button class="md3-chip" type="button" @click="fillDuplexWithCanonical" title="Usar complementaria estándar">
-                <span>Complementaria</span>
-              </button>
-              <button class="md3-chip" type="button" @click="insertDuplexMismatch" title="Introducir un apareamiento erróneo">
-                <Icon name="shuffle" size="14" />
-                <span>Inducir Error</span>
-              </button>
-            </div>
-          </div>
-
-          <button class="md3-button-filled" @click="runMismatchDetection" :disabled="loading">
-            <Icon name="analytics" size="18" />
-            <span>Escanear Apareamientos Dúplex (MMR)</span>
-          </button>
-
-          <!-- Resultados de Apareamientos -->
-          <div class="mismatch-feedback" v-if="mismatchResult && Array.isArray(mismatchResult.mismatches)">
-            <div :class="['status-banner', mismatchResult.is_fully_canonical ? 'success' : 'warning']">
-              <Icon :name="mismatchResult.is_fully_canonical ? 'check_circle' : 'warning'" size="18" />
-              <span>
-                {{ mismatchResult.is_fully_canonical 
-                  ? 'Apareamiento 100% canónico Watson-Crick.' 
-                  : `${mismatchResult.mismatch_count || 0} apareamiento(s) no canónico(s) detectado(s).` }}
-              </span>
-            </div>
-
-            <div class="pairs-visual-strip">
-              <div 
-                v-for="(pair, idx) in duplexPairsDisplay" 
-                :key="idx" 
-                :class="['pair-pill', pair.is_canonical ? 'canonical' : 'non-canonical']"
-                :title="pair.note"
-              >
-                <span class="p-idx font-mono">{{ idx }}</span>
-                <span class="p-b1 font-mono">{{ pair.b1 }}</span>
-                <span class="p-conn">:</span>
-                <span class="p-b2 font-mono">{{ pair.b2 }}</span>
-              </div>
-            </div>
-
-            <div class="scientific-disclaimer-mini" v-if="(mismatchResult.mismatch_count || 0) > 0">
-              <Icon name="info" size="14" />
-              <span>Regla del modelo: El sistema marca el error sin conjeturar arbitrariamente la base original en ausencia de plantilla fiable.</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- MÓDULO 2.3: DIFF INSPECTOR EN FASE S -->
+      <!-- MÓDULO 2: DIFF INSPECTOR -->
       <div class="diff-inspector-card" v-if="diffResult && Array.isArray(diffResult.differences)">
         <div class="diff-header">
           <div class="diff-title-row">
             <Icon name="compare_arrows" size="24" class="diff-icon" />
             <div>
-              <h3>Módulo 2.3: Reporte Diferencial de Síntesis (Molde vs Hebra Sintetizada)</h3>
-              <span class="diff-meta">Alineamiento de extremos apareados para auditoría de fidelidad</span>
+              <h3>Módulo 2: Reporte Diferencial (Original vs Modificada)</h3>
+              <span class="diff-meta">Posiciones y cambios detectados entre ambas secuencias</span>
             </div>
           </div>
 
@@ -857,7 +615,7 @@
             <code class="font-mono strand-stream">{{ diffResult.reference || '' }}</code>
           </div>
           <div class="alignment-row">
-            <span class="row-tag modified">SINTETIZADA:</span>
+            <span class="row-tag modified">MODIFICADA:</span>
             <code class="font-mono strand-stream mod-stream">{{ diffResult.modified || '' }}</code>
           </div>
         </div>
@@ -878,166 +636,7 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- ========================================================================= -->
-    <!-- ETAPA 3 (FASE G2 / M): ROTURAS BICATENARIAS (DSB) & RESOLUCIÓN PRE-MITOSIS -->
-    <!-- ========================================================================= -->
-    <div class="phase-block g2-phase-block md3-card-outlined" v-if="cleanSequence">
-      <div class="phase-block-header">
-        <div class="phase-title-group">
-          <div class="phase-avatar g2">G2</div>
-          <div>
-            <h3>ETAPA 3 (FASE G2 / M): Integridad Post-Replicativa & Roturas Bicatenarias (DSB)</h3>
-            <span class="subtext">Genoma ya duplicado (dos cromátidas hermanas presentes en G2) · Recombinación Homóloga (HDR) vs Unión de Extremos (NHEJ)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Módulo 3.1 & 3.2 DSB -->
-      <div class="dsb-controls-row">
-        <div class="md3-textfield break-pos-field">
-          <label>Módulo 3.1: Posición de Rotura DSB (1 a {{ Math.max(1, cleanSequence.length - 1) }}):</label>
-          <input 
-            type="number" 
-            v-model.number="breakPosition" 
-            :min="1" 
-            :max="Math.max(1, cleanSequence.length - 1)" 
-            class="font-mono"
-          />
-        </div>
-
-        <div class="dsb-action-buttons">
-          <button class="md3-button-filled hdr-btn" @click="runBreakSimulation('homology_directed')" :disabled="loading">
-            <Icon name="shield" size="18" />
-            <span>Módulo 3.2: Reparar vía HDR (Cromátida Hermana · Fiel 100%)</span>
-          </button>
-          <button class="md3-button-tonal nhej-btn" @click="runBreakSimulation('end_joining')" :disabled="loading">
-            <Icon name="build" size="18" />
-            <span>Módulo 3.2: Reparar vía NHEJ (Unión Extremos · Cicatriz)</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Visualización de Rotura y Fragmentación -->
-      <div class="dsb-result-panel" v-if="breakResult && breakResult.fragments && breakResult.fragments.length >= 2">
-        <div class="fragments-display">
-          <div class="frag-box">
-            <span class="frag-label">Extremo 5' (Fragmento Izq):</span>
-            <code class="font-mono">{{ breakResult.fragments[0] }}</code>
-          </div>
-          <div class="cut-marker">
-            <Icon name="content_cut" size="18" />
-            <span>ROTURA DSB</span>
-          </div>
-          <div class="frag-box">
-            <span class="frag-label">Extremo 3' (Fragmento Der):</span>
-            <code class="font-mono">{{ breakResult.fragments[1] }}</code>
-          </div>
-        </div>
-
-        <div class="recombined-box">
-          <div class="rec-header">
-            <span class="rec-title">Secuencia Recombinada ({{ formatRepairMethod(breakResult.repair_method) }}):</span>
-            <span :class="['scar-badge', breakResult.scar?.includes('deletion') ? 'scarred' : 'clean']">
-              Cicatriz: {{ formatScarText(breakResult.scar) }}
-            </span>
-          </div>
-          <code class="font-mono rec-seq">{{ breakResult.repaired_sequence }}</code>
-          <p class="rec-desc">{{ formatBreakDescription(breakResult) }}</p>
-        </div>
-
-        <!-- Cascada Enzimática y Complejos Proteicos en Acción -->
-        <div class="protein-cascade-panel">
-          <div class="cascade-header">
-            <div class="cascade-title">
-              <Icon name="biotech" size="20" class="cascade-icon" />
-              <div>
-                <h4>Complejos Proteicos y Cascada Enzimática en Acción</h4>
-                <span class="cascade-subtext">Mecanismo molecular real documentado paso a paso</span>
-              </div>
-            </div>
-            <div :class="['viability-pill', breakResult.repair_method === 'homology_directed' ? 'high' : 'medium']">
-              <Icon :name="breakResult.repair_method === 'homology_directed' ? 'check_circle' : 'shield'" size="16" />
-              <span>
-                {{ breakResult.repair_method === 'homology_directed' 
-                  ? 'Viabilidad: 100% · Célula Intacta (Sin Daño Residual)' 
-                  : 'Viabilidad: Preservada · Unión de Emergencia (Célula Viva)' }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Pasos cronológicos de la maquinaria molecular -->
-          <div class="cascade-timeline">
-            <!-- Paso 1: Alarma Sensor común -->
-            <div class="cascade-step completed">
-              <div class="step-num font-mono">1</div>
-              <div class="step-body">
-                <div class="step-head">
-                  <span class="prot-name">Complejo MRN & Quinasa ATM</span>
-                  <span class="prot-role sensor">Sensor y Baliza de Emergencia</span>
-                </div>
-                <p class="step-desc">
-                  El complejo <strong>MRN (Mre11-Rad50-Nbs1)</strong> detecta físicamente los dos cabos rotos y activa a la quinasa <strong>ATM</strong>, que fosforila miles de histonas creando un foco fluorescente de <strong>&gamma;-H2AX</strong> en la coordenada {{ breakPosition }}.
-                </p>
-              </div>
-            </div>
-
-            <!-- Paso 2: Reclutamiento de Maquinaria -->
-            <div class="cascade-step completed" v-if="breakResult.repair_method === 'homology_directed'">
-              <div class="step-num font-mono">2</div>
-              <div class="step-body">
-                <div class="step-head">
-                  <span class="prot-name">BRCA1 / BRCA2 & Nucleoproteína RAD51</span>
-                  <span class="prot-role hdr">Resección y Búsqueda de Homología</span>
-                </div>
-                <p class="step-desc">
-                  <strong>BRCA1/2</strong> facilitan la resección de los extremos 5' y cargan a <strong>RAD51</strong>, formando filamentos helicoidales que invaden la hebra molde de referencia homóloga para copiar su información sin errores.
-                </p>
-              </div>
-            </div>
-            <div class="cascade-step completed" v-else>
-              <div class="step-num font-mono">2</div>
-              <div class="step-body">
-                <div class="step-head">
-                  <span class="prot-name">Dímero Ku70 / Ku80 & DNA-PKcs</span>
-                  <span class="prot-role nhej">Abrazadera y Alineación a Ciegas</span>
-                </div>
-                <p class="step-desc">
-                  Las proteínas <strong>Ku70/Ku80</strong> se deslizan en forma de anillo sobre los extremos rotos para protegerlos de degradación, y reclutan a <strong>DNA-PKcs</strong> para mantener los dos fragmentos alineados.
-                </p>
-              </div>
-            </div>
-
-            <!-- Paso 3: Resolución y Sellado -->
-            <div class="cascade-step completed" v-if="breakResult.repair_method === 'homology_directed'">
-              <div class="step-num font-mono">3</div>
-              <div class="step-body">
-                <div class="step-head">
-                  <span class="prot-name">ADN Polimerasa & ADN Ligasa I</span>
-                  <span class="prot-role success">Síntesis de Alta Fidelidad y Sellado</span>
-                </div>
-                <p class="step-desc">
-                  La <strong>ADN Polimerasa</strong> re-sintetiza las bases idénticas al molde original y la <strong>Ligasa I</strong> sella el enlace fosfodiéster. <em>El guardián p53 desactiva la alarma: genoma restaurado al 100%.</em>
-                </p>
-              </div>
-            </div>
-            <div class="cascade-step completed" v-else>
-              <div class="step-num font-mono">3</div>
-              <div class="step-body">
-                <div class="step-head">
-                  <span class="prot-name">Endonucleasa Artemis & ADN Ligasa IV / XRCC4</span>
-                  <span class="prot-role warning">Procesamiento de Extremos y Unión Rápida</span>
-                </div>
-                <p class="step-desc">
-                  <strong>Artemis</strong> recorta nucleótidos no compatibles (posible microdeleción) y el complejo <strong>ADN Ligasa IV / XRCC4</strong> sella directamente los extremos. <em>La célula evita la catástrofe mitótica y sobrevive.</em>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- 7 & 10: Cuaderno de Bitácora / Registro de Experimentos & Marco Científico -->
     <div class="audit-log-card md3-card-outlined">
@@ -1045,7 +644,7 @@
         <div class="section-title-group">
           <Icon name="history" size="22" class="section-icon" />
           <div>
-            <h3>Módulo 4: Registro de Experimentos & Trazabilidad de Operaciones</h3>
+            <h3>Módulo 3: Registro de Experimentos & Trazabilidad de Operaciones</h3>
             <span class="subtext">Auditoría inmutable de secuencias, mutaciones, métodos y resoluciones</span>
           </div>
         </div>
@@ -1389,21 +988,33 @@
               <div class="flow-step-item">
                 <div class="step-badge step-2">Paso 2</div>
                 <div class="step-info">
-                  <h5>Paso 2 (Fase G1): Daño en el Molde y Freno del Checkpoint G1/S (Sensor p53 / p21)</h5>
+                  <h5>Paso 2 (Fase G1): Detección de Daño en el Molde y Freno en G1 (Eje ATM/ATR → p53/MDM2 → p21)</h5>
                   <p>
-                    <strong>Dónde y cuándo ocurre:</strong> En la doble hebra parental intacta antes de ingresar a la síntesis.
+                    <strong>Dónde y cuándo ocurre:</strong> En la doble hebra parental en Fase G1, antes de entrar a replicación.
                     <br>
-                    <strong>Cómo ocurre el error (Módulo 1.1):</strong>
+                    <strong>Naturaleza de las lesiones (Módulo 1.1):</strong> En este punto <em>no son mutaciones</em>, sino <em>lesiones físicas y químicas</em> en el ADN. La mutación solo se fijará si la célula replica una lesión sin reparar en Fase S.
                     <br>
-                    • <em>Radiación Ultravioleta (Luz UV):</em> Los fotones UV provocan dímeros covalentes de ciclobutano entre timinas adyacentes (T-T) o citosinas (C→T), distorsionando físicamente la hélice.
+                    • <em>Radiación Ultravioleta (Luz UV):</em> Dímeros covalentes de ciclobutano entre timinas adyacentes (T-T) o citosinas (C→T), distorsionando físicamente la hélice.
                     <br>
-                    • <em>Estrés Oxidativo (ROS):</em> Los radicales libres del metabolismo mitocondrial oxidan la guanina a 8-oxo-7,8-dihidroguanina (8-oxo-G), que aparea incorrectamente con adenina y genera transversiones G→T.
+                    • <em>Estrés Oxidativo (ROS):</em> Radicales libres del metabolismo oxidan guanina a 8-oxo-7,8-dihidroguanina (8-oxo-G), que aparea incorrectamente con adenina y genera transversiones G→T.
                     <br>
-                    • <em>Desaminación Espontánea:</em> Ataque hidrolítico que arranca el grupo amino (-NH₂) de la citosina, transformándola en uracilo (U), que se lee como timina (transición C→T).
+                    • <em>Desaminación Espontánea:</em> Ataque hidrolítico que transforma citosina en uracilo (U), leído como timina (transición C→T).
                     <br>
-                    • <em>Edición Quirúrgica CRISPR:</em> Endonucleasas Cas9 dirigidas por ARN guía que generan una alteración diana específica (sustitución, inserción o deleción).
+                    • <em>Herramienta Exógena CRISPR-Cas9:</em> Bisturí molecular externo (*S. pyogenes*) que crea un corte de doble cadena dirigido en una diana elegida.
                     <br>
-                    <strong>Respuesta Biológica (Módulo 1.2):</strong> El guardián del genoma <strong>p53 es fosforilado y estabilizado por quinasas sensoras ATM/ATR</strong>. p53 transcribe de inmediato el inhibidor de quinasas dependientes de ciclina <strong>p21</strong>, el cual inactiva al complejo Ciclina E/CDK2. Esto <strong>congela el ciclo celular en el Punto de Restricción R (G1/S)</strong>, impidiendo terminantemente que la célula replique un ADN dañado. Si el daño no es corregido, p53 conduce a la célula a senescencia o apoptosis programada.
+                    <strong>Respuesta Biológica Real (Módulo 1.2):</strong> En reposo, p53 se degrada continuamente por la ubiquitina-ligasa <strong>MDM2</strong> (vida media ~20 min). Al surgir daño:
+                    <br>
+                    1. <em>Sensores reales:</em> Complejo <strong>MRN / ATM</strong> (roturas de doble cadena) y <strong>RPA / ATR</strong> (cadena sencilla) detectan la lesión y fosforilan a p53 (Ser15/Ser20) y a MDM2.
+                    <br>
+                    2. <em>Estabilización:</em> Fosforilado, p53 deja de ser reconocido por MDM2, se estabiliza, tetrameriza y actúa como factor de transcripción.
+                    <br>
+                    3. <em>Decisión por afinidad y dosis:</em>
+                    <br>
+                    • <strong>Daño leve-moderado:</strong> p53 induce promotores de alta afinidad: <strong>p21</strong> (inhibe CDK2/4/6 manteniendo a Rb hipofosforilado y secuestrando a E2F para frenar en G1) y <strong>GADD45/DDB2</strong> (favorecen BER/NER). Reparado el daño, MDM2 vuelve a degradar a p53.
+                    <br>
+                    • <strong>Daño masivo o persistente:</strong> p53 sostenido + Ser46/Lys120 activa promotores de baja afinidad: <strong>BAX, PUMA, NOXA</strong>, induciendo apoptosis mitocondrial.
+                    <br>
+                    <em>Nota sobre el Punto R:</em> El Punto R no inspecciona calidad de ADN; solo mide señales mitogénicas. El freno ante daño lo impone la vía colateral ATM/ATR → p53 → p21.
                   </p>
                 </div>
               </div>
@@ -1445,7 +1056,7 @@
                     <br>
                     3. <em>Reparación de Apareamientos Incorrectos Post-Replicativo (MMR ~10⁻¹⁰):</em> Las proteínas <strong>MutS y MutL</strong> escanean la hebra recién sintetizada reconociendo desajustes (ej. pares A-G o C-T), cortan la hebra hija y la resintetizan con fidelidad perfecta.
                     <br>
-                    <strong>Módulos 2.2 y 2.3:</strong> Al pulsar <strong>"Escanear Apareamientos Dúplex (MMR)"</strong>, el sistema señala pares canónicos y no canónicos, y el <strong>Módulo 2.3 (Diff Inspector)</strong> desglosa cada mutación por posición, tipo y base alterada.
+                    <strong>Módulos 2.2 y 2.3:</strong> Al pulsar <strong>"Escanear Apareamientos"</strong>, el sistema señala pares canónicos y no canónicos, y el <strong>Módulo 2.3 (Diff Inspector)</strong> desglosa cada mutación por posición, tipo y base alterada.
                   </p>
                 </div>
               </div>
@@ -1685,7 +1296,7 @@
                 <li>En el <strong>Módulo 2.1</strong>, selecciona <em>"Replicación con Error Estocástico"</em> y ajusta la tasa de error al 5.0%.</li>
                 <li>Pulsa <strong>"Simular Duplicación con Error de Polimerasa"</strong>.</li>
                 <li>La nueva hebra sintetizada se carga de inmediato en el <strong>Módulo 2.2</strong> (Filtro MMR Dúplex).</li>
-                <li>Pulsa <strong>"Escanear Apareamientos Dúplex (MMR)"</strong>: comprueba las bases no canónicas detectadas por la maquinaria MutS/MutL post-horquilla.</li>
+                <li>Pulsa <strong>"Escanear Apareamientos"</strong>: comprueba las bases no canónicas detectadas por la maquinaria MutS/MutL post-horquilla.</li>
                 <li>Revisa el <strong>Módulo 2.3 (Diff Inspector)</strong> para ver el desglose exacto de las sustituciones, inserciones o deleciones ocurridas en la copia.</li>
               </ol>
             </div>
@@ -1972,28 +1583,35 @@ const checkpointG1Status = computed(() => {
     return {
       state: 'idle',
       label: 'Sin validar',
-      p53: 'Inactivo',
+      p53: 'Basal (~20 min vida media · degradado por MDM2)',
       p21: 'Inactivo',
       decision: 'Introduce una secuencia válida de molde.',
       risk: null
     };
   }
   if (isMoldDamaged.value) {
+    const isSevere = (envDamageResult.value?.lesion_count || 0) > 3;
     return {
       state: 'arrested',
-      label: 'Freno en G1/S (Punto R Activo)',
-      p53: 'Estabilizado / Activo (Sensor de Daño)',
-      p21: 'Transcripción Inducida (Inhibidor CDK)',
-      decision: 'El ciclo celular se detiene en G1 para dar tiempo a reparar el molde.',
-      risk: 'Alberts cap. 9 / Lodish cap. 9: La célula no copia un ADN dañado a ciegas. Si la lesión no se repara, p53 activa Apoptosis para no replicar un genoma roto.'
+      label: 'Freno en G1 por Daño al ADN',
+      p53: isSevere
+        ? 'Acumulación masiva + Ser46/Lys120 (Programa Apoptótico)'
+        : 'Fosforilado (Ser15/Ser20) por ATM/ATR · Escapa a MDM2',
+      p21: isSevere
+        ? 'Rebasado por activación de BAX / PUMA / NOXA'
+        : 'Transcrito e inducido (Inhibe CDK2/4/6 · Rb hipofosforilado)',
+      decision: isSevere
+        ? 'Daño irreparable/masivo: p53 activa promotores de baja afinidad (BAX, PUMA, NOXA), induciendo apoptosis mitocondrial para evitar replicar un genoma roto.'
+        : 'Daño moderado: p53 induce p21; la célula detiene el ciclo en G1 y activa reparación por escisión BER/NER (OGG1, GADD45).',
+      risk: 'El Punto R mide mitógenos; ante daño, ATM/ATR fosforilan a p53 para inducir p21 y frenar a las CDKs. La mutación no existe aún: solo se consolidará si la lesión no se repara y se replica en Fase S.'
     };
   }
   return {
     state: 'cleared',
-    label: 'Punto R Superado (Molde Fiel)',
-    p53: 'Nivel basal constitutivo',
-    p21: 'Inactivo (CDKs operativas)',
-    decision: 'Molde íntegro verificado. Célula autorizada a entrar en Fase S (Replicación).',
+    label: 'Molde Íntegro · Autorizado a Fase S',
+    p53: 'Basal bajo (MDM2 ubiquitina y envía continuamente al proteasoma)',
+    p21: 'Apagado (CDK4/6 y CDK2 activas · Rb fosforilado libera E2F)',
+    decision: 'Molde libre de lesiones. MDM2 mantiene degradado a p53. Célula autorizada a cruzar a Fase S (Replicación).',
     risk: null
   };
 });
@@ -2618,10 +2236,10 @@ async function runReferenceRepair() {
     // Sincronizar siempre la secuencia resultante (sea completa o parcial)
     sequenceInput.value = res.repaired_sequence;
     await validateAndProcess();
-    diffResult.value = await api.compareDNA(moldRef, res.repaired_sequence);
     const compMold = await api.complementDNA(moldRef);
-    mismatchResult.value = await api.detectMismatches(res.repaired_sequence, compMold.complement);
     duplexStrand.value = compMold.complement;
+    mismatchResult.value = await api.detectMismatches(res.repaired_sequence, compMold.complement);
+    diffResult.value = await api.compareDNA(moldRef, res.repaired_sequence);
     await fetchLogs();
   } catch (err) {
     alert(err.message || 'Error en reparación guiada');
@@ -2704,12 +2322,10 @@ async function applyEnvironmentalDamage() {
     };
     repairResult.value = null;
     await validateAndProcess();
-
-    diffResult.value = await api.compareDNA(moldRef, res.damaged_sequence);
     const compMold = await api.complementDNA(moldRef);
     duplexStrand.value = compMold.complement;
     mismatchResult.value = await api.detectMismatches(res.damaged_sequence, compMold.complement);
-
+    diffResult.value = await api.compareDNA(moldRef, res.damaged_sequence);
     await fetchLogs();
   } catch (err) {
     alert(err.message || 'Error al aplicar daño ambiental');
@@ -2738,15 +2354,10 @@ async function applyControlledMutation() {
     lastMutationApplied.value = res.mutation;
     repairResult.value = null;
     await validateAndProcess();
-
-    // 1. Detección automática de mutaciones frente al molde inicial
-    diffResult.value = await api.compareDNA(moldRef, res.modified_sequence);
-
-    // 2. Detección automática de apareamientos erróneos frente a la complementaria del molde
     const compMold = await api.complementDNA(moldRef);
     duplexStrand.value = compMold.complement;
     mismatchResult.value = await api.detectMismatches(res.modified_sequence, compMold.complement);
-
+    diffResult.value = await api.compareDNA(moldRef, res.modified_sequence);
     await fetchLogs();
   } catch (err) {
     alert(err.message || 'Error al aplicar mutación controlada');
@@ -5579,13 +5190,15 @@ onMounted(() => {
   font-size: 0.78rem;
 }
 
+.g1-repair-card { grid-column: 1 / -1; }
 .g1-actions-grid, .s-replication-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.2rem;
 }
 @media (max-width: 900px) {
-  .g1-actions-grid, .s-replication-grid { grid-template-columns: 1fr; }
+  .g1-repair-card { grid-column: 1 / -1; }
+.g1-actions-grid, .s-replication-grid { grid-template-columns: 1fr; }
 }
 
 .triple-fidelity-card {
