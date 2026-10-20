@@ -12,6 +12,12 @@ if db_url.startswith("postgres://"):
 elif db_url.startswith("postgresql://") and not db_url.startswith("postgresql+asyncpg://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# asyncpg no reconoce ?pgbouncer=true y genera error si viene en la query string
+if "?pgbouncer=true" in db_url:
+    db_url = db_url.replace("?pgbouncer=true", "")
+elif "&pgbouncer=true" in db_url:
+    db_url = db_url.replace("&pgbouncer=true", "")
+
 # Serverless (Vercel) + pooler de Supabase (pgbouncer): sin pool propio y sin cache de
 # prepared statements, que el pooler en modo transaccion no soporta.
 engine = create_async_engine(
