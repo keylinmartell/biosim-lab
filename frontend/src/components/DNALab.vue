@@ -191,10 +191,10 @@
             <div 
               v-for="(base, idx) in cleanSequence" 
               :key="idx"
-              :class="['base-column', base.toLowerCase(), { selected: selectedPosition === idx }]"
+              :class="['base-column', base.toLowerCase(), { selected: selectedPosition === idx, 'pair-mismatch': duplexPairsDisplay[idx] && !duplexPairsDisplay[idx].is_canonical }]"
               @click="selectBaseForMutation(idx, base)"
             >
-              <span class="pos-index font-mono">{{ idx }}</span>
+              <span class="pos-index font-mono">{{ idx + 1 }}</span>
 
               <!-- Esqueleto Superior Azúcar-Fosfato (5' -> 3') -->
               <div class="bb-monomer top" title="Monómero 5': Fosfato (PO4) + 2'-Desoxirribosa">
@@ -209,16 +209,22 @@
                 <span class="letter font-mono">{{ base }}</span>
               </div>
 
-              <!-- Enlaces de Hidrógeno Watson-Crick -->
-              <div class="hydrogen-bond" :title="base === 'C' || base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)'">
-                <span class="h-line"></span>
-                <span class="h-line"></span>
-                <span class="h-line" v-if="base === 'C' || base === 'G'"></span>
+              <!-- Enlaces de Hidrógeno Watson-Crick (solo si el par es canónico: A=T 2, C≡G 3) -->
+              <div
+                :class="['hydrogen-bond', { broken: duplexPairsDisplay[idx] && !duplexPairsDisplay[idx].is_canonical }]"
+                :title="duplexPairsDisplay[idx] && !duplexPairsDisplay[idx].is_canonical ? `Par no canónico ${base}-${duplexPairsDisplay[idx].b2}: sin puentes de hidrógeno estables` : (base === 'C' || base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)')"
+              >
+                <template v-if="!duplexPairsDisplay[idx] || duplexPairsDisplay[idx].is_canonical">
+                  <span class="h-line"></span>
+                  <span class="h-line"></span>
+                  <span class="h-line" v-if="base === 'C' || base === 'G'"></span>
+                </template>
+                <span v-else class="h-break">✕</span>
               </div>
 
-              <!-- Base Nitrogenada Complementaria (3' -> 5') -->
-              <div class="base-capsule comp-strand" :title="`Base complementaria: ${complementMap[base]}`">
-                <span class="letter font-mono">{{ complementMap[base] }}</span>
+              <!-- Base Nitrogenada Complementaria del molde (3' -> 5'): no cambia al mutar la hebra superior -->
+              <div :class="['base-capsule', 'comp-strand', { 'comp-mismatch': duplexPairsDisplay[idx] && !duplexPairsDisplay[idx].is_canonical }]" :title="`Base complementaria: ${duplexPairsDisplay[idx] ? duplexPairsDisplay[idx].b2 : complementMap[base]}`">
+                <span class="letter font-mono">{{ duplexPairsDisplay[idx] ? duplexPairsDisplay[idx].b2 : complementMap[base] }}</span>
               </div>
 
               <!-- Esqueleto Inferior Antiparalelo Azúcar-Fosfato (3' -> 5') -->
@@ -382,8 +388,8 @@
           <div v-else class="damage-subpanel">
             <div class="op-form-grid">
               <div class="md3-textfield">
-                <label>Posición Cero-Indexada:</label>
-                <input type="number" v-model.number="controlledForm.position" :min="0" :max="cleanSequence.length" class="font-mono" />
+                <label>Posición (1 = primera base):</label>
+                <input type="number" v-model.number="controlledForm.position" :min="1" :max="cleanSequence.length + 1" class="font-mono" />
               </div>
 
               <div class="md3-textfield">
@@ -428,6 +434,29 @@
             Compara la hebra alterada con la complementaria del molde original e identifica los pares no canónicos.
           </p>
 
+          <!-- Orientación de la Cadena a Comprobar (Figuras B y C) -->
+          <div class="duplex-orientation-selector">
+            <span class="sub-label">Orientación de la hebra a comprobar:</span>
+            <div class="sub-mode-toggle-row mini">
+              <button 
+                type="button" 
+                :class="['sub-toggle-btn', { active: duplexOrientation === 'aligned' }]" 
+                @click="duplexOrientation = 'aligned'"
+                title="Alineada base a base con el molde (3'→5')"
+              >
+                <span>Alineada Directa (3'→5')</span>
+              </button>
+              <button 
+                type="button" 
+                :class="['sub-toggle-btn', { active: duplexOrientation === 'antiparallel' }]" 
+                @click="duplexOrientation = 'antiparallel'"
+                title="Sintetizada en dirección canónica antiparalela (5'→3', figura C de referencia)"
+              >
+                <span>Antiparalela (5'→3')</span>
+              </button>
+            </div>
+          </div>
+
           <div class="md3-textfield">
             <label>Cadena a Comprobar:</label>
             <div class="input-with-actions">
@@ -470,10 +499,19 @@
                 :class="['pair-pill', pair.is_canonical ? 'canonical' : 'non-canonical']"
                 :title="pair.note"
               >
-                <span class="p-idx font-mono">{{ idx }}</span>
+                <span class="p-idx font-mono">{{ idx + 1 }}</span>
                 <span class="p-b1 font-mono">{{ pair.b1 }}</span>
                 <span class="p-conn">:</span>
                 <span class="p-b2 font-mono">{{ pair.b2 }}</span>
+              </div>
+            </div>
+
+            <!-- Detalle geométrico y de bases de apareamientos no canónicos -->
+            <div class="mismatches-detail-list" v-if="mismatchResult.mismatches && mismatchResult.mismatches.length > 0">
+              <div v-for="m in mismatchResult.mismatches" :key="m.position" class="mismatch-detail-item">
+                <span class="m-pos-badge font-mono">Posición {{ m.position_human || (m.position + 1) }}</span>
+                <span class="m-pair-badge font-mono">{{ m.pair }}</span>
+                <span class="m-geom-desc" v-if="m.geometry">{{ m.geometry }}</span>
               </div>
             </div>
 
@@ -544,6 +582,16 @@
               type="text" 
               v-model="referenceStrand" 
               placeholder="Secuencia homóloga de referencia..." 
+              class="font-mono sequence-field"
+            />
+          </div>
+
+          <div class="md3-textfield">
+            <label>Posiciones Autorizadas a Reparar (opcional, ej. 2 o 1,3 — vacío repara todas):</label>
+            <input 
+              type="text" 
+              v-model="repairTargetPositionsInput" 
+              placeholder="Ej. 2 o 1, 3 (índices humanos 1-based)..." 
               class="font-mono sequence-field"
             />
           </div>
@@ -1484,7 +1532,7 @@ const loading = ref(false);
 const complementMap = { A: 'T', T: 'A', C: 'G', G: 'C' };
 
 const controlledForm = ref({
-  position: 0,
+  position: 1, // indice humano (1 = primera base)
   type: 'substitution',
   newBase: 'G'
 });
@@ -1505,8 +1553,10 @@ const copyNotification = ref('');
 
 // Fase 1: Apareamientos Dúplex y Reparación Guiada
 const duplexStrand = ref('');
+const duplexOrientation = ref('aligned'); // 'aligned' (3'->5') | 'antiparallel' (5'->3')
 const mismatchResult = ref(null);
 const referenceStrand = ref('');
+const repairTargetPositionsInput = ref('');
 const repairResult = ref(null);
 const repairMode = ref('stochastic'); // 'stochastic' | 'deterministic'
 const repairEfficiency = ref(0.85); // 85% de capacidad de escisión por defecto
@@ -1647,14 +1697,15 @@ function formatStatusText(status) {
 
 function formatMutationLabel(mut) {
   if (!mut) return 'Sin mutación';
+  const humanPos = mut.position_human ?? (typeof mut.position === 'number' ? mut.position + 1 : mut.position);
   if (mut.type === 'substitution') {
-    return `Sustitución en pos ${mut.position}: ${mut.original_base || '∅'} → ${mut.new_base}`;
+    return `Sustitución en pos ${humanPos}: ${mut.original_base || '∅'} → ${mut.new_base}`;
   }
   if (mut.type === 'insertion') {
-    return `Inserción en pos ${mut.position}: +${mut.new_base}`;
+    return `Inserción en pos ${humanPos}: +${mut.new_base}`;
   }
   if (mut.type === 'deletion') {
-    return `Deleción en pos ${mut.position} (-1 base)`;
+    return `Deleción en pos ${humanPos} (-1 base)`;
   }
   if (mut.type === 'stochastic_replication') {
     return `Replicación estocástica (${(mut.rate * 100).toFixed(1)}% tasa de error)`;
@@ -1738,7 +1789,7 @@ async function confirmSaveExperiment() {
     if (!mutationInfo && diffResult.value && diffResult.value.difference_count > 0) {
       mutationInfo = {
         type: controlledForm.value.type,
-        position: controlledForm.value.position,
+        position: controlledForm.value.position - 1,
         new_base: controlledForm.value.newBase,
         diff_count: diffResult.value.difference_count
       };
@@ -1798,8 +1849,10 @@ function loadExperiment(exp) {
   if (exp.mutation_applied && Object.keys(exp.mutation_applied).length > 0 && exp.mutation_applied.type) {
     lastMutationApplied.value = exp.mutation_applied;
     if (exp.mutation_applied.position !== undefined) {
-      controlledForm.value.position = exp.mutation_applied.position;
-      selectedPosition.value = exp.mutation_applied.position;
+      const pos0 = exp.mutation_applied.position;
+      const posHuman = exp.mutation_applied.position_human ?? (pos0 + 1);
+      controlledForm.value.position = posHuman;
+      selectedPosition.value = pos0;
     }
     if (exp.mutation_applied.type) {
       controlledForm.value.type = exp.mutation_applied.type;
@@ -2186,7 +2239,7 @@ async function runMismatchDetection() {
   try {
     loading.value = true;
     const strand2 = duplexStrand.value.trim().toUpperCase() || complementStrand.value;
-    const res = await api.detectMismatches(cleanSequence.value, strand2);
+    const res = await api.detectMismatches(cleanSequence.value, strand2, duplexOrientation.value);
     mismatchResult.value = res;
     await fetchLogs();
   } catch (err) {
@@ -2202,11 +2255,21 @@ function useCurrentAsReference() {
 
 async function runReferenceRepair() {
   const current = sequenceInput.value.trim().toUpperCase();
-  const moldRef = initialMoldSequence.value || referenceStrand.value || current;
+  const moldRef = referenceStrand.value.trim().toUpperCase() || initialMoldSequence.value || current;
   const eff = repairMode.value === 'deterministic' ? 1.0 : repairEfficiency.value;
+
+  let targetPositions = null;
+  if (repairTargetPositionsInput.value && repairTargetPositionsInput.value.trim()) {
+    targetPositions = repairTargetPositionsInput.value
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n > 0)
+      .map(humanPos => humanPos - 1);
+  }
+
   try {
     loading.value = true;
-    const res = await api.repairWithReference(current, moldRef, null, eff);
+    const res = await api.repairWithReference(current, moldRef, targetPositions, eff);
     repairResult.value = res;
     // Sincronizar siempre la secuencia resultante (sea completa o parcial)
     sequenceInput.value = res.repaired_sequence;
@@ -2265,7 +2328,7 @@ async function fetchLogs() {
 
 function selectBaseForMutation(index, base) {
   selectedPosition.value = index;
-  controlledForm.value.position = index;
+  controlledForm.value.position = index + 1; // Índice humano 1-based (guía sección 5)
   const diffs = ['A', 'T', 'C', 'G'].filter(b => b !== base);
   controlledForm.value.newBase = diffs[0];
 }
@@ -2322,7 +2385,8 @@ async function applyControlledMutation() {
       currentWorking,
       controlledForm.value.type,
       controlledForm.value.position,
-      controlledForm.value.newBase
+      controlledForm.value.newBase,
+      true // one_based = true (índice humano 1-based según guía oficial)
     );
 
     sequenceInput.value = res.modified_sequence;
@@ -2786,6 +2850,22 @@ onMounted(() => {
   background-color: var(--md-sys-color-surface-container-high);
   border: 1px solid var(--md-sys-color-outline-variant);
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.comp-strand.comp-mismatch {
+  background-color: rgba(239, 68, 68, 0.18);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+}
+
+.hydrogen-bond.broken .h-break {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: #ef4444;
+}
+
+.base-column.pair-mismatch {
+  background-color: rgba(239, 68, 68, 0.08);
 }
 
 .encoded-data-row {
@@ -3263,6 +3343,82 @@ onMounted(() => {
 @keyframes pulse-border {
   from { border-color: rgba(239, 68, 68, 0.4); }
   to { border-color: rgba(239, 68, 68, 0.9); }
+}
+
+.duplex-orientation-selector {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.duplex-orientation-selector .sub-label {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.sub-mode-toggle-row.mini {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.sub-mode-toggle-row.mini .sub-toggle-btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sub-mode-toggle-row.mini .sub-toggle-btn.active {
+  background: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary-container);
+  font-weight: 600;
+}
+
+.mismatches-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.6rem 0;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.mismatch-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.m-pos-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.m-pair-badge {
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.m-geom-desc {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.72rem;
+  font-style: italic;
 }
 
 .scientific-disclaimer-mini {

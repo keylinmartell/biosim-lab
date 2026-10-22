@@ -36,9 +36,9 @@ export const api = {
     body: JSON.stringify({ sequence }),
   }),
 
-  mutateControlled: (sequence, mutation_type, position, new_base = null) => request('/dna/mutate', {
+  mutateControlled: (sequence, mutation_type, position, new_base = null, one_based = false) => request('/dna/mutate', {
     method: 'POST',
-    body: JSON.stringify({ sequence, mutation_type, position, new_base }),
+    body: JSON.stringify({ sequence, mutation_type, position, new_base, one_based }),
   }),
 
   replicateStochastic: (sequence, mutation_rate = 0.01) => request('/dna/replicate', {
@@ -61,9 +61,9 @@ export const api = {
     body: JSON.stringify({ sequence }),
   }),
 
-  detectMismatches: (strand1, strand2) => request('/dna/mismatches', {
+  detectMismatches: (strand1, strand2, orientation = 'aligned') => request('/dna/mismatches', {
     method: 'POST',
-    body: JSON.stringify({ strand1, strand2 }),
+    body: JSON.stringify({ strand1, strand2, orientation }),
   }),
 
   repairWithReference: (altered, reference, positions = null, efficiency = 1.0) => request('/dna/repair', {

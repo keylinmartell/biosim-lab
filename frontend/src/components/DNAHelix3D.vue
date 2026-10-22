@@ -161,12 +161,12 @@ const startTime = performance.now();
 
 const complementMap = { A: 'T', T: 'A', C: 'G', G: 'C' };
 
-// Colores de bases alineados con el sistema espectral de BioSIM
+// Colores de bases alineados con las figuras de referencia de Biología Molecular
 const baseColors = {
-  A: { main: 0xf43f5e, emissive: 0x9f1239, rim: 0xfecdd3, name: 'Adenina' },   // Coral Carmín
-  T: { main: 0x10b981, emissive: 0x065f46, rim: 0xa7f3d0, name: 'Timina' },    // Esmeralda Jade
-  C: { main: 0x06b6d4, emissive: 0x155e75, rim: 0xa5f3fc, name: 'Citosina' },  // Cian Zafiro
-  G: { main: 0xf59e0b, emissive: 0xb45309, rim: 0xfef08a, name: 'Guanina' }   // Ámbar Topacio
+  A: { main: 0xea580c, emissive: 0x7c2d12, rim: 0xfed7aa, name: 'Adenina (Purina)' },     // Naranja (Figura 1)
+  T: { main: 0x64748b, emissive: 0x1e293b, rim: 0xcbd5e1, name: 'Timina (Pirimidina)' },  // Gris (Figura 1)
+  C: { main: 0x2563eb, emissive: 0x1e3a8a, rim: 0x93c5fd, name: 'Citosina (Pirimidina)' },// Azul (Figura 1)
+  G: { main: 0x16a34a, emissive: 0x14532d, rim: 0x86efac, name: 'Guanina (Purina)' }     // Verde (Figura 1)
 };
 
 // Extender la secuencia a un mínimo de 30-36 pares en modo in vivo para mostrar las 3+ vueltas majestuosas
