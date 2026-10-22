@@ -924,7 +924,7 @@
             @click="manualActiveTab = 'flow'"
           >
             <Icon name="science" size="16" />
-            <span>1. Flujo del Ciclo (G1-S-G2)</span>
+            <span>1. Flujo de Trabajo</span>
           </button>
           <button 
             :class="['manual-tab-btn', { active: manualActiveTab === 'buttons' }]" 
@@ -955,82 +955,66 @@
             <div class="manual-hero-banner">
               <Icon name="science" size="24" />
               <div>
-                <h4>Arquitectura Científica del Flujo Experimental (Ciclo Celular G1 → S → G2/M)</h4>
-                <p>Basado en <strong>Alberts et al. (Molecular Biology of the Cell 7.ª ed. cap. 5 y 9)</strong>, <strong>Lodish et al. (9.ª ed.)</strong> y <strong>Lehninger (8.ª ed.)</strong>: La célula no copia ADN a ciegas. El control de calidad genómico avanza por puntos de control estrictos donde cada error tiene su momento biológico, causa físico-química y maquinaria de resolución especializada.</p>
+                <h4>Guía Operativa del Laboratorio (Módulos Activos de Fase G1)</h4>
+                <p>Basado en <strong>Alberts et al. (Molecular Biology of the Cell 7.ª ed. cap. 5 y 9)</strong> y <strong>Lehninger (8.ª ed.)</strong>: Esta guía describe exclusivamente los módulos funcionales del simulador: validación molecular del molde parental B-DNA, inducción de daño genotóxico, sensor biofísico del Checkpoint G1/S (eje p53/MDM2/p21) y cinética enzimática de escisión pre-replicativa (BER/NER).</p>
               </div>
             </div>
 
-            <!-- Mapa Visual de Transición por Fases del Ciclo Celular -->
+            <!-- Mapa Visual de los 3 Bloques Funcionales Implementados -->
             <div class="manual-pipeline-roadmap">
-              <div class="roadmap-phase g1">
+              <div class="roadmap-phase phase-molde">
                 <div class="rm-header">
-                  <span class="rm-tag">FASE G1</span>
-                  <h5>Vigilancia del Molde</h5>
+                  <span class="rm-tag">ENTRADA Y ESTRUCTURA</span>
+                  <h5>1. Molde Parental B-DNA</h5>
                 </div>
                 <div class="rm-content">
-                  <span>1. Molde Parental Inmutable</span>
-                  <span class="rm-arrow">↓</span>
-                  <span>2. Daño Físico-Químico / CRISPR</span>
-                  <span class="rm-arrow">↓</span>
-                  <span class="rm-alert">Checkpoint G1/S (Freno p53 / p21)</span>
-                  <span class="rm-arrow">↓</span>
-                  <span>3. Reparación Pre-Replicativa (BER/NER)</span>
+                  <span>• Validación de bases A, T, C, G</span>
+                  <span>• Doble hélice B-DNA 3D interactiva</span>
+                  <span>• Mapa 2D con esqueleto azúcar-fosfato</span>
+                  <span>• Polaridad 5'→3' / 3'→5' y puentes H (2 vs 3)</span>
                 </div>
-                <div class="rm-footer cleared">Sin bypass por daño sobre Punto R → Pase a Fase S</div>
+                <div class="rm-footer cleared">Molde Base Validado</div>
               </div>
 
-              <div class="roadmap-connector">
-                <Icon name="arrow_forward" size="20" />
-              </div>
-
-              <div class="roadmap-phase s">
+              <div class="roadmap-phase phase-dano">
                 <div class="rm-header">
-                  <span class="rm-tag">FASE S</span>
-                  <h5>Síntesis Semiconservativa</h5>
+                  <span class="rm-tag">VIGILANCIA GENÓMICA</span>
+                  <h5>2. Módulo 1.1 & Checkpoint G1/S</h5>
                 </div>
                 <div class="rm-content">
-                  <span>4. Horquilla de Replicación 5'→3'</span>
-                  <span class="rm-arrow">↓</span>
-                  <span>Triple Filtro de Fidelidad:</span>
-                  <small>• Polimerasa (~10⁻⁵)</small>
-                  <small>• Proofreading 3'→5' (~10⁻⁷)</small>
-                  <small>• Escaneo MMR MutS/MutL (~10⁻¹⁰)</small>
-                  <span class="rm-arrow">↓</span>
-                  <span>Reporte Diff de Mutaciones</span>
+                  <span>• Daño ambiental estocástico (UV, ROS)</span>
+                  <span>• Edición quirúrgica dirigida CRISPR-Cas9</span>
+                  <span>• Distinción clave: Lesión vs Mutación</span>
+                  <span class="rm-alert">• Eje ATM/ATR → p53/MDM2 → p21</span>
                 </div>
-                <div class="rm-footer s-done">Genoma Duplicado al 100%</div>
+                <div class="rm-footer alert-active">Freno Celular Activo</div>
               </div>
 
-              <div class="roadmap-connector">
-                <Icon name="arrow_forward" size="20" />
-              </div>
-
-              <div class="roadmap-phase g2">
+              <div class="roadmap-phase phase-escision">
                 <div class="rm-header">
-                  <span class="rm-tag">FASE G2 / M</span>
-                  <h5>Integridad Pre-Mitótica</h5>
+                  <span class="rm-tag">RESOLUCIÓN Y CONTROL</span>
+                  <h5>3. Escisión, Diff & Auditoría</h5>
                 </div>
                 <div class="rm-content">
-                  <span>5. Detección Roturas Bicatenarias (DSB)</span>
-                  <span class="rm-arrow">↓</span>
-                  <span>Cromatida Hermana Disponible:</span>
-                  <small>• Vía HDR: Fiel sin cicatriz (RAD51/BRCA)</small>
-                  <small>• Vía NHEJ: Emergencia con cicatriz (Ku70/80)</small>
+                  <span>• Módulo 1.2: Detección de Apareamientos</span>
+                  <span>• Módulo 1.3: Escisión BER/NER (50%-98%)</span>
+                  <span>• Módulo 2: Reporte Diff de Variantes</span>
+                  <span>• Módulo 3: Bitácora Inmutable de Ensayos</span>
                 </div>
-                <div class="rm-footer mit-done">Aprobación para Mitosis (M)</div>
+                <div class="rm-footer restored">Molde Restaurado / Trazable</div>
               </div>
             </div>
 
-            <!-- Acordeón Detallado de los 5 Pasos -->
+            <!-- Acordeón Detallado de los Pasos Implementados en el Sistema -->
             <div class="flow-steps-accordion">
               <div class="flow-step-item">
                 <div class="step-badge step-1">Paso 1</div>
                 <div class="step-info">
-                  <h5>Paso 1 (Fase G1): Establecimiento y Validación del Molde Parental Inmutable</h5>
+                  <h5>Paso 1: Validación Físico-Química y Modelado Estructural del Molde Parental</h5>
                   <p>
-                    <strong>Dónde ocurre:</strong> En el núcleo de la célula antes de cualquier evento de duplicación genómica.
+                    <strong>Dónde ocurre:</strong> En la cabecera del laboratorio y visores macromoleculares.
                     <br>
-                    <strong>Fundamento Biológico:</strong> En G1 la célula crece metabólicamente y cuenta únicamente con una copia de cada molécula de ADN bicatenario. La cadena ingresada en el laboratorio se establece como la <strong>plantilla parental de referencia inmutable</strong>. El motor valida reactivamente las bases nitrogenadas (A, T, C, G), calcula la longitud en pares de bases (bp), el porcentaje GC y la complementaria antiparalela Watson-Crick (5'→3' frente a 3'→5'), generando la doble hélice B-DNA tridimensional reactiva.
+                    <strong>Fundamento Biológico:</strong> En G1 la célula cuenta con su molécula parental sin duplicar. La secuencia ingresada establece la <strong>plantilla de referencia inmutable</strong>. El motor computacional valida reactivamente las bases nitrogenadas canónicas (A, T, C, G), calcula la longitud en pares de bases (bp), el porcentaje GC y la complementaria antiparalela Watson-Crick (5'→3' frente a 3'→5'), generando la doble hélice B-DNA 3D fotorrealista y el mapa 2D con monómeros azúcar-fosfato y puentes de hidrógeno estequiométricos (2 para A=T, 3 para C≡G).
                   </p>
                 </div>
               </div>
@@ -1038,33 +1022,19 @@
               <div class="flow-step-item">
                 <div class="step-badge step-2">Paso 2</div>
                 <div class="step-info">
-                  <h5>Paso 2 (Fase G1): Detección de Daño en el Molde y Freno en G1 (Eje ATM/ATR → p53/MDM2 → p21)</h5>
+                  <h5>Paso 2: Inducción de Daño en el Molde y Distinción Fundamental (Lesión vs Mutación) (Módulo 1.1)</h5>
                   <p>
-                    <strong>Dónde y cuándo ocurre:</strong> En la doble hebra parental en Fase G1, antes de entrar a replicación.
+                    <strong>Dónde y cuándo ocurre:</strong> En la hebra molde en Fase G1, previo a cualquier evento de síntesis.
                     <br>
-                    <strong>Naturaleza de las lesiones (Módulo 1.1):</strong> En este punto <em>no son mutaciones</em>, sino <em>lesiones físicas y químicas</em> en el ADN. La mutación solo se fijará si la célula replica una lesión sin reparar en Fase S.
+                    <strong>Precisión Biológica Fundamental (Lesión vs Mutación):</strong> En este simulador, las alteraciones moleculares inducidas en el molde son <em>lesiones o aductos en el ADN</em>: el sistema preserva la capacidad de extirparlas limpiamente mediante la maquinaria de escisión enzimática (BER/NER) guiada por el molde de referencia. Una mutación consolidada representaría un cambio irreversible que ya no es detectado como daño por los complejos enzimáticos.
                     <br>
-                    • <em>Radiación Ultravioleta (Luz UV):</em> Dímeros covalentes de ciclobutano entre timinas adyacentes (T-T) o citosinas (C→T), distorsionando físicamente la hélice.
+                    • <em>Radiación Ultravioleta (Luz UV):</em> Provoca dímeros de ciclobutano entre timinas adyacentes (T-T) que curvan e impiden la geometría canónica de la hélice.
                     <br>
-                    • <em>Estrés Oxidativo (ROS):</em> Radicales libres del metabolismo oxidan guanina a 8-oxo-7,8-dihidroguanina (8-oxo-G), que aparea incorrectamente con adenina y genera transversiones G→T.
+                    • <em>Estrés Oxidativo (ROS):</em> Radicales libres oxidan la guanina a 8-oxo-7,8-dihidroguanina (8-oxo-G), que aparea aberrantemente con adenina generando transversiones.
                     <br>
-                    • <em>Desaminación Espontánea:</em> Ataque hidrolítico que transforma citosina en uracilo (U), leído como timina (transición C→T).
+                    • <em>Desaminación Espontánea:</em> Hidrólisis que desamina la citosina convirtiéndola en uracilo (U), leído como timina.
                     <br>
-                    • <em>Herramienta Exógena CRISPR-Cas9:</em> Bisturí molecular externo (*S. pyogenes*) que crea un corte de doble cadena dirigido en una diana elegida.
-                    <br>
-                    <strong>Respuesta Biológica Real (Módulo 1.2):</strong> En reposo, p53 se degrada continuamente por la ubiquitina-ligasa <strong>MDM2</strong> (vida media ~20 min). Al surgir daño:
-                    <br>
-                    1. <em>Sensores reales:</em> Complejo <strong>MRN / ATM</strong> (roturas de doble cadena) y <strong>RPA / ATR</strong> (cadena sencilla) detectan la lesión y fosforilan a p53 (Ser15/Ser20) y a MDM2.
-                    <br>
-                    2. <em>Estabilización:</em> Fosforilado, p53 deja de ser reconocido por MDM2, se estabiliza, tetrameriza y actúa como factor de transcripción.
-                    <br>
-                    3. <em>Decisión por afinidad y dosis:</em>
-                    <br>
-                    • <strong>Daño leve-moderado:</strong> p53 induce promotores de alta afinidad: <strong>p21</strong> (inhibe CDK2/4/6 manteniendo a Rb hipofosforilado y secuestrando a E2F para frenar en G1) y <strong>GADD45/DDB2</strong> (favorecen BER/NER). Reparado el daño, MDM2 vuelve a degradar a p53.
-                    <br>
-                    • <strong>Daño masivo o persistente:</strong> p53 sostenido + Ser46/Lys120 activa promotores de baja afinidad: <strong>BAX, PUMA, NOXA</strong>, induciendo apoptosis mitocondrial.
-                    <br>
-                    <em>Nota sobre el Punto R:</em> El Punto R no inspecciona calidad de ADN; solo mide señales mitogénicas. El freno ante daño lo impone la vía colateral ATM/ATR → p53 → p21.
+                    • <em>Herramienta Exógena CRISPR-Cas9:</em> Modela la edición molecular quirúrgica dirigida (sustitución de base, inserción puntual +1 o microdeleción -1) en una coordenada específica.
                   </p>
                 </div>
               </div>
@@ -1072,19 +1042,15 @@
               <div class="flow-step-item">
                 <div class="step-badge step-3">Paso 3</div>
                 <div class="step-info">
-                  <h5>Paso 3 (Fase G1): Reparación Pre-Replicativa del Molde (Módulo 1.3 - BER / NER / Homología)</h5>
+                  <h5>Paso 3: Monitoreo Molecular del Checkpoint G1/S (Eje ATM/ATR → p53/MDM2 → p21)</h5>
                   <p>
-                    <strong>Cómo se resuelve:</strong> Durante el arresto en G1, la célula activa vías de reparación por escisión:
+                    <strong>Respuesta Biológica Real del Sensor:</strong> En condiciones basales de reposo, el supresor tumoral p53 es ubiquitinado continuamente por la ligasa <strong>MDM2</strong> y degradado en el proteasoma 26S (vida media corta ~20 min).
                     <br>
-                    • <em>Reparación por Escisión de Bases (BER):</em> ADN glicosilasas eliminan bases oxidadas o desaminadas (como uracilos u 8-oxo-G), una AP endonucleasa corta el esqueleto de azúcar y la ADN polimerasa β rellena el hueco guiada por la hebra complementaria intacta.
+                    1. <em>Detección y Fosforilación:</em> Ante lesiones del molde, quinasas sensoras (<strong>ATM y ATR</strong>) fosforilan a p53 en Ser15 y Ser20, impidiendo la unión de MDM2 y estabilizando al tetrámero de p53.
                     <br>
-                    • <em>Reparación por Escisión de Nucleótidos (NER):</em> Complejos escinucleasa cortan un oligonucleótido de 24-32 bases alrededor del dímero UV distorsionado y la polimerasa sintetiza el parche.
+                    2. <em>Bypass y Freno sobre el Punto R:</em> p53 induce la transcripción del inhibidor universal de CDKs <strong>p21 (CDKN1A)</strong>. p21 bloquea los complejos Ciclina E-CDK2 y Ciclina D-CDK4/6, manteniendo hipofosforilada a la proteína del Retinoblastoma (<strong>Rb</strong>) e impidiendo la liberación del factor <strong>E2F</strong>. Esto impone un bypass de arresto celular estricto antes del Punto de Restricción (Punto R).
                     <br>
-                    <strong>Cinética Enzimática de Escisión (BER / NER):</strong> En la biología celular real (Alberts cap. 5), la reparación no es un acto instantáneo ni perfecto al 100%; los complejos enzimáticos de escisión presentan cinética saturable con probabilidad de reconocimiento estocástica regulada por el slider de <strong>Capacidad / Eficiencia de Escisión (50% a 98%)</strong>:
-                    <br>
-                    • Si alguna lesión escapa a la escisión en una ronda catalítica, <strong>el sensor p53 y p21 permanecen en alerta activa</strong>, sosteniendo el freno en el Punto R para impedir la replicación de moldes mutados.
-                    <br>
-                    • La célula debe ejecutar ciclos catalíticos sucesivos hasta lograr la escisión de todas las lesiones, momento en el cual MDM2 retoma la degradación basal de p53, apagando p21 y permitiendo el paso ordenado a la Fase S.
+                    3. <em>Decisión Celular por Dosis:</em> Daños moderados activan el programa de reparación por escisión (BER/NER). Daños masivos o persistentes activan promotores de baja afinidad (<strong>BAX, PUMA, NOXA</strong>), conmutando a la apoptosis mitocondrial para proteger la viabilidad tisular.
                   </p>
                 </div>
               </div>
@@ -1092,21 +1058,11 @@
               <div class="flow-step-item">
                 <div class="step-badge step-4">Paso 4</div>
                 <div class="step-info">
-                  <h5>Paso 4 (Fase S): Duplicación Celular Semiconservativa y Triple Filtro de Fidelidad</h5>
+                  <h5>Paso 4: Inspección de Apareamientos en el Dúplex Molecular (Módulo 1.2)</h5>
                   <p>
-                    <strong>Dónde y cuándo ocurre:</strong> En la horquilla de replicación durante la Fase S de síntesis.
+                    <strong>Dónde ocurre:</strong> En el módulo de apareamiento bicatenario complementario.
                     <br>
-                    <strong>Módulo 2.1:</strong> La ADN polimerasa abre la doble hélice y sintetiza la hebra hija complementaria $5'\rightarrow3'$. El usuario puede optar por <em>Copia Fiel</em> (100% de pureza) o <em>Replicación Estocástica</em> modulando la tasa de error de polimerasa mediante el slider.
-                    <br>
-                    <strong>El Triple Filtro Biológico de Fidelidad Celular (Alberts cap. 5):</strong>
-                    <br>
-                    1. <em>Selección de Base por ADN Polimerasa (~10⁻⁵):</em> La geometría del bolsillo catalítico selecciona dNTPs complementarios Watson-Crick. Tasa de error inicial: ~1 error cada 100.000 bases.
-                    <br>
-                    2. <em>Corrección de Pruebas ("Proofreading" ~10⁻⁷):</em> El dominio exonucleasa 3'→5' de la polimerasa retrocede y extirpa monómeros mal apareados en el extremo 3'-OH.
-                    <br>
-                    3. <em>Reparación de Apareamientos Incorrectos Post-Replicativo (MMR ~10⁻¹⁰):</em> Las proteínas <strong>MutS y MutL</strong> escanean la hebra recién sintetizada reconociendo desajustes (ej. pares A-G o C-T), cortan la hebra hija y la resintetizan con fidelidad perfecta.
-                    <br>
-                    <strong>Módulos 2.2 y 2.3:</strong> Al pulsar <strong>"Escanear Apareamientos"</strong>, el sistema señala pares canónicos y no canónicos, y el <strong>Módulo 2.3 (Diff Inspector)</strong> desglosa cada mutación por posición, tipo y base alterada.
+                    <strong>Módulo 1.2:</strong> Permite contrastar la hebra molde contra una cadena de ensayo complementaria generada in silico, detectando enlaces canónicos Watson-Crick (A=T, C≡G) y localizando desajustes no canónicos (mismatches). Este escaneo visualiza la distorsión topológica que sufre la doble hélice ante pérdidas de complementariedad estricta.
                   </p>
                 </div>
               </div>
@@ -1114,17 +1070,27 @@
               <div class="flow-step-item">
                 <div class="step-badge step-5">Paso 5</div>
                 <div class="step-info">
-                  <h5>Paso 5 (Fase G2 / M): Roturas Bicatenarias (DSB) y Control Pre-Mitótico (Módulos 3.1 y 3.2)</h5>
+                  <h5>Paso 5: Cinética Enzimática de Escisión Pre-Replicativa (BER / NER) (Módulo 1.3)</h5>
                   <p>
-                    <strong>Dónde y cuándo ocurre:</strong> En la fase G2, después de que el genoma ha sido totalmente duplicado y antes de dividirse en mitosis (M).
+                    <strong>Mecanismo Biológico de Escisión:</strong> Durante el arresto pre-replicativo en G1, la célula moviliza la <em>Reparación por Escisión de Bases (BER)</em> —mediante ADN glicosilasas que extirpan bases oxidadas o uracilos y AP endonucleasas— y la <em>Reparación por Escisión de Nucleótidos (NER)</em> —complejos escinucleasa TFIIH/XPC que cortan el parche lesionado—.
                     <br>
-                    <strong>Módulo 3.1:</strong> Se establece la coordenada de corte de una <em>Rotura de Doble Cadena (Double-Strand Break - DSB)</em> provocada por radiación ionizante o colapso de horquillas.
+                    <strong>Cinética Enzimática Estocástica y Saturable:</strong> En la célula viva (Alberts cap. 5), la reparación no es un acto instantáneo al 100%; depende de la probabilidad de colisión catalítica y de la saturación del pool enzimático, regulada por el slider de <strong>Capacidad / Eficiencia de Escisión (50% a 98%)</strong>:
                     <br>
-                    <strong>Módulo 3.2 (Resolución Mecanística):</strong>
+                    • Si en un ciclo catalítico escapan lesiones, <strong>el sensor p53 y p21 permanecen en alerta activa</strong> y la célula continúa arrestada en G1, informando las coordenadas exactas de las lesiones remanentes.
                     <br>
-                    • <strong>Vía HDR (Recombinación Homóloga Asistida por Cromátida Hermana):</strong> Dado que en Fase G2 <strong>la cromátida hermana idéntica recién sintetizada en Fase S está físicamente adyacente</strong>, las nucleasas resecan los extremos 5' y la recombinasa <strong>RAD51 con BRCA1/2</strong> invade la cromátida hermana para copiar fielmente la secuencia perdida. <em>Resultado: Reconstrucción molecular pura al 100% sin dejar cicatriz.</em>
+                    • La ejecución de ciclos catalíticos sucesivos reduce progresivamente la carga genotóxica. Al lograr la escisión completa (100%), MDM2 reanuda la degradación fisiológica de p53, p21 se desactiva y se restituye el estado basal para el avance celular.
+                  </p>
+                </div>
+              </div>
+
+              <div class="flow-step-item">
+                <div class="step-badge step-6">Paso 6</div>
+                <div class="step-info">
+                  <h5>Paso 6: Reporte Diferencial (Módulo 2) y Trazabilidad Permanente (Módulo 3)</h5>
+                  <p>
+                    <strong>Módulo 2 (Diff Inspector):</strong> Contrasta directamente y en paralelo la secuencia molde de referencia frente a la secuencia modificada o reparada, desglosando cada variante molecular por coordenada exacta, tipo (Sustitución, Inserción, Deleción) y transición de base nitrogenada.
                     <br>
-                    • <strong>Vía NHEJ (Unión de Extremos No Homólogos):</strong> Si no se dispone de plantilla homóloga o la lesión ocurre en emergencia, el dímero <strong>Ku70/Ku80 con DNA-PKcs y Ligasa IV</strong> unen directamente los extremos rotos a ciegas tras un recorte nucleolítico. <em>Resultado: Resolución rápida pero propensa a pérdida de bases y cicatriz mutacional (microdeleciones).</em>
+                    <strong>Módulo 3 (Auditoría & Trazabilidad):</strong> Registra criptográficamente cada operación en una bitácora inmutable con timestamp, permitiendo almacenar ensayos en disco local en formato JSON y restaurar el estado molecular íntegro de la simulación en cualquier momento.
                   </p>
                 </div>
               </div>
@@ -1147,7 +1113,7 @@
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Restaurar a Molde</span>
-                  <p>Limpia mutaciones, roturas y lesiones activas, restableciendo la doble hélice al estado inicial del molde parental.</p>
+                  <p>Limpia lesiones y mutaciones activas, restableciendo la doble hélice al estado inicial del molde parental.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="menu_book" size="14" /> Manual del Lab</span>
@@ -1223,7 +1189,7 @@
                 <div class="card-tag">5. Fase G1 · Vigilancia del Molde, Checkpoint p53/MDM2, Freno y Reparación</div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="verified_user" size="14" /> Tarjeta de Estado Checkpoint G1/S</span>
-                  <p>Muestra en tiempo real la dinámica biofísica del eje ATM/ATR → p53/MDM2 → p21. En reposo: p53 tiene vida media corta (~20 min) degradado por MDM2 en proteasoma. Daño leve/moderado: ATM/ATR fosforilan p53 (Ser15/Ser20), impidiendo degradación e induciendo p21 para frenar CDKs y activar BER/NER. Daño masivo: fosforilación sostenida (Ser46/Lys120) que conmuta a programa de apoptosis mitocondrial (BAX, PUMA, NOXA).</p>
+                  <p>Muestra en tiempo real la dinámica biofísica del eje ATM/ATR → p53/MDM2 → p21. En reposo: p53 tiene vida media corta (~20 min) degradado por MDM2 en proteasoma. Daño leve/moderado: ATM/ATR fosforilan p53 (Ser15/Ser20), impidiendo degradación e induciendo p21 para frenar CDKs y activar BER/NER. Daño masivo: fosforilación sostenida (Ser46) que conmuta a programa de apoptosis mitocondrial (BAX, PUMA, NOXA).</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="alt_route" size="14" /> Separación Conceptual: Punto R</span>
@@ -1234,7 +1200,7 @@
                   <p>Aclara que en Fase G1 toda alteración es una lesión física/química o aducto reparable, y que solo se convertirá en mutación permanente si no se repara y se replica más adelante en la Fase S.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="wb_sunny" size="14" /> Daño Ambiental Estocástico</span>
+                  <span class="btn-name chip"><Icon name="wb_sunny" size="14" /> Daño Ambiental Estocástico (Módulo 1.1)</span>
                   <p>Activa el inductor de lesiones ambientales: Luz UV (dímeros TT), Estrés Oxidativo ROS (8-oxo-G) o Desaminación espontánea (C→U).</p>
                 </div>
                 <div class="btn-entry">
@@ -1250,7 +1216,7 @@
                   <p>Aplica la edición quirúrgica en la posición elegida e informa al sensor molecular de daño.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error / Complementaria</span>
+                  <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error / Complementaria (Módulo 1.2)</span>
                   <p>Alterna entre la complementaria exacta o inyectar deliberadamente una base no apareada en el Módulo 1.2 para probar la detección.</p>
                 </div>
                 <div class="btn-entry">
@@ -1280,7 +1246,7 @@
                 <div class="card-tag">6. Módulo 2 · Reporte Diferencial</div>
                 <div class="btn-entry">
                   <span class="btn-name chip">Diff Inspector (Módulo 2)</span>
-                  <p>Muestra el contraste base a base entre el molde original y la secuencia modificada, con posición y tipo de cambio.</p>
+                  <p>Muestra el contraste base a base entre el molde original y la secuencia modificada, con posición y tipo de cambio (sustitución, inserción, deleción).</p>
                 </div>
               </div>
 
@@ -1290,6 +1256,10 @@
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="restart_alt" size="14" /> Refrescar Registro</span>
                   <p>Recarga desde el backend la tabla de auditoría con la trazabilidad completa de eventos, secuencias y dictámenes moleculares.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="delete" size="14" /> Limpiar Historial</span>
+                  <p>Vacía el historial de auditoría de la sesión actual tras confirmación del investigador.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="arrow_forward" size="14" /> Cargar (en fila de tabla)</span>
@@ -1316,58 +1286,54 @@
               </div>
               <ol class="protocol-steps-list">
                 <li>En la cabecera, haz clic en el chip <strong>"Control Corto (12bp)"</strong> para fijar un molde parental limpio.</li>
-                <li>Observa el Stepper superior en <em>"Paso 1: Molde Parental Validado"</em> y la tarjeta de Checkpoint G1/S en verde (Reposo: MDM2 degrada continuamente a p53, sin bypass sobre el Punto R).</li>
+                <li>Observa la tarjeta de <strong>Checkpoint G1/S</strong> en estado verde (Reposo: MDM2 degrada continuamente a p53, sin freno activo sobre CDKs ni bloqueo del Punto R).</li>
                 <li>En el <strong>Módulo 1.1</strong>, selecciona <em>"Daño Ambiental Estocástico"</em> y el agente <em>"Radiación Ultravioleta (Luz UV)"</em> con intensidad al 40%.</li>
                 <li>Pulsa <strong>"Inducir Lesiones Ambientales en el Molde"</strong>.</li>
-                <li>Observa la <strong>Tarjeta de Checkpoint G1/S</strong>: pasa de inmediato a estado de freno activo con ATM/ATR fosforilando a p53 (Ser15/Ser20), impidiendo su degradación por MDM2 e induciendo p21 para frenar las CDKs (Rb hipofosforilado) y activar la escisión BER/NER. Si la intensidad supera el 60% o se acumulan >3 lesiones, conmuta a alerta crítica de apoptosis mitocondrial (BAX, PUMA, NOXA).</li>
+                <li>Observa la <strong>Tarjeta de Checkpoint G1/S</strong>: pasa de inmediato a alerta activa con ATM/ATR fosforilando a p53 (Ser15/Ser20), impidiendo su degradación por MDM2 e induciendo p21 para frenar las CDKs (Rb hipofosforilado) y activar la escisión BER/NER. Si la intensidad supera el 60% o se acumulan >3 lesiones, conmuta a alerta crítica de apoptosis mitocondrial (BAX, PUMA, NOXA).</li>
                 <li>Desplázate al <strong>Módulo 1.3</strong> a la derecha, pulsa <strong>"Usar Molde Inicial"</strong>.</li>
                 <li>Ajusta el slider de <strong>"Capacidad / Eficiencia de Escisión"</strong> al 75%.</li>
-                <li>Pulsa <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong>: comprueba cómo se reparan lesiones pero algunas escapan por cinética estocástica/saturación, manteniendo activo el sensor p53/p21.</li>
-                <li>Pulsa de nuevo <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong> (ronda enzimática sucesiva) hasta resolver las lesiones remanentes: al alcanzar el 100%, p53/p21 vuelven al reposo basal degradado por MDM2 y se levanta el freno sobre las CDKs para avanzar a Fase S.</li>
+                <li>Pulsa <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong>: comprueba cómo se reparan lesiones pero algunas escapan por cinética estocástica/saturación, manteniendo activo el sensor p53/p21 y mostrando los chips de posiciones no reparadas.</li>
+                <li>Pulsa de nuevo <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong> (ronda enzimática sucesiva) hasta resolver las lesiones remanentes: al alcanzar el 100%, p53/p21 vuelven al reposo basal degradado por MDM2 y se levanta el freno sobre las CDKs.</li>
               </ol>
             </div>
 
             <div class="protocol-card">
               <div class="protocol-card-header">
-                <span class="proto-tag s">Protocolo B (Fase S)</span>
-                <h4>Replicación en Fase S, Filtro de Fidelidad MMR y Reporte Diff Inspector</h4>
+                <span class="proto-tag crispr">Protocolo B (Edición CRISPR)</span>
+                <h4>Edición Quirúrgica CRISPR y Reporte Diferencial en Módulo 2</h4>
               </div>
               <ol class="protocol-steps-list">
-                <li>Con el molde reparado en G1, desplázate a la <strong>Etapa 2 (Fase S)</strong>.</li>
-                <li>En el <strong>Módulo 2.1</strong>, selecciona <em>"Replicación con Error Estocástico"</em> y ajusta la tasa de error al 5.0%.</li>
-                <li>Pulsa <strong>"Simular Duplicación con Error de Polimerasa"</strong>.</li>
-                <li>La nueva hebra sintetizada se carga de inmediato en el <strong>Módulo 2.2</strong> (Filtro MMR Dúplex).</li>
-                <li>Pulsa <strong>"Escanear Apareamientos"</strong>: comprueba las bases no canónicas detectadas por la maquinaria MutS/MutL post-horquilla.</li>
-                <li>Revisa el <strong>Módulo 2.3 (Diff Inspector)</strong> para ver el desglose exacto de las sustituciones, inserciones o deleciones ocurridas en la copia.</li>
-              </ol>
-            </div>
-
-            <div class="protocol-card">
-              <div class="protocol-card-header">
-                <span class="proto-tag g2">Protocolo C (Fase G2/M)</span>
-                <h4>Roturas Bicatenarias (DSB) en G2/M y Comparación Mecanística HDR vs NHEJ</h4>
-              </div>
-              <ol class="protocol-steps-list">
-                <li>Desplázate a la <strong>Etapa 3 (Fase G2/M)</strong> donde el genoma se encuentra completamente duplicado y cada cromosoma dispone de su cromátida hermana.</li>
-                <li>En el <strong>Módulo 3.1</strong>, define el punto de rotura en la posición 4 u 8.</li>
-                <li>Pulsa <strong>"Reparar vía NHEJ"</strong>: observa la ligación directa de emergencia y la aparición de la cicatriz molecular o microdeleción.</li>
-                <li>Pulsa <strong>"Restaurar a Molde"</strong> en la cabecera para regresar al estado intacto.</li>
-                <li>Ahora pulsa <strong>"Reparar vía HDR"</strong>: observa la reconstitución limpia y perfecta sin cicatriz, asistida por la cromátida hermana presente en G2.</li>
-                <li>Pulsa el botón superior <strong>"Guardar Experimento"</strong> para registrar el ensayo completo en el <strong>Módulo 4 (Auditoría)</strong>.</li>
-              </ol>
-            </div>
-
-            <div class="protocol-card">
-              <div class="protocol-card-header">
-                <span class="proto-tag crispr">Protocolo D (CRISPR & Auditoría)</span>
-                <h4>Edición Quirúrgica CRISPR, Desfase del Marco (Frameshift) y Auditoría Inmutable</h4>
-              </div>
-              <ol class="protocol-steps-list">
-                <li>Haz clic sobre la base en la posición 2 del <strong>Mapa de Alineamiento 2D</strong>.</li>
+                <li>En el <strong>Mapa de Alineamiento 2D</strong> o en el visor 3D, haz clic sobre la base en la posición 4.</li>
                 <li>En el <strong>Módulo 1.1</strong>, cambia al modo <em>"Edición Quirúrgica CRISPR"</em>.</li>
-                <li>Comprueba que la posición se rellenó automáticamente en 2. Selecciona tipo <em>"Inserción (+1 Base)"</em> y escoge la base <strong>"A"</strong>.</li>
-                <li>Pulsa <strong>"Inducir Lesión Dirigida (CRISPR-Cas9)"</strong>: comprueba la alteración en la cadena y la activación del bypass p53/p21 sobre las CDKs.</li>
-                <li>Abre el <strong>Módulo 4 (Auditoría)</strong> para comprobar la bitácora criptográfica inmutable con el registro del evento EXP.</li>
+                <li>Comprueba que la coordenada 4 se auto-asignó. Selecciona tipo <em>"Sustitución / Lesión Puntual"</em> y escoge una base nitrogenada diferente.</li>
+                <li>Pulsa <strong>"Inducir Lesión Dirigida (CRISPR-Cas9)"</strong>: observa la alteración en la cadena y la activación del freno p53/p21 sobre el Punto R.</li>
+                <li>Desplázate al <strong>Módulo 2 (Reporte Diferencial)</strong>: revisa el alineamiento comparativo entre el Molde Referencia y la secuencia Modificada, verificando la tarjeta de mutación con posición, tipo y bases implicadas.</li>
+              </ol>
+            </div>
+
+            <div class="protocol-card">
+              <div class="protocol-card-header">
+                <span class="proto-tag duplex">Protocolo C (Dúplex Mismatch)</span>
+                <h4>Detección de Apareamientos Incorrectos en el Dúplex (Módulo 1.2)</h4>
+              </div>
+              <ol class="protocol-steps-list">
+                <li>Con un molde válido cargado, desplázate al <strong>Módulo 1.2 (Detección de Apareamientos Incorrectos)</strong>.</li>
+                <li>Pulsa <strong>"Inducir Error / Complementaria"</strong> para inyectar deliberadamente una base no canónica en la cadena complementaria de prueba.</li>
+                <li>Pulsa <strong>"Escanear Apareamientos"</strong>: el sistema analiza base a base el dúplex y marca los pares canónicos Watson-Crick en verde y los desajustes no canónicos en rojo.</li>
+                <li>Analiza cómo la presencia de un desajuste altera la estabilidad energética y la complementariedad antiparalela del dúplex molecular.</li>
+              </ol>
+            </div>
+
+            <div class="protocol-card">
+              <div class="protocol-card-header">
+                <span class="proto-tag audit">Protocolo D (Trazabilidad)</span>
+                <h4>Auditoría Criptográfica, Guardado y Restauración de Ensayos (Módulo 3)</h4>
+              </div>
+              <ol class="protocol-steps-list">
+                <li>Tras inducir daño o ejecutar escisiones enzimáticas, desplázate al <strong>Módulo 3 (Registro de Experimentos & Trazabilidad de Operaciones)</strong>.</li>
+                <li>Examina la tabla de auditoría: verifica cómo cada evento cuenta con ID de ensayo, operación molecular, secuencia inicial, secuencia resultante y estado de resolución inmutable.</li>
+                <li>Pulsa <strong>"Guardar Experimento"</strong> en la cabecera: asigna un título descriptivo (ej. "Ensayo_UV_Escision_12bp") y notas de laboratorio del investigador.</li>
+                <li>En cualquier momento, abre <strong>"Cargar Experimento"</strong> para restaurar el estado molecular íntegro de la simulación o pulsa <strong>"Limpiar Historial"</strong> en el Módulo 3 para reiniciar la bitácora de trabajo.</li>
               </ol>
             </div>
           </div>
@@ -1375,7 +1341,7 @@
           <!-- Pestaña 4: Fundamentos, FAQ & Bibliografía -->
           <div v-if="manualActiveTab === 'faq'" class="manual-section-content">
             <div class="faq-container">
-              <!-- Nueva FAQ sobre Probabilidad y Cinética de Reparación -->
+              <!-- FAQ 1: Cinética de reparación real -->
               <div class="faq-card">
                 <div class="faq-q">
                   <Icon name="help" size="18" class="q-icon" />
@@ -1393,37 +1359,50 @@
                     <br>
                     2. <em>Saturación por sobrecarga:</em> Si la exposición a luz UV o ROS es alta, la concentración nuclear de glicosilasas y polimerasa β se satura. Algunas lesiones <strong>escapan</strong> a la primera ronda de inspección.
                     <br>
-                    3. <em>Respuesta del Checkpoint G1/S:</em> Esta es precisamente la razón de ser de <strong>p53 y p21</strong>. Si una sola lesión escapa a la escisión, el sensor p53 permanece fosforilado y retiene a la célula en G1. Si la célula no consigue limpiar el molde tras varios ciclos, p53 activa la apoptosis para evitar colapsos letales en la horquilla de replicación de Fase S.
+                    3. <em>Respuesta del Checkpoint G1/S:</em> Esta es precisamente la razón de ser de <strong>p53 y p21</strong>. Si una sola lesión escapa a la escisión, el sensor p53 permanece fosforilado y retiene a la célula en G1. Si la célula no consigue limpiar el molde tras varios ciclos, p53 activa la apoptosis para evitar transferir moldes lesionados a la síntesis celular.
                   </p>
                 </div>
               </div>
 
+              <!-- FAQ 2: Lesión vs Mutación -->
               <div class="faq-card">
                 <div class="faq-q">
                   <Icon name="help" size="18" class="q-icon" />
-                  <h5>¿Por qué el laboratorio está ordenado en G1 → S → G2/M y qué pasaba con el "3.2 arriba y 3.1 abajo" de antes?</h5>
+                  <h5>¿Cómo distingue el simulador entre una lesión del molde y una mutación consolidada?</h5>
                 </div>
                 <div class="faq-a">
                   <p>
-                    <strong>Resolución Biológica:</strong> En versiones tempranas del software existía una confusión estructural: el módulo de reparación con molde se colocó antes del escaneo de desapareamientos, pero con numeraciones desfasadas ("3.2 arriba y 3.1 abajo").
+                    <strong>Precisión Conceptual Canónica:</strong>
                     <br>
-                    Esto era biológicamente incorrecto porque mezclaba eventos pre-replicativos con post-replicativos. En la célula real:
+                    En el simulador, las alteraciones inducidas en el molde (UV, ROS o desaminación) son tratadas como <strong>lesiones físicas o aductos reversibles</strong>. La información original no se destruye porque el complejo de escisión enzimática (BER/NER) puede identificar y extirpar la base alterada restaurando la secuencia fidedigna guiado por la plantilla de referencia.
                     <br>
-                    • <strong>Fase G1 (Módulos 1.1 a 1.3):</strong> La célula solo tiene el molde parental sin duplicar. Las lesiones son ambientales o mutagenéticas, y la célula las repara antes de replicar mediante BER/NER para no transferir el error a la descendencia.
-                    <br>
-                    • <strong>Fase S (Módulos 2.1 a 2.3):</strong> Ocurre la replicación activa. Aquí y solo aquí la ADN polimerasa comete errores al incorporar dNTPs en la horquilla, y actúa el filtro MMR post-replicativo.
-                    <br>
-                    • <strong>Fase G2/M (Módulos 3.1 y 3.2):</strong> El ADN ya se duplicó. Si hay roturas bicatenarias (DSB), la célula puede usar la cromátida hermana idéntica para hacer Recombinación Homóloga (HDR) limpia, o recurrir a NHEJ si hay emergencia.
-                    <br>
-                    La numeración actual refleja con precisión cristalina esta cronología biológica canónica.
+                    Por el contrario, una <strong>mutación</strong> representa una base incorporada de forma permanente que forma enlaces canónicos normales y ya no es detectada como daño por las ADN glicosilasas, requiriéndose el <strong>Reporte Diferencial (Módulo 2)</strong> para contrastarla contra el molde de referencia.
                   </p>
                 </div>
               </div>
 
+              <!-- FAQ 3: Punto R vs Checkpoint G1/S -->
               <div class="faq-card">
                 <div class="faq-q">
                   <Icon name="help" size="18" class="q-icon" />
-                  <h5>¿Por qué es matemáticamente imposible que un sistema repare un desapareamiento (mismatch) sin hebra molde?</h5>
+                  <h5>¿Por qué el Punto de Restricción (Punto R) y el Checkpoint G1/S no son lo mismo?</h5>
+                </div>
+                <div class="faq-a">
+                  <p>
+                    <strong>Separación Molecular (Lodish cap. 9; Alberts cap. 9):</strong>
+                    <br>
+                    El <strong>Punto de Restricción (Punto R)</strong> es un punto de compromiso metabólico regulado por factores de crecimiento extracelulares y mitógenos que activan la vía Ras-MAPK → Ciclina D-CDK4/6 para iniciar la fosforilación de Rb. El Punto R no inspecciona la integridad del ADN.
+                    <br>
+                    El freno ante daño en el ADN lo impone un <strong>bypass de emergencia colateral</strong>: las quinasas ATM/ATR detectan las lesiones, estabilizan a p53 e inducen la síntesis masiva de <strong>p21</strong>. p21 secuestra e inhibe a las quinasas dependientes de ciclina (CDK2 y CDK4/6), impidiendo que Rb se hiperfosforile y manteniendo a E2F secuestrado. Así, la célula queda congelada antes de cruzar el Punto R hasta que el molde se repare.
+                  </p>
+                </div>
+              </div>
+
+              <!-- FAQ 4: Imposibilidad de reparar mismatch sin molde -->
+              <div class="faq-card">
+                <div class="faq-q">
+                  <Icon name="help" size="18" class="q-icon" />
+                  <h5>¿Por qué es químicamente imposible reparar un desapareamiento (mismatch) sin hebra molde?</h5>
                 </div>
                 <div class="faq-a">
                   <p>
@@ -1431,55 +1410,30 @@
                     <br>
                     El complejo de reparación no tiene forma física de "adivinar" si la secuencia original era un par canónico <strong>A — T</strong> (donde la C es la equivocada) o un par canónico <strong>G — C</strong> (donde la A es la equivocada).
                     <br>
-                    Por esta razón, la naturaleza utiliza marcadores epigenéticos (como hemimetilación de adeninas por la metilasa Dam en procariotas o mellas en la hebra retardada por PCNA en eucariotas) para identificar cuál es la hebra molde parental auténtica. Sin una <em>hebra molde parental o referencia homóloga</em>, el sistema tendría un 50% de probabilidad de fijar la mutación en vez de corregirla.
+                    Por esta razón, la naturaleza utiliza marcadores epigenéticos para identificar cuál es la hebra molde parental auténtica. Sin una <em>hebra molde parental o referencia homóloga</em>, el sistema tendría un 50% de probabilidad de fijar el error en vez de corregirlo.
                   </p>
                 </div>
               </div>
 
+              <!-- FAQ 5: Módulos implementados -->
               <div class="faq-card">
                 <div class="faq-q">
                   <Icon name="help" size="18" class="q-icon" />
-                  <h5>¿Cómo logra la célula copiar 3.000 millones de nucleótidos con solo ~3 errores? (El Triple Filtro)</h5>
+                  <h5>¿Qué módulos y funciones integran este laboratorio actualmente?</h5>
                 </div>
                 <div class="faq-a">
                   <p>
-                    Basado en <strong>Alberts cap. 5</strong>: Ningún proceso químico aislado tiene la energía libre suficiente para distinguir pares de bases con una precisión de 1 en 1.000 millones. La fidelidad extrema se consigue multiplicando tres filtros probabilísticos independientes:
+                    <strong>Arquitectura Funcional Completa del Simulador:</strong>
                     <br>
-                    1. <em>Apareamiento de bases en el sitio activo de la polimerasa:</em> Error de ~1 cada 10⁵ nt.
+                    El laboratorio implementa 4 bloques operacionales rigurosos:
                     <br>
-                    2. <em>Corrección de pruebas exonucleolítica 3'→5' (Proofreading):</em> Reduce el error en 100 veces, alcanzando ~1 cada 10⁷ nt.
+                    • <strong>Molde Parental & Estructura:</strong> Visualización tridimensional fotorrealista de la doble hélice B-DNA, mapa 2D de nucleótidos con monómeros de azúcar-fosfato, polaridad antiparalela 5'→3' / 3'→5' y puentes de hidrógeno Watson-Crick.
                     <br>
-                    3. <em>Reparación post-replicativa de desapareamientos (MMR):</em> Las enzimas MutS/MutL rastrean distorsiones en la hebra hija y reducen el error residual en otro factor de 100 a 1.000, logrando una fidelidad global de <strong>~1 error cada 10⁹ a 10¹⁰ nucleótidos</strong>.
-                  </p>
-                </div>
-              </div>
-
-              <div class="faq-card">
-                <div class="faq-q">
-                  <Icon name="help" size="18" class="q-icon" />
-                  <h5>¿Por qué la Recombinación Homóloga (HDR) solo puede operar en Fase G2/S y no en G1?</h5>
-                </div>
-                <div class="faq-a">
-                  <p>
-                    <strong>Fundamento Celular:</strong> Para que la vía HDR reconstruya una rotura de doble cadena (DSB) sin perder información, necesita una molécula de ADN idéntica que actúe como molde de copia.
+                    • <strong>Módulo 1.1 & Sensor Checkpoint G1/S:</strong> Generador de daño ambiental estocástico (UV, ROS, desaminación) y edición quirúrgica CRISPR-Cas9, acoplado al sensor biofísico de arresto celular (eje ATM/ATR → p53/MDM2 → p21 / apoptosis mitocondrial).
                     <br>
-                    En Fase G1, la célula solo dispone del cromosoma homólogo de origen materno o paterno, el cual contiene polimorfismos alélicos y no está alineado físicamente.
+                    • <strong>Módulo 1.2 & Módulo 1.3:</strong> Detección y escaneo de apareamientos Watson-Crick en el dúplex bicatenario y cinética enzimática estocástica de escisión de lesiones (BER/NER) regulable (50% a 98%) con reporte de lesiones remanentes.
                     <br>
-                    En contraste, tras la replicación en Fase S y durante la Fase G2, <strong>cada cromosoma dispone de su cromátida hermana perfectamente idéntica</strong>, mantenida a escasos nanómetros mediante anillos proteicos de <em>cohesina</em>. Esto permite que RAD51 y BRCA1/2 invadan la cromátida hermana y restauren el ADN con 100% de fidelidad sin cicatriz.
-                  </p>
-                </div>
-              </div>
-
-              <div class="faq-card">
-                <div class="faq-q">
-                  <Icon name="help" size="18" class="q-icon" />
-                  <h5>¿Qué ocurre si la célula elude el Punto de Restricción R en G1/S sin reparar el daño?</h5>
-                </div>
-                <div class="faq-a">
-                  <p>
-                    Si el sensor <strong>p53 está mutado</strong> (la alteración genética más común en neoplasias humanas, presente en más del 50% de tumores) o la proteína p21 no se expresa, la célula ingresa a Fase S portando lesiones en el molde.
-                    <br>
-                    Al llegar la horquilla de replicación, la ADN polimerasa colapsa frente a los dímeros de timina o las 8-oxo-guaninas, provocando síntesis translesión altamente mutagénica, roturas cromosómicas descontroladas, aneuploidías e inestabilidad genómica masiva.
+                    • <strong>Módulo 2 & Módulo 3:</strong> Reporte Diferencial base a base (Diff Inspector) para identificar sustituciones e indels, y Bitácora Inmutable de Auditoría criptográfica con persistencia y carga de experimentos en formato JSON.
                   </p>
                 </div>
               </div>
@@ -1495,7 +1449,7 @@
                     <strong>Alberts, B., Johnson, A., Lewis, J., Morgan, D., Raff, M., Roberts, K., & Walter, P. (2022).</strong>
                     <em>Molecular Biology of the Cell</em> (7.ª edición). W. W. Norton & Company.
                     <br>
-                    <small>• Capítulo 5: "DNA Replication, Repair, and Recombination" (mecanismos de polimerasas, MMR MutS/MutL, BER, NER, DSB, HDR y NHEJ).</small>
+                    <small>• Capítulo 5: "DNA Replication, Repair, and Recombination" (mecanismos de escisión BER, NER y cinética enzimática).</small>
                     <br>
                     <small>• Capítulo 9: "The Cell Cycle" (sistema de control del ciclo celular, sensor p53, inhibidor p21, complejos Ciclina-CDK y punto de restricción G1/S).</small>
                   </li>
@@ -1503,7 +1457,7 @@
                     <strong>Lodish, H., Berk, A., Kaiser, C. A., Krieger, M., Bretscher, A., Ploegh, H., Martin, K. C., Yaffe, M. B., & Amon, A. (2021).</strong>
                     <em>Molecular Cell Biology</em> (9.ª edición). Macmillan Learning.
                     <br>
-                    <small>• Capítulo 5: "Molecular Genetic Mechanisms" (fidelidad de replicación y mutagénesis).</small>
+                    <small>• Capítulo 5: "Molecular Genetic Mechanisms" (mecanismos de daño y mutagénesis).</small>
                     <br>
                     <small>• Capítulo 9: "Cell Cycle Control and Checkpoints" (regulación del punto de restricción R y respuesta al daño en el ADN).</small>
                   </li>
@@ -1511,7 +1465,7 @@
                     <strong>Nelson, D. L., & Cox, M. M. (2021).</strong>
                     <em>Lehninger Principles of Biochemistry</em> (8.ª edición). W. H. Freeman.
                     <br>
-                    <small>• Capítulo 25: "DNA Metabolism: Replication, Repair, and Recombination" (estequiometría de enlaces de hidrógeno, química de la polimerización 5'→3' y termodinámica del B-DNA).</small>
+                    <small>• Capítulo 25: "DNA Metabolism: Replication, Repair, and Recombination" (estequiometría de enlaces de hidrógeno, polaridad 5'→3' y termodinámica del B-DNA).</small>
                   </li>
                 </ul>
               </div>
@@ -4768,13 +4722,14 @@ onMounted(() => {
 
 /* Manual de Laboratorio Modal Styles */
 .manual-dialog-surface {
-  max-width: 920px;
-  width: 95vw;
-  max-height: 88vh;
+  max-width: 1040px;
+  width: min(96vw, 1040px);
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-large);
 }
 
 .dialog-icon.highlight {
@@ -4783,30 +4738,33 @@ onMounted(() => {
 
 .manual-tabs-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--md-sys-color-surface-container-low);
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding: 0.5rem 1rem;
-  gap: 0.5rem;
-  overflow: hidden;
+  padding: 0.6rem 1rem;
+  gap: 0.6rem;
+  align-items: stretch;
 }
 
 .manual-tab-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.65rem 0.6rem;
+  gap: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  min-height: 44px;
   background: var(--md-sys-color-surface-container);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-small);
   color: var(--md-sys-color-on-surface-variant);
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
   text-align: center;
+  line-height: 1.25;
+  box-sizing: border-box;
 }
 
 .manual-tab-btn:hover {
@@ -4823,9 +4781,9 @@ onMounted(() => {
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.12);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 820px) {
   .manual-tabs-bar {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -5008,9 +4966,9 @@ onMounted(() => {
 }
 
 .proto-tag.g1 { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
-.proto-tag.s { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.proto-tag.g2 { background: rgba(16, 185, 129, 0.2); color: #10b981; }
 .proto-tag.crispr { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+.proto-tag.duplex { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+.proto-tag.audit { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
 
 .protocol-card h4 {
   margin: 0;
@@ -5032,36 +4990,49 @@ onMounted(() => {
 /* Roadmap Visual de Fases */
 .manual-pipeline-roadmap {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: center;
-  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
   background: var(--md-sys-color-surface-container-lowest);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-medium);
-  padding: 1rem;
+  padding: 1.1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .manual-pipeline-roadmap {
+    grid-template-columns: 1fr;
+  }
 }
 
 .roadmap-phase {
   background: var(--md-sys-color-surface-container-low);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-small);
-  padding: 0.85rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  min-height: 210px;
+  gap: 0.6rem;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-.roadmap-phase.g1 { border-top: 3px solid #818cf8; }
-.roadmap-phase.s { border-top: 3px solid #ef4444; }
-.roadmap-phase.g2 { border-top: 3px solid #10b981; }
+.roadmap-phase.phase-molde { border-top: 3px solid #38bdf8; }
+.roadmap-phase.phase-dano { border-top: 3px solid #f59e0b; }
+.roadmap-phase.phase-escision { border-top: 3px solid #10b981; }
+
+.roadmap-phase.phase-molde .rm-tag { color: #38bdf8; }
+.roadmap-phase.phase-dano .rm-tag { color: #f59e0b; }
+.roadmap-phase.phase-escision .rm-tag { color: #10b981; }
 
 .rm-header {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.45rem;
 }
 
 .rm-tag {
@@ -5070,30 +5041,21 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-.roadmap-phase.g1 .rm-tag { color: #818cf8; }
-.roadmap-phase.s .rm-tag { color: #ef4444; }
-.roadmap-phase.g2 .rm-tag { color: #10b981; }
-
 .rm-header h5 {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   color: var(--md-sys-color-on-surface);
+  font-weight: 700;
 }
 
 .rm-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.75rem;
+  gap: 0.35rem;
+  font-size: 0.76rem;
   color: var(--md-sys-color-on-surface-variant);
-  line-height: 1.35;
-}
-
-.rm-arrow {
-  text-align: center;
-  color: var(--md-sys-color-outline);
-  font-size: 0.7rem;
+  line-height: 1.4;
 }
 
 .rm-alert {
@@ -5101,37 +5063,21 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.rm-content small {
-  font-size: 0.69rem;
-  color: var(--md-sys-color-outline);
-}
-
 .rm-footer {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.3rem 0.5rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 4px;
   text-align: center;
 }
 
-.rm-footer.cleared { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.rm-footer.s-done { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
-.rm-footer.mit-done { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-
-.roadmap-connector {
-  color: var(--md-sys-color-outline);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.rm-footer.cleared { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.rm-footer.alert-active { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.rm-footer.restored { background: rgba(16, 185, 129, 0.15); color: #10b981; }
 
 @media (max-width: 860px) {
   .manual-pipeline-roadmap {
     grid-template-columns: 1fr;
-  }
-  .roadmap-connector {
-    transform: rotate(90deg);
-    padding: 0.2rem 0;
   }
 }
 
