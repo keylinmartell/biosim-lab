@@ -721,6 +721,12 @@ class DNAEngine:
         return list(reversed(cls._events_log[-limit:]))
 
     @classmethod
+    def clear_events(cls) -> int:
+        count = len(cls._events_log)
+        cls._events_log.clear()
+        return count
+
+    @classmethod
     def build_experiment_record(cls, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Construye (sin persistir) el informe integral del experimento de laboratorio:

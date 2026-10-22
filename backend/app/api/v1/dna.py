@@ -207,6 +207,12 @@ def get_dna_events(limit: int = 50):
         total=len(events)
     )
 
+@router.delete("/events")
+def clear_dna_events():
+    """Limpia el registro en memoria de auditoria de experimentos."""
+    count = dna_engine.clear_events()
+    return {"message": "Historial de eventos de auditoria vaciado", "cleared": count}
+
 @router.post("/experiment/save", response_model=FullExperimentReport)
 async def save_full_experiment_endpoint(payload: SaveFullExperimentRequest, db: AsyncSession = Depends(get_db)):
     """Guarda el informe integral del experimento en la base de datos (Supabase/Postgres)."""

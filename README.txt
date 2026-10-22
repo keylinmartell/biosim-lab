@@ -38,25 +38,33 @@ y mutaciones controladas (sustitucion, insercion, delecion).
 - cell_events: Historial cronologico de eventos de cada celula (divisiones, exposiciones, cambios de fase).
 
 4. MOTOR DE ADN (DNA ENGINE - FASE 1 CERRADA)
-- Representacion y Validacion: Almacenamiento en alfabeto A, T, C, G; deteccion de caracteres no permitidos y manejo controlado.
-- Complementariedad: Generacion de cadena complementaria bajo reglas canonicas Watson-Crick (A<->T, C<->G).
+- Representacion y Validacion: Almacenamiento en alfabeto A, T, C, G; deteccion reactiva de caracteres no permitidos y manejo controlado.
+- Complementariedad: Generacion de cadena complementaria bajo reglas canonicas Watson-Crick (A<->T, C<->G) antiparalela (5'->3' frente a 3'->5').
 - Copia fidedigna: Generacion de copias sin cambios y verificacion automatica de identidad (100% match).
-- Mutaciones:
-  * Mutacion controlada (CRISPR in silico): Sustitucion puntual, insercion y delecion en coordenadas indexadas.
-  * Replicacion estocastica: Duplicacion probabilistica con tasa de error de polimerasa configurable.
-- Comparacion y Diff: Reporte de diferencias exactas, posiciones y transiciones entre referencia y copia.
-- Mecanismos de Reparacion Simplificados:
-  * 3.1 Deteccion de apareamientos incorrectos (MMR): Evaluacion duplex de pares de bases canonicos vs no canonicos (ej. A-G, C-T).
-    Regla del modelo: marca el error sin conjeturar arbitrariamente la base original cuando no existe referencia fiable.
-  * 3.2 Reparacion guiada por referencia (Template-guided repair): Comparacion con plantilla homologa fiable y reemplazo 
-    selectivo en posiciones autorizadas. Distingue entre correccion respaldada por plantilla y conjetura.
-  * 3.3 Roturas de ADN (DSB) como extension conceptual: Simulacion de rotura bicatenaria en posicion definida; comparacion entre
-    reconstruccion guiada por homologia (HDR, alta fidelidad sin cicatriz) y union de extremos no homologos (NHEJ, propenso a microdeleciones/cicatrices).
-- Trazabilidad y Registro de Experimentos (Seccion 7):
-  * Generacion de registros inmutables (EXP-xxxx) con secuencias inicial/final, tipo de operacion, parametros, plantilla usada,
-    diagnostico de deteccion, estado de reparacion y nota de suposiciones del modelo.
+- Precision de Terminos Biologicos (Dano/Lesion vs Mutacion):
+  * En Fase G1 pre-replicativa, las alteraciones son 'lesiones fisicas/quimicas' o 'aductos' reparables (ej. dimeros T-T, 8-oxo-G, uracilo).
+  * La 'mutacion' permanente solo se consolida e incorpora en el genoma si la lesion escapa a la reparacion y se replica en Fase S.
+- Checkpoint G1/S y Sensor Molecular p53 / MDM2:
+  * Reposo: p53 tiene vida media corta (~20 min); la ubiquitina ligasa MDM2 lo poliubiquitina y degrada continuamente en el proteasoma 26S. p21 inactivo.
+  * Dano leve/moderado: Quinasas sensoras ATM/ATR fosforilan a p53 (Ser15/Ser20), impidiendo su degradacion por MDM2; p53 induce la transcripcion de p21 (CIP1/WAF1), inhibiendo CDK4/6 y CDK2, manteniendo a Rb hipofosforilado (secuestra a E2F), congelando el ciclo en G1 y activando BER/NER.
+  * Dano masivo/irreparable: Fosforilacion sostenida (Ser46/Lys120) activa promotores de baja afinidad: efectores proapoptoticos BAX, PUMA y NOXA (permeabilizacion mitocondrial MOMP, liberacion de citocromo c y caspasas).
+  * Separacion Conceptual del Punto R: El Punto R solo evalua factores mitogenicos de crecimiento (Ciclina D/CDK4/6/Rb/E2F) y no detecta danos directamente. El freno por lesiones es un bypass impuesto externamente por la via ATM/ATR -> p53 -> p21.
+- Induccion de Lesiones y Edicion Dirigida (Modulo 1.1):
+  * Dano ambiental estocastico: Radiacion UV (dimeros T-T), Estres oxidativo ROS (8-oxo-G) y Desaminacion espontanea (C->U/T) modulados por slider de intensidad.
+  * Edicion exogena (CRISPR-Cas9 in silico): Lesion puntual/aducto (sustitucion), insercion (+1 base, frameshift) y delecion (-1 base, frameshift).
+- Deteccion de Desapareamientos en el Molde (Modulo 1.2):
+  * Evaluacion duplex de pares de bases canonicos vs no canonicos frente a la complementaria parental intacta.
+- Mecanismos de Reparacion Pre-Replicativa (Modulo 1.3 - BER / NER / Homologia):
+  * Cinetica enzimatica real probabilistica con slider de eficiencia (50% a 98%): modela la probabilidad finita de escision y el escape de lesiones por saturacion.
+  * Control asistido 100% fiel: restauracion determinista limpia con secuencia de referencia homologa.
+- Replicacion en Fase S y Triple Filtro MMR (Fase S):
+  * Replicacion con tasa de error de polimerasa y filtro de desapareamientos post-replicativo (MutS/MutL).
+- Roturas Bicatenarias DSB (Fase G2/M):
+  * Comparacion mecanistica entre HDR (asistida por cromatida hermana, 100% fiel) y NHEJ (union directa propensa a microdeleciones).
+- Trazabilidad y Registro de Experimentos (Modulo 3 / Seccion 7):
+  * Persistencia inmutable (EXP-xxxx) con secuencias inicial/final, diagnostico, parametros y notas de laboratorio.
 - Marco Cientifico (Seccion 10):
-  * Documentado como modelo computacional didactico basado en reglas abstractas; no reproduce la cinetica enzimatica molecular completa.
+  * Documentado como modelo computacional didactico basado en reglas abstractas; no reproduce la cinetica estequiometrica total in vivo.
 
 5. FASES DE DESARROLLO
 - Fase 1 [CERRADA Y VALIDADA]: Secuencias, reglas geneticas basicas, copia, mutaciones, apareamientos incorrectos, reparacion por referencia, extension DSB, registro de experimentos, tests unitarios y laboratorio reactivo.
@@ -272,4 +280,39 @@ Cierre de la Primera Fase: ADN, Copia, Mutaciones y Mecanismos de Reparacion
         - Paso 4: Deteccion de Daño (MMR / Diff) automatica e instantanea comparando frente a la complementaria del molde inicial.
         - Paso 5: Reparacion Guiada por Homologia (restauracion basada en el molde inicial con verificacion de fidelidad).
         - Boton rapido 'Restaurar a Molde' para reiniciar el laboratorio directamente desde la hebra molde.
+
+================================================================================
+Fecha: 2026-10-22
+Alineacion Biologica Fase G1, Eje p53/MDM2, Separacion Punto R y Actualizacion
+================================================================================
+- Precision de Nomenclatura Biologica (Dano/Lesion vs Mutacion):
+  * Sustitucion de la palabra 'mutacion' por 'dano', 'lesion fisica/quimica' o 'aducto' en la Fase G1,
+    Modulo 1.1 y selectores de evento.
+  * Incorporacion de banner en la interfaz y en el manual aclarando que en Fase G1 el ADN presenta
+    lesiones o aductos quimicos reparables, y que unicamente se convertiran en mutaciones irreversibles
+    si escapan a la escision enzimatica (BER/NER) y se replican mas adelante en la Fase S.
+- Integracion y Renderizado del Checkpoint G1/S en Vivo (DNALab.vue):
+  * Implementacion de la tarjeta reactiva 'checkpoint-g1-card' vinculada a la propiedad computada 'checkpointG1Status'.
+  * Semáforo molecular de tres estados en cabecera y cuerpo:
+    1. Estado en reposo (Verde): Molde integro; p53 con vida media corta (~20 min) degradado de forma continua
+       por la ubiquitina ligasa E3 MDM2 en el proteasoma 26S; p21 inactivo y complejos CDK activos.
+    2. Dano leve/moderado (Ambar): Quinasas sensoras ATM/ATR fosforilan a p53 (Ser15/Ser20), impidiendo su degradacion
+       por MDM2 y estabilizandolo; p53 transcribe p21 (CIP1/WAF1) inhibiendo CDK4/6 y CDK2, manteniendo a Rb
+       hipofosforilado (secuestrando a E2F) y activando la reparacion por escision de bases y nucleotidos (BER/NER).
+    3. Dano masivo/irreparable (Rojo pulsante): Fosforilacion sostenida (Ser46/Lys120) que conmuta la expresion genica
+       hacia el programa proapoptotico mitocondrial transcribiendo efectores de baja afinidad: BAX, PUMA y NOXA
+       (permeabilizacion mitocondrial MOMP, liberacion de citocromo c y activacion de caspasas).
+- Desacoplamiento y Separacion Conceptual del Punto R:
+  * El Punto de Restriccion (Punto R) evalua exclusivamente senales mitogenicas de proliferacion celular
+    (Ciclina D / CDK4/6 / Rb / E2F) y no detecta danos genotoxicos de forma directa.
+  * El arresto ante lesiones de ADN es un bypass impuesto externamente desde la cascada de estres ATM/ATR -> p53 -> p21,
+    que neutraliza a las quinasas dependientes de ciclinas e impide superar el Punto R hacia Fase S.
+- Actualizacion de Botones y Controles en la Interfaz y Manuales:
+  * Modulo 1.1: 'Inducir Lesiones Ambientales en el Molde' (con selector de agente genotoxico UV, ROS, Desaminacion
+    y slider de intensidad) e 'Inducir Lesión Dirigida (CRISPR-Cas9)' (con tipo de alteracion puntual, insercion o delecion).
+  * Modulo 1.2: 'Escanear Apareamientos', 'Complementaria' e 'Inducir Error'.
+  * Modulo 1.3: 'Usar Molde Inicial' y 'Ejecutar Ciclo de Escisión Enzimática' (con switcher de cinetica probabilistica
+    vs control asistido al 100% y slider de eficiencia de escision 50%-98%).
+  * Actualizacion del manual interactivo en pantalla (DNALab.vue), guia tecnica externa (MANUAL_LABORATORIO_ADN.txt)
+    y bitacora del proyecto (README.txt).
 
