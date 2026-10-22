@@ -77,6 +77,7 @@ export const api = {
   }),
 
   getDNAEvents: (limit = 50) => request(`/dna/events?limit=${limit}`),
+  clearDNAEvents: () => request('/dna/events', { method: 'DELETE' }),
 
   saveDNAExperiment: (data) => request('/dna/experiment/save', {
     method: 'POST',

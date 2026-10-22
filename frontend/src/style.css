@@ -53,7 +53,7 @@
   /* Typography Scale */
   --md-ref-typeface-brand: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
   --md-ref-typeface-plain: 'Roboto Flex', -apple-system, BlinkMacSystemFont, sans-serif;
-  --md-ref-typeface-mono: 'Roboto Mono', 'SF Mono', Consolas, monospace;
+  --md-ref-typeface-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', 'SF Mono', Consolas, monospace;
 
   --md-sys-typescale-display-small: 400 2.25rem/2.75rem var(--md-ref-typeface-brand);
   --md-sys-typescale-headline-large: 500 2rem/2.5rem var(--md-ref-typeface-brand);

@@ -12,38 +12,20 @@
         </div>
       </div>
 
-      <!-- Muestras de Referencia y Gestión de Experimentos -->
-      <div class="header-actions-row">
-        <div class="sample-chips-row">
-          <span class="chips-label">Muestras Estándar:</span>
-          <button class="md3-chip" @click="loadSample('ATCGATCGATCG')">
-            <Icon name="tag" size="14" class="chip-icon" />
-            <span>Control Corto (12bp)</span>
-          </button>
-          <button class="md3-chip" @click="loadSample('ATGCGATCGATCGATCGATC')">
-            <Icon name="dna" size="14" class="chip-icon" />
-            <span>Gen Sintético (20bp)</span>
-          </button>
-          <button class="md3-chip" @click="loadSample('ATGCCCCCGGGGTTTAA')">
-            <Icon name="water_drop" size="14" class="chip-icon" />
-            <span>Rica en GC (64.7%)</span>
-          </button>
-        </div>
-
-        <div class="exp-management-buttons">
-          <button class="md3-button-filled save-exp-btn" @click="openSaveDialog" :disabled="loading" title="Guardar todo el proceso del experimento con nombre y notas">
-            <Icon name="save" size="18" />
-            <span>Guardar Experimento</span>
-          </button>
-          <button class="md3-button-tonal load-exp-btn" @click="openLoadDialog" :disabled="loading" title="Cargar un experimento guardado para restaurar secuencias y modelo 3D">
-            <Icon name="history" size="18" />
-            <span>Cargar Experimento ({{ savedExperimentsList.length }})</span>
-          </button>
-          <button class="md3-button-outlined manual-exp-btn" @click="showManualDialog = true" title="Abrir Manual de Laboratorio interactivo con la guía paso a paso">
-            <Icon name="menu_book" size="18" />
-            <span>Manual del Lab</span>
-          </button>
-        </div>
+      <!-- Gestión de Experimentos -->
+      <div class="exp-management-buttons">
+        <button class="md3-button-filled save-exp-btn" @click="openSaveDialog" :disabled="loading" title="Guardar todo el proceso del experimento con nombre y notas">
+          <Icon name="save" size="18" />
+          <span>Guardar Experimento</span>
+        </button>
+        <button class="md3-button-tonal load-exp-btn" @click="openLoadDialog" :disabled="loading" title="Cargar un experimento guardado para restaurar secuencias y modelo 3D">
+          <Icon name="history" size="18" />
+          <span>Cargar Experimento ({{ savedExperimentsList.length }})</span>
+        </button>
+        <button class="md3-button-outlined manual-exp-btn" @click="showManualDialog = true" title="Abrir Manual de Laboratorio interactivo con la guía paso a paso">
+          <Icon name="menu_book" size="18" />
+          <span>Manual del Lab</span>
+        </button>
       </div>
     </div>
 
@@ -70,8 +52,9 @@
               placeholder="Introduce bases A, T, C, G (ej: ATCGTAGC)..."
               class="font-mono sequence-field"
               @input="handleInput"
+              @keyup.enter="validateAndProcess(true)"
             />
-            <button class="md3-button-filled" @click="validateAndProcess" :disabled="loading">
+            <button class="md3-button-filled" @click="validateAndProcess(true)" :disabled="loading">
               <Icon name="analytics" size="18" />
               <span>Validar Molde</span>
             </button>
@@ -92,7 +75,7 @@
       </div>
 
       <!-- Barra de Parámetros Biofísicos y Validación -->
-      <div class="metrics-grid" v-if="validationData">
+      <div class="metrics-grid" v-if="validationData && validationData.is_valid">
         <div class="metric-tile">
           <span class="m-k">Longitud Total</span>
           <span class="m-v font-mono">{{ validationData.length }} <small>pares de bases (bp)</small></span>
@@ -136,7 +119,7 @@
       </div>
 
       <!-- Banner de Error si la secuencia contiene símbolos no válidos -->
-      <div class="validation-error-alert" v-if="validationData && !validationData.is_valid">
+      <div class="validation-error-alert" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
         <Icon name="warning" size="20" class="err-icon" />
         <div class="err-text">
           <strong>Secuencia no válida para el motor genético:</strong>
@@ -145,15 +128,26 @@
       </div>
     </div>
 
-
-
-    <!-- Aviso si la secuencia actual no es válida -->
-    <div class="invalid-sequence-placeholder md3-card-outlined" v-if="validationData && !validationData.is_valid">
+    <!-- Aviso si la secuencia actual contiene símbolos no válidos -->
+    <div class="invalid-sequence-placeholder md3-card-outlined" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
       <div class="placeholder-content">
         <Icon name="warning" size="36" class="placeholder-icon" />
         <div>
           <h3>Secuencia con Símbolos No Permitidos</h3>
           <p>La cadena ingresada contiene caracteres no canónicos <strong>({{ (validationData.invalid_chars || []).join(', ') }})</strong>. Corrige la secuencia eliminando los símbolos no válidos para restaurar la doble hélice 3D y habilitar las operaciones de recombinación.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guía Inicial: Estación Lista para Entrada Manual -->
+    <div class="manual-input-prompt-card md3-card-outlined" v-if="!sequenceInput.trim() || (!cleanSequence && !validationData?.is_valid)">
+      <div class="prompt-content">
+        <div class="prompt-icon-box">
+          <Icon name="biotech" size="34" />
+        </div>
+        <div class="prompt-text">
+          <h3>Estación Molecular en Espera</h3>
+          <p>Introduce una cadena molde de nucleótidos (bases <strong>A</strong>, <strong>T</strong>, <strong>C</strong>, <strong>G</strong>) en el campo superior y presiona <strong>Validar Molde</strong> o la tecla <strong>Enter</strong> para inicializar el mapa 2D y el modelo macromolecular 3D.</p>
         </div>
       </div>
     </div>
@@ -167,7 +161,7 @@
             <Icon name="dna" size="22" class="title-icon" />
             <div>
               <h3>Mapa de Alineamiento de Nucleótidos</h3>
-              <span class="hint">Haz clic en cualquier base para posicionar el editor de mutación quirúrgica</span>
+              <span class="hint">Haz clic en cualquier base para posicionar el inductor de lesión dirigida o aducto</span>
             </div>
           </div>
 
@@ -290,8 +284,75 @@
         <div class="phase-title-group">
           <div class="phase-avatar g1">1</div>
           <div>
-            <h3>Módulo 1: Mutagénesis y Reparación de ADN</h3>
-            <span class="subtext">Modificaciones puntuales en coordenadas específicas y reparación guiada con plantilla</span>
+            <h3>Fase G1: Vigilancia del Molde, Daño Químico y Reparación Pre-Replicativa</h3>
+            <span class="subtext">Monitoreo pre-replicativo del molde: inducción de aductos/lesiones, sensor p53/MDM2 y reparación guiada por plantilla</span>
+          </div>
+        </div>
+        <div :class="['checkpoint-status-pill', checkpointG1Status.badgeClass]">
+          <Icon :name="checkpointG1Status.icon" size="16" />
+          <span>{{ checkpointG1Status.statusTitle }}</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta Científica de Estado de Checkpoint G1/S, Dinámica p53/MDM2 y Freno Celular -->
+      <div :class="['checkpoint-g1-card', 'md3-card-outlined', checkpointG1Status.state]">
+        <div class="cp-card-header">
+          <div class="cp-status-badge">
+            <span :class="['cp-status-dot', checkpointG1Status.state]"></span>
+            <Icon :name="checkpointG1Status.icon" size="20" />
+            <span class="cp-status-title">{{ checkpointG1Status.statusTitle }}</span>
+          </div>
+          <div class="cp-phase-badge">
+            <Icon name="verified_user" size="14" />
+            <span>Fase G1 · Control Pre-Replicativo</span>
+          </div>
+        </div>
+
+        <!-- Grid de los 3 Pilares Moleculares -->
+        <div class="cp-grid-3col">
+          <!-- Pilar 1: Dinámica p53 / MDM2 -->
+          <div class="cp-node-box p53-node">
+            <div class="cp-node-header">
+              <Icon name="biotech" size="16" class="node-icon" />
+              <span class="node-title">{{ checkpointG1Status.p53Title }}</span>
+            </div>
+            <div class="node-badge" :class="checkpointG1Status.state">
+              {{ checkpointG1Status.p53Badge }}
+            </div>
+            <p class="node-desc">{{ checkpointG1Status.p53Details }}</p>
+          </div>
+
+          <!-- Pilar 2: Efector p21 / Freno CDK / Apoptosis -->
+          <div class="cp-node-box p21-node">
+            <div class="cp-node-header">
+              <Icon name="block" size="16" class="node-icon" />
+              <span class="node-title">{{ checkpointG1Status.p21Title }}</span>
+            </div>
+            <div class="node-badge" :class="checkpointG1Status.state">
+              {{ checkpointG1Status.p21Badge }}
+            </div>
+            <p class="node-desc">{{ checkpointG1Status.p21Details }}</p>
+          </div>
+
+          <!-- Pilar 3: Separación Conceptual Punto R -->
+          <div class="cp-node-box puntor-node">
+            <div class="cp-node-header">
+              <Icon name="alt_route" size="16" class="node-icon" />
+              <span class="node-title">{{ checkpointG1Status.puntoRTitle }}</span>
+            </div>
+            <div class="node-badge bypass-tag">
+              Bypass Externo ATM/ATR &rarr; p53 &rarr; p21
+            </div>
+            <p class="node-desc">{{ checkpointG1Status.puntoRDetails }}</p>
+          </div>
+        </div>
+
+        <!-- Banner de Corrección Conceptual: Lesión vs Mutación -->
+        <div class="cp-clarification-banner">
+          <Icon name="info" size="16" class="banner-icon" />
+          <div class="banner-body">
+            <strong>Precisión Biológica Fundamental (Lesión vs Mutación):</strong>
+            <span>{{ checkpointG1Status.damageNatureClarification }}</span>
           </div>
         </div>
       </div>
@@ -306,7 +367,7 @@
             </div>
             <div>
               <h4>Módulo 1.1: Inducción de Daño en el Molde</h4>
-              <span class="op-sub">Comprueba cómo las lesiones físicas/químicas o la intervención dirigida sobre la secuencia</span>
+              <span class="op-sub">Comprueba cómo las lesiones físicas/químicas o aductos alteran el molde antes de la replicación</span>
             </div>
           </div>
 
@@ -333,7 +394,7 @@
           <!-- MODO A: DAÑO AMBIENTAL ESTOCÁSTICO (Luz UV, Estrés Oxidativo, Desaminación) -->
           <div v-if="g1DamageMode === 'environmental'" class="damage-subpanel">
             <div class="md3-textfield">
-              <label>Agente Mutagénico Ambiental (Alberts cap. 5):</label>
+              <label>Agente Genotóxico / Lesivo Ambiental (Alberts cap. 5):</label>
               <select v-model="envAgent">
                 <option value="uv_radiation">Radiación Ultravioleta (Luz UV · Dímeros T-T)</option>
                 <option value="oxidative_ros">Estrés Oxidativo (Radicales Libres ROS · 8-oxo-G)</option>
@@ -387,11 +448,11 @@
               </div>
 
               <div class="md3-textfield">
-                <label>Tipo de Evento:</label>
+                <label>Tipo de Alteración / Lesión:</label>
                 <select v-model="controlledForm.type">
-                  <option value="substitution">Sustitución (Puntual)</option>
-                  <option value="insertion">Inserción (+1 Base)</option>
-                  <option value="deletion">Deleción (-1 Base)</option>
+                  <option value="substitution">Lesión Puntual / Aducto Químico (Sustitución)</option>
+                  <option value="insertion">Lesión por Inserción (+1 Base)</option>
+                  <option value="deletion">Lesión por Deleción (-1 Base)</option>
                 </select>
               </div>
 
@@ -492,33 +553,11 @@
             <span>Módulo 1.3: Reparación del Molde (BER / NER / Homología)</span>
           </div>
           <p class="desc-text">
-            Corrige lesiones o mutaciones en la hebra molde parental utilizando la plantilla de referencia.
+            Corrige lesiones físicas/químicas o aductos en la hebra molde parental utilizando la plantilla de referencia homóloga.
           </p>
 
-          <!-- Toggle: Modo de Reparación (Control 100% vs Cinética Enzimática Real) -->
-          <div class="repair-mode-toggle-row">
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: repairMode === 'stochastic' }]" 
-              @click="repairMode = 'stochastic'"
-              title="Modela la probabilidad de escisión enzimática in vivo según Alberts cap. 5"
-            >
-              <Icon name="biotech" size="15" />
-              <span>Cinética Enzimática Real (Probabilístico)</span>
-            </button>
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: repairMode === 'deterministic' }]" 
-              @click="repairMode = 'deterministic'"
-              title="Restaura la secuencia completa al 100% como control didáctico limpio"
-            >
-              <Icon name="verified" size="15" />
-              <span>Control Asistido (100% Fiel)</span>
-            </button>
-          </div>
-
-          <!-- Slider de Eficiencia Enzimática de Escisión (Solo en modo estocástico) -->
-          <div class="slider-module repair-eff-slider" v-if="repairMode === 'stochastic'">
+          <!-- Slider de Eficiencia Enzimática de Escisión (BER / NER) -->
+          <div class="slider-module repair-eff-slider">
             <div class="slider-telemetry">
               <span class="slider-title">Capacidad / Eficiencia de Escisión (BER / NER):</span>
               <span class="slider-rate font-mono highlight-repair">{{ Math.round(repairEfficiency * 100) }}%</span>
@@ -555,7 +594,7 @@
             </button>
             <button class="md3-button-filled" @click="runReferenceRepair" :disabled="loading">
               <Icon name="build" size="18" />
-              <span>{{ repairMode === 'stochastic' ? 'Ejecutar Ciclo de Escisión Enzimática' : 'Reparar Molde al 100%' }}</span>
+              <span>Ejecutar Ciclo de Escisión Enzimática</span>
             </button>
           </div>
 
@@ -568,7 +607,7 @@
                 <p>
                   {{ repairResult.matches_reference 
                     ? 'La hebra molde recuperó su secuencia original.' 
-                    : `Se repararon ${repairResult.repaired_positions?.length || 0} lesiones. Sin embargo, ${repairResult.escaped_positions?.length || (repairResult.remaining_divergences || 0)} lesiones escaparon al reconocimiento enzimático en este ciclo. Ejecuta otro ciclo o usa control asistido.` }}
+                    : `Se repararon ${repairResult.repaired_positions?.length || 0} lesiones. Sin embargo, ${repairResult.escaped_positions?.length || (repairResult.remaining_divergences || 0)} lesiones escaparon al reconocimiento enzimático en este ciclo. Ejecuta otro ciclo enzimático para continuar la escisión de las lesiones remanentes.` }}
                 </p>
               </div>
             </div>
@@ -639,7 +678,7 @@
 
 
     <!-- 7 & 10: Cuaderno de Bitácora / Registro de Experimentos & Marco Científico -->
-    <div class="audit-log-card md3-card-outlined">
+    <div class="audit-log-card md3-card-outlined" v-if="cleanSequence">
       <div class="section-header">
         <div class="section-title-group">
           <Icon name="history" size="22" class="section-icon" />
@@ -648,10 +687,16 @@
             <span class="subtext">Auditoría inmutable de secuencias, mutaciones, métodos y resoluciones</span>
           </div>
         </div>
-        <button class="md3-chip" type="button" @click="fetchLogs">
-          <Icon name="restart_alt" size="14" />
-          <span>Refrescar Registro ({{ experimentLogs.length }})</span>
-        </button>
+        <div class="audit-header-chips">
+          <button class="md3-chip" type="button" @click="fetchLogs" title="Actualizar lista de eventos">
+            <Icon name="restart_alt" size="14" />
+            <span>Refrescar Registro ({{ experimentLogs.length }})</span>
+          </button>
+          <button class="md3-chip clear-logs-chip" type="button" @click="handleClearLogs" :disabled="experimentLogs.length === 0" title="Vaciar todo el historial de auditoría de la sesión">
+            <Icon name="delete" size="14" />
+            <span>Limpiar Historial</span>
+          </button>
+        </div>
       </div>
 
       <!-- Banner Rigor Científico Sección 10 -->
@@ -719,6 +764,11 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <!-- Estado Vacío cuando no hay eventos -->
+      <div class="empty-logs-notice" v-else>
+        <Icon name="history_toggle_off" size="26" class="empty-icon" />
+        <span>No hay eventos de mutación o reparación registrados en esta sesión.</span>
       </div>
     </div>
 
@@ -808,7 +858,7 @@
           <div class="empty-experiments-notice" v-if="savedExperimentsList.length === 0">
             <Icon name="info" size="32" class="empty-icon" />
             <h4>No hay experimentos guardados</h4>
-            <p>Realiza mutaciones o reparaciones en el laboratorio y pulsa <strong>"Guardar Experimento"</strong> para conservarlos aquí.</p>
+            <p>Realiza inducción de daño o reparaciones en el laboratorio y pulsa <strong>"Guardar Experimento"</strong> para conservarlos aquí.</p>
           </div>
 
           <div class="saved-experiments-list" v-else>
@@ -926,7 +976,7 @@
                   <span class="rm-arrow">↓</span>
                   <span>3. Reparación Pre-Replicativa (BER/NER)</span>
                 </div>
-                <div class="rm-footer cleared">Punto R Despejado → Pase a Fase S</div>
+                <div class="rm-footer cleared">Sin bypass por daño sobre Punto R → Pase a Fase S</div>
               </div>
 
               <div class="roadmap-connector">
@@ -1030,11 +1080,11 @@
                     <br>
                     • <em>Reparación por Escisión de Nucleótidos (NER):</em> Complejos escinucleasa cortan un oligonucleótido de 24-32 bases alrededor del dímero UV distorsionado y la polimerasa sintetiza el parche.
                     <br>
-                    <strong>Cinética Enzimática Real vs Control Asistido:</strong> En la célula real, las enzimas de escisión no reparan mágicamente al 100% de golpe; tienen una probabilidad de reconocimiento y pueden saturarse ante dosis elevadas. Por ello, el laboratorio incorpora el modo <em>"Cinética Enzimática Real (Probabilístico)"</em> con slider de <strong>Capacidad / Eficiencia de Escisión (50% a 98%)</strong>:
+                    <strong>Cinética Enzimática de Escisión (BER / NER):</strong> En la biología celular real (Alberts cap. 5), la reparación no es un acto instantáneo ni perfecto al 100%; los complejos enzimáticos de escisión presentan cinética saturable con probabilidad de reconocimiento estocástica regulada por el slider de <strong>Capacidad / Eficiencia de Escisión (50% a 98%)</strong>:
                     <br>
-                    • Si alguna lesión escapa a la escisión en ese ciclo, <strong>el sensor p53 y p21 permanecen en alerta roja</strong> y el Punto R sigue bloqueado.
+                    • Si alguna lesión escapa a la escisión en una ronda catalítica, <strong>el sensor p53 y p21 permanecen en alerta activa</strong>, sosteniendo el freno en el Punto R para impedir la replicación de moldes mutados.
                     <br>
-                    • La célula puede ejecutar un segundo ciclo enzimático o recurrir al <em>Control Asistido (100% Fiel)</em> para restaurar el molde al 100%, desactivando p53/p21 y autorizando el ingreso a Fase S.
+                    • La célula debe ejecutar ciclos catalíticos sucesivos hasta lograr la escisión de todas las lesiones, momento en el cual MDM2 retoma la degradación basal de p53, apagando p21 y permitiendo el paso ordenado a la Fase S.
                   </p>
                 </div>
               </div>
@@ -1170,42 +1220,58 @@
 
               <!-- Módulo 1 -->
               <div class="button-guide-card">
-                <div class="card-tag">5. Módulo 1 · Mutagénesis, Detección y Reparación</div>
+                <div class="card-tag">5. Fase G1 · Vigilancia del Molde, Checkpoint p53/MDM2, Freno y Reparación</div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="verified_user" size="14" /> Tarjeta de Estado Checkpoint G1/S</span>
+                  <p>Muestra en tiempo real la dinámica biofísica del eje ATM/ATR → p53/MDM2 → p21. En reposo: p53 tiene vida media corta (~20 min) degradado por MDM2 en proteasoma. Daño leve/moderado: ATM/ATR fosforilan p53 (Ser15/Ser20), impidiendo degradación e induciendo p21 para frenar CDKs y activar BER/NER. Daño masivo: fosforilación sostenida (Ser46/Lys120) que conmuta a programa de apoptosis mitocondrial (BAX, PUMA, NOXA).</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="alt_route" size="14" /> Separación Conceptual: Punto R</span>
+                  <p>Aclara que el Punto R evalúa únicamente factores mitogénicos de proliferación celular (Ciclina D/CDK4/6/Rb/E2F) y no detecta daños directamente. El freno celular ante lesiones es un bypass impuesto externamente desde la cascada ATM/ATR → p53 → p21.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name chip"><Icon name="info" size="14" /> Banner de Precisión: Lesión vs Mutación</span>
+                  <p>Aclara que en Fase G1 toda alteración es una lesión física/química o aducto reparable, y que solo se convertirá en mutación permanente si no se repara y se replica más adelante en la Fase S.</p>
+                </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="wb_sunny" size="14" /> Daño Ambiental Estocástico</span>
                   <p>Activa el inductor de lesiones ambientales: Luz UV (dímeros TT), Estrés Oxidativo ROS (8-oxo-G) o Desaminación espontánea (C→U).</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="content_cut" size="14" /> Herramienta Exógena (CRISPR-Cas9)</span>
-                  <p>Modo de alteración dirigida en una posición: sustitución puntual, inserción (+1 base) o deleción (-1 base).</p>
+                  <p>Modo de alteración dirigida en una coordenada indexada: lesión puntual / aducto (sustitución), inserción (+1 base) o deleción (-1 base).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="bolt" size="14" /> Inducir Lesiones / Inducir Lesión Dirigida</span>
-                  <p>Aplica la alteración sobre el molde (Módulo 1.1). El Módulo 1.2 revisa de inmediato los apareamientos.</p>
+                  <span class="btn-name filled"><Icon name="bolt" size="14" /> Inducir Lesiones Ambientales en el Molde</span>
+                  <p>Aplica el agente genotóxico seleccionado según la intensidad regulada por el slider (10% a 80%), alertando al sensor p53/MDM2.</p>
+                </div>
+                <div class="btn-entry">
+                  <span class="btn-name filled"><Icon name="content_cut" size="14" /> Inducir Lesión Dirigida (CRISPR-Cas9)</span>
+                  <p>Aplica la edición quirúrgica en la posición elegida e informa al sensor molecular de daño.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip"><Icon name="shuffle" size="14" /> Inducir Error / Complementaria</span>
-                  <p>Alterna entre la complementaria exacta o inyectar deliberadamente una base no apareada para probar la detección.</p>
+                  <p>Alterna entre la complementaria exacta o inyectar deliberadamente una base no apareada en el Módulo 1.2 para probar la detección.</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos (Módulo 1.2)</span>
-                  <p>Compara la cadena con la complementaria del molde y marca pares canónicos (verdes) y no canónicos (rojos).</p>
+                  <p>Compara la cadena con la complementaria del molde y marca pares canónicos Watson-Crick (verdes) y no canónicos (rojos).</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name chip"><Icon name="biotech" size="14" /> Cinética Enzimática Real vs Control Asistido</span>
-                  <p>Switcher del Módulo 1.3: alterna entre reparación probabilística (puede dejar lesiones sin reparar) y reparación al 100%.</p>
+                  <span class="btn-name chip"><Icon name="biotech" size="14" /> Cinética Enzimática de Escisión (BER / NER)</span>
+                  <p>Modelo biológico in vivo del Módulo 1.3: reparación catalítica probabilística según capacidad enzimática fisiológica (50% - 98%).</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name chip">Slider Eficiencia de Escisión (50% - 98%)</span>
-                  <p>Regula la probabilidad de que cada lesión sea reparada en un ciclo.</p>
+                  <p>Regula la probabilidad estocástica de escisión enzimática de cada lesión por ciclo (BER/NER).</p>
                 </div>
                 <div class="btn-entry">
                   <span class="btn-name tonal"><Icon name="tag" size="14" /> Usar Molde Inicial</span>
-                  <p>Carga la secuencia original limpia en el campo de referencia para la reparación.</p>
+                  <p>Carga la secuencia parental original limpia en el campo de referencia homóloga para la reparación.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="build" size="14" /> Ciclo de Escisión / Reparar Molde</span>
-                  <p>Ejecuta la ronda de reparación. Reporta lesiones reparadas y posiciones que escaparon.</p>
+                  <span class="btn-name filled"><Icon name="build" size="14" /> Ejecutar Ciclo de Escisión Enzimática</span>
+                  <p>Ejecuta una ronda catalítica de escisión. Si se limpia el 100% de las lesiones, p53/MDM2 vuelve al reposo basal y se desactiva el freno sobre las CDKs; si escapan lesiones por saturación, se reportan las posiciones no reparadas y continúa el arresto en G1.</p>
                 </div>
               </div>
 
@@ -1250,14 +1316,14 @@
               </div>
               <ol class="protocol-steps-list">
                 <li>En la cabecera, haz clic en el chip <strong>"Control Corto (12bp)"</strong> para fijar un molde parental limpio.</li>
-                <li>Observa el Stepper superior en <em>"Paso 1: Molde Parental Validado"</em> y el Checkpoint G1/S en verde (Punto R despejado).</li>
+                <li>Observa el Stepper superior en <em>"Paso 1: Molde Parental Validado"</em> y la tarjeta de Checkpoint G1/S en verde (Reposo: MDM2 degrada continuamente a p53, sin bypass sobre el Punto R).</li>
                 <li>En el <strong>Módulo 1.1</strong>, selecciona <em>"Daño Ambiental Estocástico"</em> y el agente <em>"Radiación Ultravioleta (Luz UV)"</em> con intensidad al 40%.</li>
                 <li>Pulsa <strong>"Inducir Lesiones Ambientales en el Molde"</strong>.</li>
-                <li>Observa el <strong>Módulo 1.2</strong>: El Checkpoint G1/S pasa a estado de alerta roja con p53 fosforilado y p21 activo frenando el ciclo en G1 para impedir replicar un molde lesionado.</li>
+                <li>Observa la <strong>Tarjeta de Checkpoint G1/S</strong>: pasa de inmediato a estado de freno activo con ATM/ATR fosforilando a p53 (Ser15/Ser20), impidiendo su degradación por MDM2 e induciendo p21 para frenar las CDKs (Rb hipofosforilado) y activar la escisión BER/NER. Si la intensidad supera el 60% o se acumulan >3 lesiones, conmuta a alerta crítica de apoptosis mitocondrial (BAX, PUMA, NOXA).</li>
                 <li>Desplázate al <strong>Módulo 1.3</strong> a la derecha, pulsa <strong>"Usar Molde Inicial"</strong>.</li>
-                <li>Deja activo el modo <strong>"Cinética Enzimática Real"</strong> y ajusta la eficiencia al 75%.</li>
-                <li>Pulsa <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong>: comprueba cómo se reparan lesiones pero algunas escapan por saturación, manteniendo el Punto R en alerta.</li>
-                <li>Pulsa de nuevo <strong>"Ejecutar Ciclo"</strong> (segunda ronda de escisión celular) o cambia a <strong>"Control Asistido"</strong>: al alcanzar el 100%, p53/p21 se inactivan y el Punto R autoriza el avance a Fase S.</li>
+                <li>Ajusta el slider de <strong>"Capacidad / Eficiencia de Escisión"</strong> al 75%.</li>
+                <li>Pulsa <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong>: comprueba cómo se reparan lesiones pero algunas escapan por cinética estocástica/saturación, manteniendo activo el sensor p53/p21.</li>
+                <li>Pulsa de nuevo <strong>"Ejecutar Ciclo de Escisión Enzimática"</strong> (ronda enzimática sucesiva) hasta resolver las lesiones remanentes: al alcanzar el 100%, p53/p21 vuelven al reposo basal degradado por MDM2 y se levanta el freno sobre las CDKs para avanzar a Fase S.</li>
               </ol>
             </div>
 
@@ -1300,7 +1366,7 @@
                 <li>Haz clic sobre la base en la posición 2 del <strong>Mapa de Alineamiento 2D</strong>.</li>
                 <li>En el <strong>Módulo 1.1</strong>, cambia al modo <em>"Edición Quirúrgica CRISPR"</em>.</li>
                 <li>Comprueba que la posición se rellenó automáticamente en 2. Selecciona tipo <em>"Inserción (+1 Base)"</em> y escoge la base <strong>"A"</strong>.</li>
-                <li>Pulsa <strong>"Aplicar Mutación Dirigida CRISPR"</strong>: comprueba el desfase (frameshift) en la cadena y la alerta del sensor p53 en el Punto R.</li>
+                <li>Pulsa <strong>"Inducir Lesión Dirigida (CRISPR-Cas9)"</strong>: comprueba la alteración en la cadena y la activación del bypass p53/p21 sobre las CDKs.</li>
                 <li>Abre el <strong>Módulo 4 (Auditoría)</strong> para comprobar la bitácora criptográfica inmutable con el registro del evento EXP.</li>
               </ol>
             </div>
@@ -1470,8 +1536,8 @@ import { api } from '../api/client';
 import Icon from './Icon.vue';
 import DNAHelix3D from './DNAHelix3D.vue';
 
-const sequenceInput = ref('ATCGATCGATCG');
-const initialMoldSequence = ref('ATCGATCGATCG');
+const sequenceInput = ref('');
+const initialMoldSequence = ref('');
 const cleanSequence = computed(() => {
   return validationData.value?.is_valid ? sequenceInput.value.trim().toUpperCase() : '';
 });
@@ -1508,7 +1574,6 @@ const duplexStrand = ref('');
 const mismatchResult = ref(null);
 const referenceStrand = ref('');
 const repairResult = ref(null);
-const repairMode = ref('stochastic'); // 'stochastic' | 'deterministic'
 const repairEfficiency = ref(0.85); // 85% de capacidad de escisión por defecto
 
 // Fase 1: Roturas Bicatenarias (DSB)
@@ -1535,7 +1600,10 @@ const isFullyRepaired = computed(() => {
 
 const isMoldDamaged = computed(() => {
   if (!initialMoldSequence.value) return false;
-  return sequenceInput.value.trim().toUpperCase() !== initialMoldSequence.value.trim().toUpperCase();
+  // Solo se considera dañado el molde si se indujo una lesión ambiental o mutación dirigida activa no reparada
+  if (!envDamageResult.value && !lastMutationApplied.value) return false;
+  if (isFullyRepaired.value) return false;
+  return true;
 });
 
 const currentCellPhase = computed(() => {
@@ -1546,7 +1614,7 @@ const currentCellPhase = computed(() => {
 
 const currentCellPhaseName = computed(() => {
   switch (currentCellPhase.value) {
-    case 'G1': return 'Fase G1 · Molde & Checkpoint G1/S (Punto R)';
+    case 'G1': return 'Fase G1 · Molde, Checkpoint p53/p21 & Bypass del Punto R';
     case 'S': return 'Fase S · Replicación & Triple Filtro MMR';
     case 'G2': return 'Fase G2 / M · Integridad Post-Replicativa & DSB';
     default: return 'Fase G1';
@@ -1557,36 +1625,94 @@ const checkpointG1Status = computed(() => {
   if (!cleanSequence.value || !validationData.value?.is_valid) {
     return {
       state: 'idle',
+      icon: 'hourglass_empty',
+      statusTitle: 'Sin validar · Esperando molde genómico',
+      badgeClass: 'idle',
+      p53Title: 'Dinámica p53 / MDM2',
+      p53Badge: 'En espera',
+      p53Details: 'Introduce y valida una secuencia de molde de ADN para iniciar la vigilancia biofísica.',
+      p21Title: 'Efector p21 / Freno CDK',
+      p21Badge: 'En espera',
+      p21Details: 'El sistema sensor permanece inactivo a la espera de una hebra de referencia.',
+      puntoRTitle: 'Punto R (Punto de Restricción)',
+      puntoRDetails: 'El Punto R solo mide señales mitogénicas de crecimiento; el freno por daño es un bypass externo ATM/ATR → p53 → p21.',
+      damageNatureClarification: 'En Fase G1, cualquier alteración es una lesión física/química o aducto reparable. Solo se convertirá en mutación si no se repara y se replica más adelante en la Fase S.',
+      decision: 'Introduce una secuencia válida de molde.',
       label: 'Sin validar',
       p53: 'Basal (~20 min vida media · degradado por MDM2)',
       p21: 'Inactivo',
-      decision: 'Introduce una secuencia válida de molde.',
       risk: null
     };
   }
+
   if (isMoldDamaged.value) {
-    const isSevere = (envDamageResult.value?.lesion_count || 0) > 3;
+    const lesionCount = envDamageResult.value?.lesion_count || 0;
+    const diffCount = diffResult.value?.difference_count || 0;
+    const isSevere = lesionCount > 3 || diffCount > 3 || (envIntensity.value >= 0.6 && envDamageResult.value);
+
+    if (isSevere) {
+      return {
+        state: 'arrested_severe',
+        icon: 'heart_broken',
+        statusTitle: 'Alerta Crítica: Daño Masivo / Irreparable · Programa de Apoptosis Mitocondrial',
+        badgeClass: 'arrested',
+        p53Title: 'Dinámica p53 / MDM2 (Fosforilación Sostenida)',
+        p53Badge: 'Acumulación masiva + Ser46/Lys120 (Apoptosis)',
+        p53Details: 'Fosforilación sostenida y acumulación masiva de p53 (Ser46/Lys120). p53 satura los promotores de arresto e invade promotores proapoptóticos de baja afinidad, desacoplándose totalmente de la degradación por MDM2.',
+        p21Title: 'Programa Apoptótico Mitocondrial',
+        p21Badge: 'Inducción de BAX, PUMA y NOXA',
+        p21Details: 'El freno por p21 es rebasado. p53 induce la transcripción de efectores proapoptóticos mitocondriales (BAX, PUMA, NOXA). BAX permeabiliza la membrana mitocondrial externa (MOMP), provocando salida de citocromo c y activación de caspasas para evitar replicar un genoma roto.',
+        puntoRTitle: 'Punto R: Bypass Irreversible por Daño Masivo',
+        puntoRDetails: 'El Punto R solo evalúa factores mitogénicas de crecimiento (Ciclina D/CDK4/6/Rb/E2F). Ante daño genómico irreparable, la cascada de estrés impone un veto absoluto que cancela definitivamente el avance hacia Fase S.',
+        damageNatureClarification: 'Sobrecarga de lesiones físicas/químicas en el molde. Si no se ejecuta una escisión enzimática (BER/NER) o reparación homóloga inmediata, el programa celular ejecuta apoptosis para no perpetuar un molde fragmentado.',
+        decision: 'Daño irreparable/masivo: p53 activa promotores de baja afinidad (BAX, PUMA, NOXA), induciendo apoptosis mitocondrial para evitar replicar un genoma roto.',
+        label: 'Alerta Crítica: Apoptosis Mitocondrial',
+        p53: 'Acumulación masiva + Ser46/Lys120 (Programa Apoptótico)',
+        p21: 'Rebasado por activación de BAX / PUMA / NOXA',
+        risk: 'El Punto R solo mide mitógenos; ante daño masivo, el bypass ATM/ATR anula el ciclo y activa la apoptosis mitocondrial.'
+      };
+    }
+
     return {
-      state: 'arrested',
+      state: 'arrested_mild',
+      icon: 'shield_with_heart',
+      statusTitle: 'Freno en G1 Activo · Daño Leve/Moderado (ATM/ATR → p53 → p21)',
+      badgeClass: 'arrested',
+      p53Title: 'Dinámica p53 / MDM2 (Estabilización)',
+      p53Badge: 'Fosforilado (Ser15/Ser20) por ATM/ATR · Escapa a MDM2',
+      p53Details: 'Las quinasas sensoras ATM/ATR detectan la lesión y fosforilan a p53 en Ser15 y Ser20. Esta modificación alostérica impide la unión de la ubiquitina ligasa MDM2, evitando su degradación proteasómica y aumentando su vida media.',
+      p21Title: 'Efector p21 / Freno CDK en G1',
+      p21Badge: 'p21 Inducido · CDKs bloqueadas (Rb hipofosforilado)',
+      p21Details: 'p53 estabilizado actúa como factor de transcripción e induce p21 (CIP1/WAF1). p21 inhibe directamente los complejos Ciclina D/CDK4/6 y Ciclina E/CDK2, manteniendo a Rb hipofosforilado (secuestra a E2F) y frenando el ciclo en G1 para permitir reparación por escisión BER/NER (OGG1, GADD45).',
+      puntoRTitle: 'Punto R: Bypass Externo Impuesto por ATM/ATR → p53 → p21',
+      puntoRDetails: 'El Punto R mide exclusivamente señales mitogénicas de crecimiento (Ciclina D / CDK4/6 / Rb / E2F) y NO detecta daños directamente. El freno ante lesiones es un bypass impuesto externamente desde la vía ATM/ATR → p53 → p21.',
+      damageNatureClarification: 'En esta etapa el ADN tiene una lesión física/química o aducto reparable (ej. dímero T-T, 8-oxo-G, uracilo), NO una mutación fijada. Solo se convertirá en mutación si no se repara y se replica más adelante en la Fase S.',
+      decision: 'Daño moderado: p53 induce p21; la célula detiene el ciclo en G1 y activa reparación por escisión BER/NER (OGG1, GADD45).',
       label: 'Freno en G1 por Daño al ADN',
-      p53: isSevere
-        ? 'Acumulación masiva + Ser46/Lys120 (Programa Apoptótico)'
-        : 'Fosforilado (Ser15/Ser20) por ATM/ATR · Escapa a MDM2',
-      p21: isSevere
-        ? 'Rebasado por activación de BAX / PUMA / NOXA'
-        : 'Transcrito e inducido (Inhibe CDK2/4/6 · Rb hipofosforilado)',
-      decision: isSevere
-        ? 'Daño irreparable/masivo: p53 activa promotores de baja afinidad (BAX, PUMA, NOXA), induciendo apoptosis mitocondrial para evitar replicar un genoma roto.'
-        : 'Daño moderado: p53 induce p21; la célula detiene el ciclo en G1 y activa reparación por escisión BER/NER (OGG1, GADD45).',
+      p53: 'Fosforilado (Ser15/Ser20) por ATM/ATR · Escapa a MDM2',
+      p21: 'Transcrito e inducido (Inhibe CDK2/4/6 · Rb hipofosforilado)',
       risk: 'El Punto R mide mitógenos; ante daño, ATM/ATR fosforilan a p53 para inducir p21 y frenar a las CDKs. La mutación no existe aún: solo se consolidará si la lesión no se repara y se replica en Fase S.'
     };
   }
+
   return {
     state: 'cleared',
+    icon: 'verified',
+    statusTitle: 'Estado en Reposo: Molde Íntegro · MDM2 Activo (Autorizado a Fase S)',
+    badgeClass: 'cleared',
+    p53Title: 'Dinámica p53 / MDM2 (Recambio Continuo)',
+    p53Badge: 'Vida media corta (~20 min) · Degradación en Proteasoma',
+    p53Details: 'En reposo sin daño genotóxico, p53 tiene una vida media corta (~20 min). La ubiquitina ligasa E3 MDM2 se une continuamente a p53 y cataliza su poliubiquitinación, enviándolo al proteasoma 26S para su degradación continua.',
+    p21Title: 'Efector p21 / Complejos CDK Activos',
+    p21Badge: 'p21 Inactivo · CDK4/6 y CDK2 activas',
+    p21Details: 'Al no haber p53 estabilizado, p21 no se transcribe. Los complejos Ciclina D-CDK4/6 y Ciclina E-CDK2 están activos para responder a mitógenos, fosforilar a la proteína del Retinoblastoma (Rb) y liberar E2F.',
+    puntoRTitle: 'Punto R: Libre de Bypass por Daño',
+    puntoRDetails: 'El Punto R solo mide señales mitogénicas de crecimiento (Ciclina D / CDK4/6 / Rb / E2F) y no detecta daños directamente. Al estar el molde libre de lesiones, no existe señal de bypass y la célula está autorizada a cruzar a la síntesis en Fase S.',
+    damageNatureClarification: 'Molde parental 100% íntegro. No existen lesiones físicas ni aductos químicos en la secuencia.',
+    decision: 'Molde libre de lesiones. MDM2 mantiene degradado a p53. Célula autorizada a cruzar a Fase S (Replicación).',
     label: 'Molde Íntegro · Autorizado a Fase S',
     p53: 'Basal bajo (MDM2 ubiquitina y envía continuamente al proteasoma)',
     p21: 'Apagado (CDK4/6 y CDK2 activas · Rb fosforilado libera E2F)',
-    decision: 'Molde libre de lesiones. MDM2 mantiene degradado a p53. Célula autorizada a cruzar a Fase S (Replicación).',
     risk: null
   };
 });
@@ -1827,7 +1953,7 @@ function loadExperiment(exp) {
     diffResult.value = null;
   }
 
-  validateAndProcess();
+  validateAndProcess(false);
   showLoadDialog.value = false;
 
   experimentNotification.value = {
@@ -1870,7 +1996,7 @@ function loadEventOrExperiment(ev) {
     diffResult.value = null;
   }
 
-  validateAndProcess();
+  validateAndProcess(false);
 
   experimentNotification.value = {
     title: `Evento ${ev.experiment_id} cargado`,
@@ -2055,38 +2181,19 @@ const duplexPairsDisplay = computed(() => {
   return pairs;
 });
 
-let debounceTimer = null;
 function handleInput() {
   sequenceInput.value = sequenceInput.value.toUpperCase();
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    validateAndProcess();
-  }, 100);
 }
 
 function loadSample(seq) {
   sequenceInput.value = seq;
-  initialMoldSequence.value = seq;
-  referenceStrand.value = seq;
-  lastMutationApplied.value = null;
-  repairResult.value = null;
-  breakResult.value = null;
-  diffResult.value = null;
-  mismatchResult.value = null;
-  copyNotification.value = '';
-  validateAndProcess();
+  validateAndProcess(true);
 }
 
 function resetToInitialMold() {
   if (!initialMoldSequence.value) return;
   sequenceInput.value = initialMoldSequence.value;
-  lastMutationApplied.value = null;
-  repairResult.value = null;
-  breakResult.value = null;
-  diffResult.value = null;
-  mismatchResult.value = null;
-  copyNotification.value = '';
-  validateAndProcess();
+  validateAndProcess(true);
   experimentNotification.value = {
     title: 'Molde Inicial Restaurado',
     message: `Se restableció la hebra molde de partida (${initialMoldSequence.value.length} bp) para un nuevo ensayo.`
@@ -2096,20 +2203,22 @@ function resetToInitialMold() {
   }, 3500);
 }
 
-async function validateAndProcess() {
+async function validateAndProcess(isInitialMold = true) {
   const raw = sequenceInput.value.trim().toUpperCase();
   if (!raw) {
-    validationData.value = {
-      sequence: '',
-      is_valid: false,
-      length: 0,
-      gc_content: 0,
-      base_counts: {},
-      invalid_chars: [],
-      error_message: 'Secuencia vacía. Introduce nucleótidos A, T, C o G.'
-    };
+    validationData.value = null;
     complementStrand.value = '';
     binaryStrand.value = '';
+    initialMoldSequence.value = '';
+    referenceStrand.value = '';
+    duplexStrand.value = '';
+    envDamageResult.value = null;
+    lastMutationApplied.value = null;
+    diffResult.value = null;
+    mismatchResult.value = null;
+    repairResult.value = null;
+    breakResult.value = null;
+    copyNotification.value = '';
     return;
   }
 
@@ -2119,19 +2228,33 @@ async function validateAndProcess() {
     validationData.value = valRes;
 
     if (valRes.is_valid) {
-      if (!initialMoldSequence.value) {
-        initialMoldSequence.value = raw;
-      }
       const compRes = await api.complementDNA(raw);
       complementStrand.value = compRes.complement;
       binaryStrand.value = compRes.binary_repr;
 
-      if (!duplexStrand.value) {
+      if (isInitialMold) {
+        initialMoldSequence.value = raw;
+        referenceStrand.value = raw;
         duplexStrand.value = compRes.complement;
+        envDamageResult.value = null;
+        lastMutationApplied.value = null;
+        diffResult.value = null;
+        mismatchResult.value = null;
+        repairResult.value = null;
+        breakResult.value = null;
+        copyNotification.value = '';
+      } else {
+        if (!initialMoldSequence.value) {
+          initialMoldSequence.value = raw;
+        }
+        if (!referenceStrand.value) {
+          referenceStrand.value = initialMoldSequence.value || raw;
+        }
+        if (!duplexStrand.value) {
+          duplexStrand.value = compRes.complement;
+        }
       }
-      if (!referenceStrand.value) {
-        referenceStrand.value = initialMoldSequence.value || raw;
-      }
+
       breakPosition.value = Math.max(1, Math.floor(raw.length / 2));
     } else {
       complementStrand.value = '';
@@ -2203,14 +2326,14 @@ function useCurrentAsReference() {
 async function runReferenceRepair() {
   const current = sequenceInput.value.trim().toUpperCase();
   const moldRef = initialMoldSequence.value || referenceStrand.value || current;
-  const eff = repairMode.value === 'deterministic' ? 1.0 : repairEfficiency.value;
+  const eff = repairEfficiency.value;
   try {
     loading.value = true;
     const res = await api.repairWithReference(current, moldRef, null, eff);
     repairResult.value = res;
     // Sincronizar siempre la secuencia resultante (sea completa o parcial)
     sequenceInput.value = res.repaired_sequence;
-    await validateAndProcess();
+    await validateAndProcess(false);
     const compMold = await api.complementDNA(moldRef);
     duplexStrand.value = compMold.complement;
     mismatchResult.value = await api.detectMismatches(res.repaired_sequence, compMold.complement);
@@ -2244,7 +2367,7 @@ async function runBreakSimulation(method) {
     };
 
     sequenceInput.value = res.repaired_sequence;
-    await validateAndProcess();
+    await validateAndProcess(false);
     diffResult.value = await api.compareDNA(moldRef, res.repaired_sequence);
     await fetchLogs();
   } catch (err) {
@@ -2260,6 +2383,15 @@ async function fetchLogs() {
     experimentLogs.value = res.events || [];
   } catch (err) {
     console.error('Error fetching logs:', err);
+  }
+}
+
+async function handleClearLogs() {
+  try {
+    await api.clearDNAEvents();
+    experimentLogs.value = [];
+  } catch (err) {
+    console.error('Error al limpiar registros:', err);
   }
 }
 
@@ -2296,7 +2428,7 @@ async function applyEnvironmentalDamage() {
       count: res.lesion_count
     };
     repairResult.value = null;
-    await validateAndProcess();
+    await validateAndProcess(false);
     const compMold = await api.complementDNA(moldRef);
     duplexStrand.value = compMold.complement;
     mismatchResult.value = await api.detectMismatches(res.damaged_sequence, compMold.complement);
@@ -2328,7 +2460,7 @@ async function applyControlledMutation() {
     sequenceInput.value = res.modified_sequence;
     lastMutationApplied.value = res.mutation;
     repairResult.value = null;
-    await validateAndProcess();
+    await validateAndProcess(false);
     const compMold = await api.complementDNA(moldRef);
     duplexStrand.value = compMold.complement;
     mismatchResult.value = await api.detectMismatches(res.modified_sequence, compMold.complement);
@@ -2389,7 +2521,7 @@ async function replicateWithProbabilities() {
       mutations: res.mutations
     };
     repairResult.value = null;
-    await validateAndProcess();
+    await validateAndProcess(false);
 
     // Detección automática
     diffResult.value = await api.compareDNA(moldRef, res.replicated_sequence);
@@ -2406,7 +2538,9 @@ async function replicateWithProbabilities() {
 }
 
 onMounted(() => {
-  validateAndProcess();
+  if (sequenceInput.value) {
+    validateAndProcess();
+  }
   fetchLogs();
   fetchSavedExperiments();
 });
@@ -2419,15 +2553,26 @@ onMounted(() => {
   gap: 1.25rem;
 }
 
-/* Header Científico */
+/* Header Científico con Glassmorphism Bio-Tech */
 .dna-header-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.2rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container);
+  padding: 1.25rem 1.6rem;
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   flex-wrap: wrap;
   gap: 1.2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dna-header-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
 }
 
 .header-main {
@@ -2440,24 +2585,25 @@ onMounted(() => {
   width: 44px;
   height: 44px;
   border-radius: var(--md-sys-shape-corner-medium);
-  background-color: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(2, 132, 199, 0.35) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
 }
 
 .header-text h2 {
   font-size: 1.15rem;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
+  color: #f1f5f9;
   letter-spacing: -0.2px;
 }
 
 .header-text .subtext {
   font-size: 0.74rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
 }
 
 .sample-chips-row {
@@ -2469,26 +2615,42 @@ onMounted(() => {
 
 .chips-label {
   font-size: 0.74rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
 }
 
 .sample-chips-row .md3-chip {
   cursor: pointer;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  color: #cbd5e1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sample-chips-row .md3-chip:hover {
-  border-color: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-surface);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: #f8fafc;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
 }
 
 .chip-icon {
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
 }
 
-/* Entrada de Secuencia & Métricas */
+/* Entrada de Secuencia & Métricas - Bio-Tech Glass */
 .dna-input-section {
   padding: 1.4rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container-low);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dna-input-section:hover {
+  border-color: rgba(56, 189, 248, 0.3);
 }
 
 .input-primary-row {
@@ -2508,8 +2670,22 @@ onMounted(() => {
 
 .sequence-field {
   flex: 1;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
   font-size: 1.05rem;
   letter-spacing: 2.5px;
+  background: rgba(4, 9, 18, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  color: #70d6ff;
+  padding: 0.65rem 1rem;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sequence-field:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35), inset 0 2px 5px rgba(0, 0, 0, 0.6);
+  outline: none;
 }
 
 .metrics-grid {
@@ -2624,31 +2800,98 @@ onMounted(() => {
   border: 1px solid rgba(255, 180, 171, 0.3);
 }
 
-/* Workbench Grid (Alineamiento 2D + Doble Hélice 3D) */
-.molecular-workbench-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: stretch;
-  min-width: 0;
+/* Tarjeta de Espera para Entrada Manual de Cadena */
+.manual-input-prompt-card {
+  padding: 2.2rem 2rem;
+  background: rgba(13, 23, 38, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px dashed rgba(56, 189, 248, 0.3);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
 }
 
-/* Track Molecular Interactivo */
-.sequence-track-card {
-  padding: 1.4rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container);
+.manual-input-prompt-card:hover {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), 0 0 20px rgba(56, 189, 248, 0.1);
+}
+
+.manual-input-prompt-card .prompt-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.manual-input-prompt-card .prompt-icon-box {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+}
+
+.manual-input-prompt-card .prompt-text h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.01em;
+}
+
+.manual-input-prompt-card .prompt-text p {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.manual-input-prompt-card .prompt-text strong {
+  color: #38bdf8;
+}
+
+/* Workbench Grid (Alineamiento 2D + Doble Hélice 3D en Filas Dedicadas) */
+.molecular-workbench-grid {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-width: 0;
-  overflow: hidden;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* Track Molecular Interactivo - Glassmorphism & Full Width Row */
+.sequence-track-card {
+  padding: 1.4rem 1.6rem;
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sequence-track-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .track-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.2rem;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
   gap: 0.8rem;
 }
@@ -2660,18 +2903,19 @@ onMounted(() => {
 }
 
 .title-icon {
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
 }
 
 .track-title-group h3 {
   font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
+  color: #f1f5f9;
 }
 
 .track-title-group .hint {
   font-size: 0.72rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
 }
 
 .spectral-legend {
@@ -2684,7 +2928,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.35rem;
   font-size: 0.72rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
 }
 
 .leg-item .square {
@@ -2693,33 +2937,58 @@ onMounted(() => {
   border-radius: 2px;
 }
 
-.leg-item.a .square { background: var(--bio-base-a); }
-.leg-item.t .square { background: var(--bio-base-t); }
-.leg-item.c .square { background: var(--bio-base-c); }
-.leg-item.g .square { background: var(--bio-base-g); }
+.leg-item.a .square { background: var(--bio-base-a); box-shadow: 0 0 6px var(--bio-base-a); }
+.leg-item.t .square { background: var(--bio-base-t); box-shadow: 0 0 6px var(--bio-base-t); }
+.leg-item.c .square { background: var(--bio-base-c); box-shadow: 0 0 6px var(--bio-base-c); }
+.leg-item.g .square { background: var(--bio-base-g); box-shadow: 0 0 6px var(--bio-base-g); }
 
 .track-viewport {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background-color: var(--md-sys-color-surface-container-lowest);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  background: rgba(4, 9, 18, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.2);
   border-radius: var(--md-sys-shape-corner-medium);
   padding: 1rem 0.8rem;
-  overflow-x: auto;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
+
+
 .track-strand-label {
-  font-family: var(--md-ref-typeface-mono);
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
   font-weight: 700;
   font-size: 0.9rem;
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
   padding: 0 0.4rem;
 }
 
 .bases-filmstrip {
   display: flex;
   gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.4rem 0.3rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.5) rgba(8, 15, 28, 0.7);
+}
+
+.bases-filmstrip::-webkit-scrollbar {
+  height: 4px;
+}
+.bases-filmstrip::-webkit-scrollbar-track {
+  background: rgba(8, 15, 28, 0.7);
+  border-radius: 999px;
+}
+.bases-filmstrip::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.4), rgba(14, 165, 233, 0.9));
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
 }
 
 .base-column {
@@ -2728,24 +2997,30 @@ onMounted(() => {
   align-items: center;
   min-width: 44px;
   cursor: pointer;
-  padding: 0.35rem 0.2rem;
+  padding: 0.4rem 0.25rem;
   border-radius: var(--md-sys-shape-corner-small);
-  transition: all var(--md-sys-motion-duration-short);
+  border: 1px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .base-column:hover {
-  background-color: var(--md-sys-color-surface-container-high);
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.25);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .base-column.selected {
-  background-color: var(--md-sys-color-surface-container-highest);
-  box-shadow: 0 0 0 2px var(--md-sys-color-primary);
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+  transform: translateY(-2px);
 }
 
 .pos-index {
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
   font-size: 0.65rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
   margin-bottom: 0.3rem;
 }
 
@@ -2758,12 +3033,37 @@ onMounted(() => {
   justify-content: center;
   font-weight: 700;
   font-size: 1rem;
+  transition: all 0.2s ease;
 }
 
-.base-column.a .primary-strand { background: rgba(239, 68, 68, 0.2); color: var(--bio-base-a); border: 1px solid var(--bio-base-a); }
-.base-column.t .primary-strand { background: rgba(16, 185, 129, 0.2); color: var(--bio-base-t); border: 1px solid var(--bio-base-t); }
-.base-column.c .primary-strand { background: rgba(6, 182, 212, 0.2); color: var(--bio-base-c); border: 1px solid var(--bio-base-c); }
-.base-column.g .primary-strand { background: rgba(245, 158, 11, 0.2); color: var(--bio-base-g); border: 1px solid var(--bio-base-g); }
+.base-column.a .primary-strand { 
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.25) 100%); 
+  color: var(--bio-base-a); 
+  border: 1px solid var(--bio-base-a); 
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+.base-column.t .primary-strand { 
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(4, 120, 87, 0.25) 100%); 
+  color: var(--bio-base-t); 
+  border: 1px solid var(--bio-base-t); 
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+.base-column.c .primary-strand { 
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(14, 116, 144, 0.25) 100%); 
+  color: var(--bio-base-c); 
+  border: 1px solid var(--bio-base-c); 
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+.base-column.g .primary-strand { 
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(180, 83, 9, 0.25) 100%); 
+  color: var(--bio-base-g); 
+  border: 1px solid var(--bio-base-g); 
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.base-column:hover .base-capsule {
+  transform: scale(1.08);
+}
 
 .hydrogen-bond {
   display: flex;
@@ -2779,22 +3079,23 @@ onMounted(() => {
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background-color: var(--md-sys-color-outline);
+  background-color: #38bdf8;
+  box-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
 }
 
 .comp-strand {
-  background-color: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-on-surface-variant);
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  color: #94a3b8;
 }
 
 .encoded-data-row {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  margin-top: 1.2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--md-sys-color-outline-variant);
+  margin-top: 0.5rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(56, 189, 248, 0.15);
 }
 
 .encoded-field {
@@ -2808,25 +3109,27 @@ onMounted(() => {
 
 .field-label {
   font-size: 0.75rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
   min-width: 240px;
 }
 
 .strand-box {
-  padding: 0.3rem 0.7rem;
+  padding: 0.35rem 0.8rem;
   border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface-container-lowest);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-primary);
+  background: rgba(4, 9, 18, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
   font-size: 0.85rem;
   letter-spacing: 1.5px;
   max-width: 100%;
   overflow-x: auto;
   word-break: break-all;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .strand-box.binary {
-  color: var(--md-sys-color-secondary);
+  color: #9ecaff;
 }
 
 /* Operaciones Genéticas */
@@ -2838,10 +3141,21 @@ onMounted(() => {
 
 .op-panel {
   padding: 1.4rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container-low);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.op-panel:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .op-panel-header {
@@ -2854,22 +3168,24 @@ onMounted(() => {
   width: 36px;
   height: 36px;
   border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface-container-highest);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(2, 132, 199, 0.35) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .op-panel-header h4 {
   font-size: 0.98rem;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
+  font-weight: 700;
+  color: #f1f5f9;
 }
 
 .op-sub {
   font-size: 0.7rem;
-  color: var(--md-sys-color-on-surface-variant);
+  color: #94a3b8;
 }
 
 .op-form-grid {
@@ -2885,19 +3201,23 @@ onMounted(() => {
 .base-segmented-selector {
   display: flex;
   gap: 0.4rem;
+  background: rgba(8, 15, 28, 0.75);
+  padding: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
 .seg-btn {
   flex: 1;
   height: 38px;
-  border-radius: var(--md-sys-shape-corner-small);
-  background-color: var(--md-sys-color-surface-container-highest);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  font-family: var(--md-ref-typeface-mono);
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: all var(--md-sys-motion-duration-short);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .seg-btn.a { color: var(--bio-base-a); }
@@ -2906,19 +3226,25 @@ onMounted(() => {
 .seg-btn.g { color: var(--bio-base-g); }
 
 .seg-btn.active {
-  background-color: var(--md-sys-color-primary-container);
-  border-color: var(--md-sys-color-primary);
-  box-shadow: 0 0 10px rgba(112, 214, 255, 0.4);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
 }
+.seg-btn.a.active { background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(185, 28, 28, 0.4)); border-color: var(--bio-base-a); color: #fff; box-shadow: 0 0 16px rgba(239, 68, 68, 0.4); }
+.seg-btn.t.active { background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(4, 120, 87, 0.4)); border-color: var(--bio-base-t); color: #fff; box-shadow: 0 0 16px rgba(16, 185, 129, 0.4); }
+.seg-btn.c.active { background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 116, 144, 0.4)); border-color: var(--bio-base-c); color: #fff; box-shadow: 0 0 16px rgba(6, 182, 212, 0.4); }
+.seg-btn.g.active { background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(180, 83, 9, 0.4)); border-color: var(--bio-base-g); color: #fff; box-shadow: 0 0 16px rgba(245, 158, 11, 0.4); }
 
 .slider-module {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  background-color: var(--md-sys-color-surface-container);
-  padding: 1rem;
-  border-radius: var(--md-sys-shape-corner-small);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  gap: 0.65rem;
+  background: rgba(10, 18, 32, 0.65);
+  padding: 1rem 1.15rem;
+  border-radius: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .slider-telemetry {
@@ -2929,32 +3255,84 @@ onMounted(() => {
 
 .slider-title {
   font-size: 0.78rem;
-  color: var(--md-sys-color-on-surface);
+  font-weight: 500;
+  color: #cbd5e1;
 }
 
 .slider-rate {
-  font-size: 0.95rem;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
 }
 
 .md3-range-slider {
-  accent-color: var(--md-sys-color-primary);
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.25) 0%, rgba(14, 165, 233, 0.7) 50%, rgba(56, 189, 248, 1) 100%);
+  outline: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+.md3-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.95), 0 0 20px rgba(56, 189, 248, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.md3-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 1), 0 0 26px rgba(56, 189, 248, 0.7);
+}
+
+.md3-range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #38bdf8;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.95), 0 0 20px rgba(56, 189, 248, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .slider-marks {
   display: flex;
   justify-content: space-between;
-  font-size: 0.65rem;
-  color: var(--md-sys-color-on-surface-variant);
-  font-family: var(--md-ref-typeface-mono);
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-weight: 500;
 }
 
 /* Diff Inspector */
 .diff-inspector-card {
   padding: 1.4rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.diff-inspector-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .diff-header {
@@ -3115,10 +3493,23 @@ onMounted(() => {
 .dsb-card,
 .audit-log-card {
   padding: 1.4rem 1.6rem;
-  background-color: var(--md-sys-color-surface-container);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mismatch-repair-card:hover,
+.dsb-card:hover,
+.audit-log-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .section-header {
@@ -3150,13 +3541,22 @@ onMounted(() => {
 }
 
 .duplex-card {
-  background: var(--md-sys-color-surface-container-high);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
   border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   padding: 1.2rem 1.4rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duplex-card:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 
 .card-subtitle {
@@ -3587,6 +3987,40 @@ onMounted(() => {
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.audit-header-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.clear-logs-chip {
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.clear-logs-chip:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.15) !important;
+  border-color: rgba(248, 113, 113, 0.5) !important;
+}
+
+.empty-logs-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 1.6rem;
+  background: rgba(4, 9, 18, 0.45);
+  border: 1px dashed rgba(56, 189, 248, 0.2);
+  border-radius: var(--md-sys-shape-corner-small);
+  color: #94a3b8;
+  font-size: 0.88rem;
+  justify-content: center;
+}
+
+.empty-logs-notice .empty-icon {
+  color: #64748b;
 }
 
 .events-table-wrapper {
@@ -4830,12 +5264,6 @@ onMounted(() => {
   color: var(--md-sys-color-on-surface-variant);
 }
 
-@media (max-width: 1024px) {
-  .molecular-workbench-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Esqueleto de Azúcar-Fosfato en Métricas */
 .backbone-metric-tile {
   grid-column: span 1;
@@ -4932,10 +5360,10 @@ onMounted(() => {
   box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
 }
 .bb-dot.sugar {
-  background: #0284c7;
-  color: #fff;
+  background: #94a3b8;
+  color: #0f172a;
   border-radius: 3px;
-  box-shadow: 0 0 6px rgba(2, 132, 199, 0.5);
+  box-shadow: 0 0 6px rgba(148, 163, 184, 0.5);
 }
 .bb-hyphen {
   font-size: 0.65rem;
@@ -4997,7 +5425,7 @@ onMounted(() => {
   border-radius: 4px;
 }
 .sym-badge.p { background: #f59e0b; color: #000; }
-.sym-badge.d { background: #0284c7; color: #fff; }
+.sym-badge.d { background: #94a3b8; color: #0f172a; }
 .sym-badge.b { background: rgba(255, 255, 255, 0.1); color: var(--md-sys-color-on-surface); }
 .eq-op {
   font-weight: 700;
@@ -5072,10 +5500,19 @@ onMounted(() => {
 .phase-block {
   padding: 1.4rem 1.6rem;
   border-radius: var(--md-sys-shape-corner-medium);
-  background-color: var(--md-sys-color-surface-container);
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.phase-block:hover {
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(56, 189, 248, 0.15);
 }
 .phase-block-header {
   display: flex;
@@ -5106,63 +5543,304 @@ onMounted(() => {
 .checkpoint-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.8rem;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
+  backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
 }
-.checkpoint-status-pill.cleared { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
-.checkpoint-status-pill.arrested { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); }
-.checkpoint-status-pill.idle { background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface-variant); }
+.checkpoint-status-pill.cleared { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 0 12px rgba(16, 185, 129, 0.2); }
+.checkpoint-status-pill.arrested { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 0 12px rgba(239, 68, 68, 0.2); }
+.checkpoint-status-pill.idle { background: rgba(30, 41, 59, 0.6); color: #94a3b8; border: 1px solid rgba(71, 85, 105, 0.4); }
 
-.p53-checkpoint-card {
-  padding: 1.1rem 1.4rem;
+/* Tarjeta de Checkpoint G1 / Dinámica p53-MDM2 / Punto R - Bio-Tech HUD */
+.checkpoint-g1-card {
+  padding: 1.3rem 1.5rem;
   border-radius: var(--md-sys-shape-corner-medium);
-  border: 1px solid var(--md-sys-color-outline-variant);
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1.15rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 0.25rem;
+  background: rgba(13, 23, 38, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  position: relative;
+  overflow: hidden;
 }
-.p53-checkpoint-card.cleared { background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3); }
-.p53-checkpoint-card.arrested { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.35); }
 
-.checkpoint-telemetry-row {
+.checkpoint-g1-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.7), transparent);
+}
+
+.checkpoint-g1-card.cleared {
+  background: linear-gradient(135deg, rgba(13, 23, 38, 0.75) 0%, rgba(6, 78, 59, 0.18) 100%);
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+.checkpoint-g1-card.arrested_mild {
+  background: linear-gradient(135deg, rgba(13, 23, 38, 0.75) 0%, rgba(120, 53, 15, 0.18) 100%);
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+}
+.checkpoint-g1-card.arrested_severe {
+  background: linear-gradient(135deg, rgba(13, 23, 38, 0.8) 0%, rgba(127, 29, 29, 0.25) 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);
+}
+.checkpoint-g1-card.idle {
+  background: rgba(13, 23, 38, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+}
+
+.cp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  padding-bottom: 0.75rem;
+}
+
+.cp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f1f5f9;
+  letter-spacing: -0.2px;
+}
+
+.cp-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+.cp-status-dot.cleared {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981, 0 0 16px rgba(16, 185, 129, 0.6);
+  animation: pulse-glow-emerald 2s infinite ease-in-out;
+}
+.cp-status-dot.arrested_mild {
+  background: #f59e0b;
+  box-shadow: 0 0 10px #f59e0b, 0 0 16px rgba(245, 158, 11, 0.6);
+  animation: pulse-glow-amber 1.8s infinite ease-in-out;
+}
+.cp-status-dot.arrested_severe {
+  background: #ef4444;
+  box-shadow: 0 0 12px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8);
+  animation: pulse-glow-danger 1.4s infinite ease-in-out;
+}
+.cp-status-dot.idle {
+  background: #64748b;
+  box-shadow: 0 0 6px #64748b;
+}
+
+@keyframes pulse-glow-emerald {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; box-shadow: 0 0 8px #10b981; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 16px #10b981, 0 0 24px rgba(16, 185, 129, 0.5); }
+}
+
+@keyframes pulse-glow-amber {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; box-shadow: 0 0 8px #f59e0b; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 16px #f59e0b, 0 0 24px rgba(245, 158, 11, 0.5); }
+}
+
+@keyframes pulse-glow-danger {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; box-shadow: 0 0 10px #ef4444; }
+  50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 20px #ef4444, 0 0 30px rgba(239, 68, 68, 0.6); }
+}
+
+.cp-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.12) 0%, rgba(14, 165, 233, 0.2) 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+}
+
+/* Grid responsivo auto-fit para los 3 nodos */
+.cp-grid-3col {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
 }
-@media (max-width: 900px) {
-  .checkpoint-telemetry-row { grid-template-columns: 1fr; }
-}
-.cp-indicator-box {
+
+/* Tarjetas de Instrumentación Biofísica para los Nodos */
+.cp-node-box {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.65rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(10, 18, 32, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
 }
-.cp-label {
-  font-size: 0.7rem;
-  color: var(--md-sys-color-on-surface-variant);
-  text-transform: uppercase;
-}
-.cp-val {
-  font-size: 0.85rem;
-  color: var(--md-sys-color-on-surface);
-}
-.cp-val.p53 { color: #38bdf8; }
-.cp-val.p21 { color: #f59e0b; }
-.cp-val.desc { font-weight: 500; }
 
-.checkpoint-risk-alert {
+.cp-node-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  opacity: 0.75;
+}
+
+.cp-node-box.p53-node::before { background: linear-gradient(90deg, #38bdf8, transparent); }
+.cp-node-box.p21-node::before { background: linear-gradient(90deg, #f59e0b, transparent); }
+.cp-node-box.puntor-node::before { background: linear-gradient(90deg, #a78bfa, transparent); }
+
+.cp-node-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.2);
+}
+
+.cp-node-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.9rem;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: var(--md-sys-shape-corner-small);
-  color: #fca5a5;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #cbd5e1;
+}
+
+.cp-node-box.p53-node .node-icon { color: #38bdf8; filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5)); }
+.cp-node-box.p21-node .node-icon { color: #f59e0b; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.5)); }
+.cp-node-box.puntor-node .node-icon { color: #a78bfa; filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5)); }
+
+.node-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.28rem 0.65rem;
+  border-radius: 6px;
+  line-height: 1.25;
+  letter-spacing: 0.2px;
+  position: relative;
+}
+
+.node-badge::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse-badge-dot 1.8s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-badge-dot {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px currentColor; }
+}
+
+.node-badge.cleared {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.node-badge.arrested_mild {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(120, 53, 15, 0.25) 100%);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.node-badge.arrested_severe {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(127, 29, 29, 0.3) 100%);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.3);
+}
+
+.node-badge.idle {
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+  border: 1px solid rgba(71, 85, 105, 0.4);
+}
+
+.node-badge.bypass-tag {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(109, 40, 217, 0.2) 100%);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.2);
+}
+
+.node-desc {
+  font-size: 0.77rem;
+  line-height: 1.45;
+  color: #94a3b8;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-clarification-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.8rem 1.1rem;
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(2, 132, 199, 0.05) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #e2e8f0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.cp-clarification-banner .banner-icon {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.5));
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.cp-clarification-banner .banner-body {
   font-size: 0.78rem;
+  line-height: 1.45;
+}
+.cp-clarification-banner strong {
+  color: #38bdf8;
+  margin-right: 0.4rem;
 }
 
 .g1-repair-card { grid-column: 1 / -1; }
@@ -5271,13 +5949,19 @@ onMounted(() => {
   color: var(--md-sys-color-primary);
 }
 
-.sub-mode-toggle-row {
+/* Toggles de Modo: Cápsula Flotante Bio-Tech */
+.sub-mode-toggle-row,
+.repair-mode-toggle-row {
   display: flex;
   gap: 0.5rem;
-  padding: 0.3rem;
-  background: var(--md-sys-color-surface-container-highest);
-  border-radius: var(--md-sys-shape-corner-medium);
-  border: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0.35rem;
+  background: rgba(8, 15, 28, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  margin-bottom: 0.3rem;
 }
 
 .sub-toggle-btn {
@@ -5285,28 +5969,30 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--md-sys-shape-corner-small);
-  border: none;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: 0.76rem;
+  color: #94a3b8;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .sub-toggle-btn:hover {
-  color: var(--md-sys-color-on-surface);
+  color: #f1f5f9;
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .sub-toggle-btn.active {
-  background: var(--md-sys-color-surface-container-lowest);
-  color: var(--md-sys-color-primary);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.3) 0%, rgba(2, 132, 199, 0.45) 100%);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .damage-subpanel, .replication-mode-box {
@@ -5319,80 +6005,79 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding: 0.75rem 0.9rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: var(--md-sys-shape-corner-small);
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.06) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .env-tag {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #f59e0b;
 }
 
 .env-mechanism {
-  font-size: 0.74rem;
-  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.75rem;
+  color: #cbd5e1;
   margin: 0;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .lesions-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.45rem;
   margin-top: 0.25rem;
 }
 
 .lesion-chip {
   font-size: 0.72rem;
-  padding: 0.18rem 0.45rem;
-  border-radius: 4px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  color: #ef4444;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.3) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 }
 
-/* Modos y Cinética de Reparación G1 */
-.repair-mode-toggle-row {
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.3rem;
-  background: var(--md-sys-color-surface-container-highest);
-  border-radius: var(--md-sys-shape-corner-medium);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  margin-bottom: 0.3rem;
-}
-
+/* Slider de Eficiencia Enzimática de Reparación G1 */
 .repair-eff-slider {
-  background: rgba(56, 189, 248, 0.05);
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  border-radius: var(--md-sys-shape-corner-small);
-  padding: 0.75rem 0.9rem;
+  background: rgba(10, 18, 32, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .highlight-repair {
   color: #38bdf8;
   font-weight: 700;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
 }
 
 .repair-range::-webkit-slider-thumb {
   background: #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 1), 0 0 22px rgba(56, 189, 248, 0.6);
 }
 
 .escaped-lesions-box {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.6rem 0.8rem;
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: var(--md-sys-shape-corner-small);
+  gap: 0.35rem;
+  padding: 0.75rem 0.95rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.09) 0%, rgba(180, 83, 9, 0.05) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 10px;
 }
 
 .esc-label {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: #f59e0b;
   font-weight: 600;
 }
@@ -5400,19 +6085,68 @@ onMounted(() => {
 .esc-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .esc-chip {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  font-family: 'JetBrains Mono', 'Fira Code', var(--md-ref-typeface-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
 }
 
-/* ===================== RESPONSIVO ===================== */
+/* Botones y Controles con Degradados Sutiles Bioluminiscentes */
+.dna-lab-layout .md3-button-filled {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0284c7 100%);
+  background-size: 200% auto;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #f0f9ff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dna-lab-layout .md3-button-filled:hover:not(:disabled) {
+  background-position: right center;
+  border-color: #38bdf8;
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.5);
+  transform: translateY(-1px);
+}
+
+.dna-lab-layout .md3-button-tonal {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: #70d6ff;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dna-lab-layout .md3-button-tonal:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(14, 165, 233, 0.25) 100%);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
+}
+
+.dna-lab-layout .md3-chip {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.65) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  color: #cbd5e1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dna-lab-layout .md3-chip:hover {
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   5. MEDIA QUERIES Y ADAPTABILIDAD MÓVIL / TABLET ESTRUCTURADA
+   ========================================================================== */
 .dna-lab-layout { min-width: 0; max-width: 100%; }
 .dna-lab-layout > * { min-width: 0; max-width: 100%; }
 .dna-lab-layout code, .dna-lab-layout .font-mono { overflow-wrap: anywhere; word-break: break-all; }
@@ -5424,32 +6158,192 @@ onMounted(() => {
 .manual-dialog-body { min-width: 0; }
 .manual-dialog-body img, .manual-dialog-body table { max-width: 100%; }
 
-@media (max-width: 1100px) {
-  .molecular-workbench-grid { grid-template-columns: minmax(0, 1fr); }
-  .button-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .g1-actions-grid { grid-template-columns: minmax(0, 1fr); }
-  .manual-pipeline-roadmap { grid-template-columns: minmax(0, 1fr); }
+/* Punto de Quiebre 1: Desktop (> 1200px) - Distribución Espaciosa en Filas */
+@media (min-width: 1200px) {
+  .molecular-workbench-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+  }
+  .g1-actions-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 }
 
-@media (max-width: 820px) {
-  .manual-dialog-surface { width: 98vw; max-height: 94vh; border-radius: 16px; }
-  .manual-dialog-body { padding: 0.9rem; gap: 0.9rem; }
-  .manual-tabs-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0.5rem; }
-  .button-guide-grid { grid-template-columns: minmax(0, 1fr); }
-  .flow-step-item { flex-direction: column; gap: 0.5rem; }
-  .op-form-grid { grid-template-columns: minmax(0, 1fr); }
-  .input-with-actions { flex-wrap: wrap; }
-  .input-with-actions input { flex: 1 1 100%; min-width: 0; }
-  .dsb-controls-row { flex-direction: column; align-items: stretch; }
-  .mutation-events-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+/* Punto de Quiebre 2: Laptop / Tablet (768px - 1199px) - Adaptativo */
+@media (max-width: 1199px) and (min-width: 768px) {
+  .molecular-workbench-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  .g1-actions-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  .button-guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .manual-pipeline-roadmap {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .manual-dialog-surface {
+    width: 95vw;
+    max-height: 94vh;
+  }
+  .sequence-track-card {
+    min-height: auto;
+  }
 }
 
-@media (max-width: 560px) {
-  .phase-block, .audit-log-card, .sequence-track-card { padding: 0.9rem; }
-  .manual-tabs-bar { grid-template-columns: minmax(0, 1fr); }
-  .manual-tab-btn { padding: 0.55rem; font-size: 0.78rem; }
-  .sub-toggle-btn, .md3-button-filled, .md3-button-tonal { width: 100%; justify-content: center; }
-  .phase-title-group h3, .section-header h3 { font-size: 0.98rem; }
-  .slider-marks { font-size: 0.62rem; gap: 0.25rem; }
+/* Punto de Quiebre 3: Mobile (< 767px) - Padding 0.8rem, Botones 100%, Touch Friendly */
+@media (max-width: 767px) {
+  .dna-header-card,
+  .dna-input-section,
+  .sequence-track-card,
+  .phase-block,
+  .checkpoint-g1-card,
+  .op-panel,
+  .duplex-card,
+  .diff-inspector-card,
+  .mismatch-repair-card,
+  .dsb-card,
+  .audit-log-card {
+    padding: 0.8rem;
+    border-radius: 12px;
+  }
+
+  .molecular-workbench-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .sequence-track-card {
+    min-height: auto;
+  }
+
+  .g1-actions-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .input-primary-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sub-mode-toggle-row,
+  .repair-mode-toggle-row {
+    flex-direction: column;
+    padding: 0.35rem;
+    border-radius: 16px;
+    gap: 0.35rem;
+  }
+
+  .sub-toggle-btn {
+    width: 100%;
+    justify-content: center;
+    border-radius: 10px;
+    padding: 0.6rem 0.8rem;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .md3-button-filled,
+  .md3-button-tonal,
+  .dna-lab-layout .md3-button-filled,
+  .dna-lab-layout .md3-button-tonal {
+    width: 100%;
+    justify-content: center;
+    padding: 0 14px;
+    font-size: 0.84rem;
+  }
+
+  .action-buttons-row,
+  .dsb-action-buttons,
+  .input-action-bar {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.6rem;
+  }
+
+  .input-with-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .input-with-actions input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .header-text h2,
+  .phase-title-group h3,
+  .section-header h3,
+  .diff-title-row h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .track-title-group h3 {
+    font-size: 0.95rem;
+  }
+
+  .slider-marks {
+    font-size: 0.62rem;
+    gap: 0.25rem;
+  }
+
+  .slider-module {
+    padding: 0.75rem 0.85rem;
+  }
+
+  .manual-dialog-surface {
+    width: 98vw;
+    max-height: 95vh;
+    border-radius: 14px;
+  }
+
+  .manual-dialog-body {
+    padding: 0.8rem;
+    gap: 0.8rem;
+  }
+
+  .manual-tabs-bar {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0.4rem;
+  }
+
+  .manual-tab-btn {
+    padding: 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .button-guide-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .flow-step-item {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .op-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dsb-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mutation-events-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-grid-3col {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

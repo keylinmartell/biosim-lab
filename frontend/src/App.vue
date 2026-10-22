@@ -454,4 +454,33 @@ function handleCellSelected(cell) {
     display: none;
   }
 }
+
+@media (max-width: 640px) {
+  .md3-main-container {
+    padding: 0.85rem 0.65rem 1.5rem;
+  }
+  .lab-subtext {
+    display: none;
+  }
+  .app-bar-telemetry {
+    display: none;
+  }
+  .md3-tab-item {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.76rem;
+    gap: 0.35rem;
+  }
+  .tab-icon {
+    width: 16px;
+    height: 16px;
+  }
+  .hud-bar {
+    padding: 0.3rem 0.75rem;
+  }
+  .md3-lab-footer {
+    padding: 0.75rem 0.85rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 </style>

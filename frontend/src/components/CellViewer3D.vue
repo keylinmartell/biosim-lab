@@ -4740,4 +4740,134 @@ onUnmounted(() => {
   filter: brightness(1.1);
   box-shadow: 0 4px 12px rgba(112, 214, 255, 0.35);
 }
+
+/* Reglas Responsivas para Dispositivos Móviles y Tablets */
+@media (max-width: 1024px) {
+  .viewer-main-area {
+    grid-template-columns: 1fr;
+  }
+  .single-viewer-container {
+    min-height: 460px;
+    height: 52vh;
+  }
+  .canvas-box {
+    min-height: 460px;
+    height: 100%;
+  }
+  .organelle-inspector-sidebar {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    max-height: 480px;
+  }
+}
+
+@media (max-width: 860px) {
+  .workstation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.85rem 1rem;
+    gap: 0.75rem;
+  }
+  .header-controls-row {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+  .channels-legend {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.3rem;
+  }
+  .optical-toggles {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.2rem;
+  }
+  .phase-selector-bar {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .phase-nav-item {
+    flex: 0 0 auto;
+    min-width: 125px;
+    scroll-snap-align: start;
+    padding: 0.6rem 0.8rem;
+  }
+  .mitosis-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .subphase-buttons {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .single-viewer-container {
+    min-height: 380px;
+    height: 48vh;
+  }
+  .canvas-box {
+    min-height: 380px;
+  }
+  .viewer-hud-top-left {
+    top: 0.65rem;
+    left: 0.65rem;
+    gap: 0.5rem;
+  }
+  .active-code-pill {
+    font-size: 0.95rem;
+    padding: 0.25rem 0.55rem;
+  }
+  .hud-sub-tags {
+    display: none;
+  }
+  .phase-title {
+    font-size: 0.8rem;
+  }
+  .viewer-hud-top-right {
+    top: 0.65rem;
+    right: 0.65rem;
+    gap: 0.4rem;
+  }
+  .telemetry-box {
+    display: none;
+  }
+  .rotation-hud-btn span {
+    display: none;
+  }
+  .rotation-hud-btn {
+    padding: 0.4rem;
+  }
+  .viewer-hud-bottom {
+    left: 0.65rem;
+    right: 0.65rem;
+    bottom: 0.65rem;
+  }
+  .caption-dock {
+    max-width: 100%;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.68rem;
+  }
+  .caption-desc {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.65rem;
+  }
+  .scrubber-metric-badge {
+    display: none;
+  }
+}
 </style>

@@ -42,15 +42,20 @@
     <!-- Contenedor del Canvas WebGL 3D -->
     <div class="canvas-wrapper" ref="canvasContainer">
       <!-- HUD Superior Izquierdo: Leyenda Espectral de Nucleótidos -->
+      <!-- HUD Superior Izquierdo: Leyenda Biofísica Macromolecular -->
       <div class="hud-card hud-top-left">
         <div class="hud-card-header">
-          <span class="hud-label">Código Espectral de Bases</span>
+          <span class="hud-label">Estructura Macromolecular</span>
         </div>
         <div class="spectral-legend-grid">
-          <span class="spectral-pill a"><span class="swatch"></span>A · Adenina</span>
-          <span class="spectral-pill t"><span class="swatch"></span>T · Timina</span>
-          <span class="spectral-pill c"><span class="swatch"></span>C · Citosina</span>
-          <span class="spectral-pill g"><span class="swatch"></span>G · Guanina</span>
+          <span class="spectral-pill a"><span class="swatch"></span>A · Adenina (Rojo)</span>
+          <span class="spectral-pill t"><span class="swatch"></span>T · Timina (Verde)</span>
+          <span class="spectral-pill c"><span class="swatch"></span>C · Citosina (Azul)</span>
+          <span class="spectral-pill g"><span class="swatch"></span>G · Guanina (Amarillo)</span>
+          <span class="spectral-pill phosphate"><span class="swatch"></span>Fosfato (PO₄³⁻)</span>
+          <span class="spectral-pill sugar"><span class="swatch"></span>2'-Desoxirribosa</span>
+          <span class="spectral-pill bond"><span class="swatch rod"></span>Enlace Covalente</span>
+          <span class="spectral-pill hbond"><span class="swatch pin"></span>Puentes H (2/3)</span>
         </div>
       </div>
 
@@ -161,12 +166,12 @@ const startTime = performance.now();
 
 const complementMap = { A: 'T', T: 'A', C: 'G', G: 'C' };
 
-// Colores de bases alineados con el sistema espectral de BioSIM
+// Colores de bases alineados con el sistema macromolecular del modelo de referencia
 const baseColors = {
-  A: { main: 0xf43f5e, emissive: 0x9f1239, rim: 0xfecdd3, name: 'Adenina' },   // Coral Carmín
-  T: { main: 0x10b981, emissive: 0x065f46, rim: 0xa7f3d0, name: 'Timina' },    // Esmeralda Jade
-  C: { main: 0x06b6d4, emissive: 0x155e75, rim: 0xa5f3fc, name: 'Citosina' },  // Cian Zafiro
-  G: { main: 0xf59e0b, emissive: 0xb45309, rim: 0xfef08a, name: 'Guanina' }   // Ámbar Topacio
+  A: { main: 0xef4444, emissive: 0x7f1d1d, rim: 0xfca5a5, name: 'Adenina', hex: '#ef4444' },   // Rojo brillante
+  T: { main: 0x22c55e, emissive: 0x14532d, rim: 0x86efac, name: 'Timina', hex: '#22c55e' },    // Verde esmeralda
+  C: { main: 0x2563eb, emissive: 0x1e3a8a, rim: 0x93c5fd, name: 'Citosina', hex: '#2563eb' },  // Azul zafiro
+  G: { main: 0xeab308, emissive: 0x713f12, rim: 0xfef08a, name: 'Guanina', hex: '#eab308' }   // Amarillo dorado
 };
 
 // Extender la secuencia a un mínimo de 30-36 pares en modo in vivo para mostrar las 3+ vueltas majestuosas
@@ -199,14 +204,21 @@ const selectedBaseData = computed(() => {
   return { strand1: s1, strand2: s2, bonds };
 });
 
-// Parámetros Estructurales de Doble Hélice B-DNA
+// Parámetros Estructurales de Doble Hélice B-DNA (Ball-and-Stick Macromolecular)
 const HELIX_RADIUS = 2.65;
-const VERTICAL_STEP = 0.58;
+const VERTICAL_STEP = 0.60;
 const ANGLE_STEP = (Math.PI * 2) / 10.5; // ~34.3° por par de bases
 const MINOR_GROOVE_OFFSET = 2.42; // ~138° desfase de surco menor
-const BACKBONE_CORE_RADIUS = 0.28; // Radio del tubo conector interno
-const MONOMER_POD_RADIUS = 0.48; // Radio de cada monómero globular de desoxirribosa
-const BASE_LOBE_RADIUS = 0.24; // Radio de los lóbulos de las bases nitrogenadas
+
+// Dimensiones atómicas según render biofísico de referencia
+const PHOSPHATE_RADIUS = 0.40;     // Esfera de fosfato (Ámbar / Naranja)
+const PHOSPHATE_SAT_RADIUS = 0.20; // Átomo satélite de oxígeno (-O)
+const SUGAR_RADIUS = 0.33;         // Esfera de desoxirribosa (Gris plateado)
+const SUGAR_SAT_RADIUS = 0.17;     // Átomo satélite de desoxirribosa
+const BASE_CORE_RADIUS = 0.26;     // Esferas primarias de bases nitrogenadas
+const BASE_BRANCH_RADIUS = 0.19;   // Esferas satélite de bases nitrogenadas
+const COVALENT_BOND_RADIUS = 0.08; // Varillas cilíndricas de enlaces covalentes (Grafito metálico)
+const HBOND_PIN_RADIUS = 0.044;    // Pines de puentes de hidrógeno (Plateado brillante)
 
 const clickableObjects = [];
 let backboneMaterials = [];
@@ -336,201 +348,212 @@ function createChemicalTexture(type) {
   return texture;
 }
 
-// Shader GLSL Avanzado para el Esqueleto Bio-Polimérico de Azúcar-Fosfato
-function createBackboneShader(isBackground = false) {
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uBaseColor: { value: new THREE.Color(0x0284c7) },
-      uCoreColor: { value: new THREE.Color(0x00274d) },
-      uRimColor: { value: new THREE.Color(0x70d6ff) },
-      uOpacity: { value: isBackground ? 0.38 : 0.96 }
-    },
-    vertexShader: `
-      varying vec3 vNormal;
-      varying vec3 vViewPos;
-      varying vec3 vWorldPos;
-      varying vec2 vUv;
-      uniform float uTime;
-
-      void main() {
-        vUv = uv;
-        vec3 pos = position;
-
-        // Estrías periódicas que esculpen los surcos de los monómeros
-        float rib = sin(pos.y * 12.0) * 0.024;
-        pos += normal * rib;
-
-        vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-        vViewPos = -mvPosition.xyz;
-        vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
-        vNormal = normalize(normalMatrix * normal);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 uBaseColor;
-      uniform vec3 uCoreColor;
-      uniform vec3 uRimColor;
-      uniform float uTime;
-      uniform float uOpacity;
-      varying vec3 vNormal;
-      varying vec3 vViewPos;
-      varying vec3 vWorldPos;
-      varying vec2 vUv;
-
-      // Simplex 3D noise simplificado para textura biológica micro-celular
-      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
-      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-      float snoise(vec3 v) {
-        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
-        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-        vec3 i  = floor(v + dot(v, C.yyy));
-        vec3 x0 = v - i + dot(i, C.xxx);
-        vec3 g = step(x0.yzx, x0.xyz);
-        vec3 l = 1.0 - g;
-        vec3 i1 = min(g.xyz, l.zxy);
-        vec3 i2 = max(g.xyz, l.zxy);
-        vec3 x1 = x0 - i1 + C.xxx;
-        vec3 x2 = x0 - i2 + C.yyy;
-        vec3 x3 = x0 - D.yyy;
-        i = mod289(i);
-        vec4 p = permute(permute(permute(
-                   i.z + vec4(0.0, i1.z, i2.z, 1.0))
-                 + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-                 + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-        float n_ = 0.142857142857;
-        vec3 ns = n_ * D.wyz - D.xzx;
-        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-        vec4 x_ = floor(j * ns.z);
-        vec4 y_ = floor(j - 7.0 * x_);
-        vec4 x = x_ *ns.x + ns.yyyy;
-        vec4 y = y_ *ns.x + ns.yyyy;
-        vec4 h = 1.0 - abs(x) - abs(y);
-        vec4 b0 = vec4(x.xy, y.xy);
-        vec4 b1 = vec4(x.zw, y.zw);
-        vec4 s0 = floor(b0)*2.0 + 1.0;
-        vec4 s1 = floor(b1)*2.0 + 1.0;
-        vec4 sh = -step(h, vec4(0.0));
-        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
-        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
-        vec3 p0 = vec3(a0.xy, h.x);
-        vec3 p1 = vec3(a0.zw, h.y);
-        vec3 p2 = vec3(a1.xy, h.z);
-        vec3 p3 = vec3(a1.zw, h.w);
-        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
-        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
-        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
-        m = m * m;
-        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
-      }
-
-      void main() {
-        vec3 n = normalize(vNormal);
-        vec3 v = normalize(vViewPos);
-
-        // Perturbación sutil de micro-rugosidad orgánica celular
-        float noiseVal = snoise(vWorldPos * 3.4);
-        n = normalize(n + vec3(noiseVal * 0.12));
-
-        // Fresnel de borde intenso idéntico a la imagen de referencia
-        float fresnel = pow(1.0 - abs(dot(n, v)), 1.75);
-
-        // Dispersión biológica subsuperficial (Subsurface Scattering approximation)
-        vec3 lightDir = normalize(vec3(1.2, 1.8, 1.0));
-        float sss = max(0.0, dot(n, lightDir) * 0.5 + 0.5);
-
-        // Onda bioeléctrica luminosa que recorre la espiral
-        float pulseWave = sin(vWorldPos.y * 1.5 - uTime * 2.0) * 0.5 + 0.5;
-
-        // Bandas de absorción en las hendiduras segmentadas
-        float grooveCreep = sin(vWorldPos.y * 10.5) * 0.15;
-
-        vec3 coreGrad = mix(uCoreColor, uBaseColor, sss + grooveCreep);
-        vec3 finalColor = mix(coreGrad, uRimColor, clamp(fresnel * 1.45, 0.0, 1.0));
-        finalColor += uRimColor * pulseWave * 0.35;
-
-        // Reflejo especular brillante de biolaboratorio
-        vec3 halfDir = normalize(lightDir + v);
-        float spec = pow(max(dot(n, halfDir), 0.0), 45.0);
-        finalColor += vec3(0.9, 0.98, 1.0) * spec * 0.75;
-
-        gl_FragColor = vec4(finalColor, uOpacity);
-      }
-    `,
-    transparent: true,
-    side: THREE.DoubleSide
-  });
-  backboneMaterials.push(mat);
-  return mat;
+// Cache de Geometrías Esféricas para Máximo Rendimiento WebGL
+const sphereGeomCache = {};
+function getSphereGeom(radius) {
+  const key = radius.toFixed(2);
+  if (!sphereGeomCache[key]) {
+    sphereGeomCache[key] = new THREE.SphereGeometry(radius, 24, 20);
+  }
+  return sphereGeomCache[key];
 }
 
-// Shader para las Bases Nitrogenadas (Efecto Gel Translúcido con Resplandor Interno)
-function createBaseGelShader(colorHex, emissiveHex, rimHex, isSelected = false) {
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uBaseColor: { value: new THREE.Color(colorHex) },
-      uEmissiveColor: { value: new THREE.Color(emissiveHex) },
-      uRimColor: { value: new THREE.Color(rimHex) },
-      uSelected: { value: isSelected ? 1.0 : 0.0 }
-    },
-    vertexShader: `
-      varying vec3 vNormal;
-      varying vec3 vViewPos;
-      varying vec3 vWorldPos;
+// Materiales Macromoleculares Satinados (Idénticos al Render de Referencia: Sólidos, sin sobreexposición ni emisión)
+let pbrMaterials = null;
+function initPBRMaterials() {
+  if (pbrMaterials) return pbrMaterials;
 
-      void main() {
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        vViewPos = -mvPosition.xyz;
-        vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-        vNormal = normalize(normalMatrix * normal);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 uBaseColor;
-      uniform vec3 uEmissiveColor;
-      uniform vec3 uRimColor;
-      uniform float uTime;
-      uniform float uSelected;
-      varying vec3 vNormal;
-      varying vec3 vViewPos;
-      varying vec3 vWorldPos;
-
-      void main() {
-        vec3 n = normalize(vNormal);
-        vec3 v = normalize(vViewPos);
-
-        float fresnel = pow(1.0 - abs(dot(n, v)), 1.9);
-        vec3 lightDir = normalize(vec3(0.8, 1.5, 1.0));
-        float diff = max(dot(n, lightDir), 0.0) * 0.65 + 0.35;
-
-        // Pulso eléctrico si está seleccionada
-        float pulse = uSelected * (sin(uTime * 5.0) * 0.3 + 0.7);
-
-        vec3 body = mix(uEmissiveColor, uBaseColor, diff);
-        vec3 col = mix(body, uRimColor, clamp(fresnel * (1.2 + pulse * 0.8), 0.0, 1.0));
-        col += uRimColor * pulse * 0.45;
-
-        // Especular nítido
-        vec3 halfDir = normalize(lightDir + v);
-        float spec = pow(max(dot(n, halfDir), 0.0), 32.0);
-        col += vec3(1.0) * spec * 0.6;
-
-        gl_FragColor = vec4(col, 0.95);
-      }
-    `,
-    transparent: true
+  // Fosfato (PO₄³⁻): Ámbar / Naranja dorado sólido satinado
+  const phosphateMat = new THREE.MeshStandardMaterial({
+    color: 0xdf7a1e,
+    roughness: 0.32,
+    metalness: 0.08
   });
-  baseMaterials.push(mat);
-  return mat;
+
+  // Azúcar (2'-Desoxirribosa): Gris pizarra / plata neutro sólido
+  const sugarMat = new THREE.MeshStandardMaterial({
+    color: 0x8fa0b2,
+    roughness: 0.35,
+    metalness: 0.08
+  });
+
+  // Enlaces Covalentes & Fosfodiéster: Grafito carbón oscuro
+  const bondRodMat = new THREE.MeshStandardMaterial({
+    color: 0x2d3748,
+    roughness: 0.42,
+    metalness: 0.15
+  });
+
+  // Puentes de Hidrógeno: Pines metálicos plateados
+  const hBondMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8,
+    roughness: 0.30,
+    metalness: 0.35
+  });
+
+  // Bases Nitrogenadas: Colores puros, ricos y sólidos (Rojo, Verde, Azul, Amarillo)
+  const baseMats = {
+    A: new THREE.MeshStandardMaterial({
+      color: 0xc53030, // Adenina: Rojo carmín profundo
+      roughness: 0.32,
+      metalness: 0.06
+    }),
+    T: new THREE.MeshStandardMaterial({
+      color: 0x228b45, // Timina: Verde esmeralda rico
+      roughness: 0.32,
+      metalness: 0.06
+    }),
+    C: new THREE.MeshStandardMaterial({
+      color: 0x2563eb, // Citosina: Azul real profundo
+      roughness: 0.32,
+      metalness: 0.06
+    }),
+    G: new THREE.MeshStandardMaterial({
+      color: 0xd99b00, // Guanina: Amarillo dorado / mostaza
+      roughness: 0.32,
+      metalness: 0.06
+    })
+  };
+
+  // Materiales de alta luminiscencia para el par de nucleótidos seleccionado
+  const selectedSugarMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0x38bdf8,
+    emissiveIntensity: 0.75,
+    roughness: 0.15
+  });
+
+  const selectedHbondMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0x70d6ff,
+    emissiveIntensity: 1.4,
+    roughness: 0.05
+  });
+
+  // Versiones resaltadas para par seleccionado (brillo bioeléctrico de la base activa)
+  const baseSelectedMats = {
+    A: new THREE.MeshStandardMaterial({
+      color: 0xff4d4d,
+      emissive: 0xef4444,
+      emissiveIntensity: 0.95,
+      roughness: 0.18
+    }),
+    T: new THREE.MeshStandardMaterial({
+      color: 0x4ade80,
+      emissive: 0x22c55e,
+      emissiveIntensity: 0.95,
+      roughness: 0.18
+    }),
+    C: new THREE.MeshStandardMaterial({
+      color: 0x60a5fa,
+      emissive: 0x2563eb,
+      emissiveIntensity: 0.95,
+      roughness: 0.18
+    }),
+    G: new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xeab308,
+      emissiveIntensity: 0.95,
+      roughness: 0.18
+    })
+  };
+
+  pbrMaterials = {
+    phosphateMat,
+    sugarMat,
+    selectedSugarMat,
+    bondRodMat,
+    hBondMat,
+    selectedHbondMat,
+    baseMats,
+    baseSelectedMats
+  };
+  return pbrMaterials;
 }
 
-// Constructor de la Doble Hélice Principal
+// Función auxiliar para agregar una esfera atómica
+function addAtomSphere(group, pos, radius, material, userData = null) {
+  const geo = getSphereGeom(radius);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.copy(pos);
+  if (userData) {
+    mesh.userData = userData;
+    clickableObjects.push(mesh);
+  }
+  group.add(mesh);
+  return mesh;
+}
+
+// Función auxiliar para conectar dos puntos con un cilindro (Varilla / Enlace)
+function addCylinderBetween(group, pA, pB, radius, material) {
+  const dir = new THREE.Vector3().subVectors(pB, pA);
+  const len = dir.length();
+  if (len < 0.005) return null;
+  const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+  const geo = new THREE.CylinderGeometry(radius, radius, len, 12);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.copy(mid);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  group.add(mesh);
+  return mesh;
+}
+
+// Ensambla el cluster molecular ball-and-stick de una base nitrogenada
+function buildBaseCluster(group, sugarPos, unitDir, crossDir, upDir, isPurine, baseMat, bondMat, index, baseLetter, strandNum) {
+  const uData = { index, base: baseLetter, strand: strandNum };
+  // Extensión de la base hacia el eje central
+  const baseSpan = isPurine ? 0.95 : 0.72;
+
+  // 1. Enlace N-glicosídico covalente desde el azúcar a la base
+  const p1 = sugarPos.clone().addScaledVector(unitDir, isPurine ? 0.32 : 0.28);
+  addCylinderBetween(group, sugarPos, p1, COVALENT_BOND_RADIUS, bondMat);
+  addAtomSphere(group, p1, BASE_CORE_RADIUS, baseMat, uData);
+
+  let terminalPoint = p1;
+
+  if (isPurine) {
+    // Purina (A, G): Estructura bicíclica con 3 esferas nucleares y 3 satélites
+    const p2 = sugarPos.clone().addScaledVector(unitDir, 0.64);
+    const p3 = sugarPos.clone().addScaledVector(unitDir, baseSpan);
+    addCylinderBetween(group, p1, p2, COVALENT_BOND_RADIUS, bondMat);
+    addCylinderBetween(group, p2, p3, COVALENT_BOND_RADIUS, bondMat);
+    addAtomSphere(group, p2, BASE_CORE_RADIUS, baseMat, uData);
+    addAtomSphere(group, p3, BASE_CORE_RADIUS, baseMat, uData);
+    terminalPoint = p3;
+
+    // Átomos anulares / satélites de purina (geometría hexagonal + pentagonal)
+    const sat1 = p1.clone().addScaledVector(crossDir, 0.28).addScaledVector(upDir, 0.16);
+    const sat2 = p2.clone().addScaledVector(crossDir, -0.30).addScaledVector(upDir, -0.14);
+    const sat3 = p2.clone().addScaledVector(crossDir, 0.26).addScaledVector(upDir, 0.18);
+
+    addCylinderBetween(group, p1, sat1, COVALENT_BOND_RADIUS * 0.85, bondMat);
+    addCylinderBetween(group, p2, sat2, COVALENT_BOND_RADIUS * 0.85, bondMat);
+    addCylinderBetween(group, p2, sat3, COVALENT_BOND_RADIUS * 0.85, bondMat);
+
+    addAtomSphere(group, sat1, BASE_BRANCH_RADIUS, baseMat, uData);
+    addAtomSphere(group, sat2, BASE_BRANCH_RADIUS, baseMat, uData);
+    addAtomSphere(group, sat3, BASE_BRANCH_RADIUS, baseMat, uData);
+  } else {
+    // Pirimidina (T, C): Anillo simple con 2 esferas nucleares y 2 satélites
+    const p2 = sugarPos.clone().addScaledVector(unitDir, baseSpan);
+    addCylinderBetween(group, p1, p2, COVALENT_BOND_RADIUS, bondMat);
+    addAtomSphere(group, p2, BASE_CORE_RADIUS, baseMat, uData);
+    terminalPoint = p2;
+
+    const sat1 = p1.clone().addScaledVector(crossDir, 0.26).addScaledVector(upDir, 0.16);
+    const sat2 = p2.clone().addScaledVector(crossDir, -0.26).addScaledVector(upDir, -0.14);
+
+    addCylinderBetween(group, p1, sat1, COVALENT_BOND_RADIUS * 0.85, bondMat);
+    addCylinderBetween(group, p2, sat2, COVALENT_BOND_RADIUS * 0.85, bondMat);
+
+    addAtomSphere(group, sat1, BASE_BRANCH_RADIUS, baseMat, uData);
+    addAtomSphere(group, sat2, BASE_BRANCH_RADIUS, baseMat, uData);
+  }
+
+  return terminalPoint;
+}
+
+// Constructor de la Doble Hélice Macromolecular Ball-and-Stick
 function buildDNAHelix() {
   if (!mainHelixGroup) return;
 
@@ -548,11 +571,10 @@ function buildDNAHelix() {
   const N = seq.length;
   if (!N) return;
 
-  const strand1Points = [];
-  const strand2Points = [];
-  const axisPoints = [];
+  const mats = initPBRMaterials();
 
   // 1. Definir trayectoria central: Curvada S-Bend (In Vivo) o Recta (Lineal)
+  const axisPoints = [];
   for (let i = 0; i < N; i++) {
     const s = i / (N - 1);
     const y = (i - (N - 1) / 2) * VERTICAL_STEP;
@@ -560,151 +582,229 @@ function buildDNAHelix() {
     let axisZ = 0;
 
     if (trajectoryMode.value === 'curved') {
-      // Curva macromolecular sinuosa y orgánica
       axisX = Math.sin(s * Math.PI * 1.8) * 2.2;
       axisZ = Math.cos(s * Math.PI * 1.3) * 1.5;
     }
     axisPoints.push(new THREE.Vector3(axisX, y, axisZ));
   }
 
-  const axisCurve = new THREE.CatmullRomCurve3(axisPoints);
+  // 2. Coordenadas de Azúcares (Desoxirribosas) y Fosfatos a lo largo de cada hebra
+  const sugarPoints1 = [];
+  const sugarPoints2 = [];
+  const phosPoints1 = [];
+  const phosPoints2 = [];
 
-  // 2. Calcular coordenadas helicoidales a lo largo de la trayectoria con Surco Mayor y Menor
-  const podGeo = new THREE.SphereGeometry(MONOMER_POD_RADIUS, 18, 14);
-  podGeo.scale(0.85, 0.65, 1.25); // Forma anatómica de vaina de desoxirribosa
-
-  const sharedBackboneMat = createBackboneShader();
+  const R_SUGAR = HELIX_RADIUS * 0.90;
+  const R_PHOS = HELIX_RADIUS * 1.08;
 
   for (let i = 0; i < N; i++) {
+    const center = axisPoints[i];
     const theta1 = i * ANGLE_STEP;
     const theta2 = theta1 + MINOR_GROOVE_OFFSET;
-    const center = axisPoints[i];
 
-    // Orientación tangente y normal local
-    const p1 = new THREE.Vector3(
-      center.x + HELIX_RADIUS * Math.cos(theta1),
+    const s1 = new THREE.Vector3(
+      center.x + R_SUGAR * Math.cos(theta1),
       center.y,
-      center.z + HELIX_RADIUS * Math.sin(theta1)
+      center.z + R_SUGAR * Math.sin(theta1)
     );
-
-    const p2 = new THREE.Vector3(
-      center.x + HELIX_RADIUS * Math.cos(theta2),
+    const s2 = new THREE.Vector3(
+      center.x + R_SUGAR * Math.cos(theta2),
       center.y,
-      center.z + HELIX_RADIUS * Math.sin(theta2)
+      center.z + R_SUGAR * Math.sin(theta2)
     );
+    sugarPoints1.push(s1);
+    sugarPoints2.push(s2);
 
-    strand1Points.push(p1);
-    strand2Points.push(p2);
+    if (i < N - 1) {
+      const nextCenter = axisPoints[i + 1];
+      const midCenter = new THREE.Vector3().addVectors(center, nextCenter).multiplyScalar(0.5);
+      const thetaPhos1 = theta1 + ANGLE_STEP * 0.5;
+      const thetaPhos2 = theta2 + ANGLE_STEP * 0.5;
 
-    // Monómero abultado de desoxirribosa en Hebra 1
-    const pod1 = new THREE.Mesh(podGeo, sharedBackboneMat);
-    pod1.position.copy(p1);
-    pod1.lookAt(center);
-    mainHelixGroup.add(pod1);
-
-    // Monómero abultado de desoxirribosa en Hebra 2
-    const pod2 = new THREE.Mesh(podGeo, sharedBackboneMat);
-    pod2.position.copy(p2);
-    pod2.lookAt(center);
-    mainHelixGroup.add(pod2);
+      const p1 = new THREE.Vector3(
+        midCenter.x + R_PHOS * Math.cos(thetaPhos1),
+        midCenter.y,
+        midCenter.z + R_PHOS * Math.sin(thetaPhos1)
+      );
+      const p2 = new THREE.Vector3(
+        midCenter.x + R_PHOS * Math.cos(thetaPhos2),
+        midCenter.y,
+        midCenter.z + R_PHOS * Math.sin(thetaPhos2)
+      );
+      phosPoints1.push(p1);
+      phosPoints2.push(p2);
+    }
   }
 
-  // 3. Cadenas Continuas Internas (Vaina Continua que une los monómeros)
-  if (N >= 2) {
-    const curve1 = new THREE.CatmullRomCurve3(strand1Points);
-    const tubeGeo1 = new THREE.TubeGeometry(curve1, N * 24, BACKBONE_CORE_RADIUS, 20, false);
-    const tubeMesh1 = new THREE.Mesh(tubeGeo1, sharedBackboneMat);
-    mainHelixGroup.add(tubeMesh1);
+  const cleanSeq = props.sequence.toUpperCase().replace(/[^ATCG]/g, '');
 
-    const curve2 = new THREE.CatmullRomCurve3(strand2Points);
-    const tubeGeo2 = new THREE.TubeGeometry(curve2, N * 24, BACKBONE_CORE_RADIUS, 20, false);
-    const tubeMesh2 = new THREE.Mesh(tubeGeo2, sharedBackboneMat);
-    mainHelixGroup.add(tubeMesh2);
-  }
-
-  // 4. Peldaños de Pares de Bases Nitrogenadas (Lóbulos Orgánicos Sólidos)
+  // 3. Construir el Esqueleto Azúcar-Fosfato (Ball-and-Stick Covalente)
   for (let i = 0; i < N; i++) {
-    const p1 = strand1Points[i];
-    const p2 = strand2Points[i];
+    const center = axisPoints[i];
+    const s1 = sugarPoints1[i];
+    const s2 = sugarPoints2[i];
     const b1 = seq[i];
     const b2 = complementMap[b1] || 'T';
-    const isSelected = (i === props.selectedPosition);
+    const seqIndex = cleanSeq.length ? (i % cleanSeq.length) : i;
+    const isSelected = (props.selectedPosition !== null && props.selectedPosition !== undefined && i === props.selectedPosition);
 
-    const colorDef1 = baseColors[b1] || baseColors.A;
-    const colorDef2 = baseColors[b2] || baseColors.T;
+    // Esfera de Azúcar (Desoxirribosa - Gris Plateado) en Hebra 1
+    const sugarMat1 = isSelected ? mats.selectedSugarMat : mats.sugarMat;
+    addAtomSphere(mainHelixGroup, s1, SUGAR_RADIUS, sugarMat1, { index: i, base: b1, strand: 1 });
+    // Átomo satélite de azúcar (C2'/OH)
+    const s1Tangent = new THREE.Vector3(-(s1.z - center.z), 0, s1.x - center.x).normalize();
+    const satS1 = s1.clone().addScaledVector(s1Tangent, 0.28).add(new THREE.Vector3(0, 0.12, 0));
+    addCylinderBetween(mainHelixGroup, s1, satS1, COVALENT_BOND_RADIUS * 0.75, mats.bondRodMat);
+    addAtomSphere(mainHelixGroup, satS1, SUGAR_SAT_RADIUS, sugarMat1, { index: i, base: b1, strand: 1 });
 
-    const dir = new THREE.Vector3().subVectors(p2, p1);
-    const totalDist = dir.length();
-    const unitDir = dir.clone().normalize();
+    // Esfera de Azúcar en Hebra 2
+    const sugarMat2 = isSelected ? mats.selectedSugarMat : mats.sugarMat;
+    addAtomSphere(mainHelixGroup, s2, SUGAR_RADIUS, sugarMat2, { index: i, base: b2, strand: 2 });
+    const s2Tangent = new THREE.Vector3(-(s2.z - center.z), 0, s2.x - center.x).normalize();
+    const satS2 = s2.clone().addScaledVector(s2Tangent, 0.28).add(new THREE.Vector3(0, 0.12, 0));
+    addCylinderBetween(mainHelixGroup, s2, satS2, COVALENT_BOND_RADIUS * 0.75, mats.bondRodMat);
+    addAtomSphere(mainHelixGroup, satS2, SUGAR_SAT_RADIUS, sugarMat2, { index: i, base: b2, strand: 2 });
 
-    // Las purinas (A, G) son anatómicamente más largas (~55%) que las pirimidinas (T, C, ~45%)
+    // Enlaces de Fosfato intermonómeros
+    if (i < N - 1) {
+      const p1 = phosPoints1[i];
+      const p2 = phosPoints2[i];
+
+      // Enlace Sugar[i] -> Phos[i] -> Sugar[i+1] en Hebra 1
+      addCylinderBetween(mainHelixGroup, s1, p1, COVALENT_BOND_RADIUS, mats.bondRodMat);
+      addCylinderBetween(mainHelixGroup, p1, sugarPoints1[i + 1], COVALENT_BOND_RADIUS, mats.bondRodMat);
+      addAtomSphere(mainHelixGroup, p1, PHOSPHATE_RADIUS, mats.phosphateMat);
+      // Átomo satélite de oxígeno (-O) en Fosfato
+      const p1Outward = new THREE.Vector3(p1.x - center.x, 0, p1.z - center.z).normalize();
+      const satP1 = p1.clone().addScaledVector(p1Outward, 0.32).add(new THREE.Vector3(0, 0.10, 0));
+      addCylinderBetween(mainHelixGroup, p1, satP1, COVALENT_BOND_RADIUS * 0.75, mats.bondRodMat);
+      addAtomSphere(mainHelixGroup, satP1, PHOSPHATE_SAT_RADIUS, mats.phosphateMat);
+
+      // Enlace Sugar[i] -> Phos[i] -> Sugar[i+1] en Hebra 2
+      addCylinderBetween(mainHelixGroup, s2, p2, COVALENT_BOND_RADIUS, mats.bondRodMat);
+      addCylinderBetween(mainHelixGroup, p2, sugarPoints2[i + 1], COVALENT_BOND_RADIUS, mats.bondRodMat);
+      addAtomSphere(mainHelixGroup, p2, PHOSPHATE_RADIUS, mats.phosphateMat);
+      const p2Outward = new THREE.Vector3(p2.x - center.x, 0, p2.z - center.z).normalize();
+      const satP2 = p2.clone().addScaledVector(p2Outward, 0.32).add(new THREE.Vector3(0, 0.10, 0));
+      addCylinderBetween(mainHelixGroup, p2, satP2, COVALENT_BOND_RADIUS * 0.75, mats.bondRodMat);
+      addAtomSphere(mainHelixGroup, satP2, PHOSPHATE_SAT_RADIUS, mats.phosphateMat);
+    }
+  }
+
+  // 4. Construir Peldaños de Bases Nitrogenadas y Puentes de Hidrógeno
+  for (let i = 0; i < N; i++) {
+    const s1 = sugarPoints1[i];
+    const s2 = sugarPoints2[i];
+    const b1 = seq[i];
+    const b2 = complementMap[b1] || 'T';
+    const seqIndex = cleanSeq.length ? (i % cleanSeq.length) : i;
+    const isSelected = (props.selectedPosition !== null && props.selectedPosition !== undefined && i === props.selectedPosition);
+
     const isPurine1 = (b1 === 'A' || b1 === 'G');
-    const frac1 = isPurine1 ? 0.44 : 0.38;
-    const frac2 = isPurine1 ? 0.38 : 0.44;
+    const isPurine2 = (b2 === 'A' || b2 === 'G');
 
-    const len1 = totalDist * frac1;
-    const len2 = totalDist * frac2;
+    const mat1 = isSelected ? (mats.baseSelectedMats[b1] || mats.baseSelectedMats.A) : (mats.baseMats[b1] || mats.baseMats.A);
+    const mat2 = isSelected ? (mats.baseSelectedMats[b2] || mats.baseSelectedMats.T) : (mats.baseMats[b2] || mats.baseMats.T);
 
-    const mat1 = createBaseGelShader(colorDef1.main, colorDef1.emissive, colorDef1.rim, isSelected);
-    const mat2 = createBaseGelShader(colorDef2.main, colorDef2.emissive, colorDef2.rim, isSelected);
+    const dirTo2 = new THREE.Vector3().subVectors(s2, s1);
+    const unit1to2 = dirTo2.clone().normalize();
+    const unit2to1 = unit1to2.clone().negate();
 
-    // Lóbulo Cápsula Base 1
-    const lobeGeo1 = new THREE.CapsuleGeometry(BASE_LOBE_RADIUS, Math.max(0.1, len1 - BASE_LOBE_RADIUS * 2), 14, 18);
-    const mesh1 = new THREE.Mesh(lobeGeo1, mat1);
-    const center1 = p1.clone().addScaledVector(unitDir, len1 * 0.5);
-    mesh1.position.copy(center1);
-    mesh1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), unitDir);
-    mesh1.userData = { index: i, base: b1, strand: 1 };
-    mainHelixGroup.add(mesh1);
-    clickableObjects.push(mesh1);
+    const upDir = new THREE.Vector3(0, 1, 0);
+    const crossDir1 = new THREE.Vector3().crossVectors(unit1to2, upDir).normalize();
+    const crossDir2 = new THREE.Vector3().crossVectors(unit2to1, upDir).normalize();
 
-    // Lóbulo Cápsula Base 2
-    const lobeGeo2 = new THREE.CapsuleGeometry(BASE_LOBE_RADIUS, Math.max(0.1, len2 - BASE_LOBE_RADIUS * 2), 14, 18);
-    const mesh2 = new THREE.Mesh(lobeGeo2, mat2);
-    const center2 = p2.clone().addScaledVector(unitDir.clone().negate(), len2 * 0.5);
-    mesh2.position.copy(center2);
-    mesh2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), unitDir);
-    mesh2.userData = { index: i, base: b2, strand: 2 };
-    mainHelixGroup.add(mesh2);
-    clickableObjects.push(mesh2);
+    // Ensamblar cluster ball-and-stick de Base 1 (Hebra 1)
+    const term1 = buildBaseCluster(mainHelixGroup, s1, unit1to2, crossDir1, upDir, isPurine1, mat1, mats.bondRodMat, i, b1, 1);
 
-    // Puentes de Hidrógeno Centrales (2 pines para A-T, 3 pines para C-G)
-    const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-    const bondsCount = (b1 === 'C' || b1 === 'G') ? 3 : 2;
-    const gapLen = totalDist - len1 - len2;
+    // Ensamblar cluster ball-and-stick de Base 2 (Hebra 2)
+    const term2 = buildBaseCluster(mainHelixGroup, s2, unit2to1, crossDir2, upDir, isPurine2, mat2, mats.bondRodMat, i, b2, 2);
 
-    const bondMat = new THREE.MeshStandardMaterial({
-      color: isSelected ? 0x70d6ff : 0x38bdf8,
-      emissive: isSelected ? 0x70d6ff : 0x0284c7,
-      emissiveIntensity: isSelected ? 2.5 : 1.4,
-      roughness: 0.15,
-      metalness: 0.3
-    });
+    // Puentes de Hidrógeno Centrales: 2 pines para A=T, 3 pines para C≡G
+    const hBondCount = (b1 === 'C' || b1 === 'G') ? 3 : 2;
+    const pinOffsetStep = 0.14;
+    const pinMat = isSelected ? mats.selectedHbondMat : mats.hBondMat;
+    const pinRadius = isSelected ? HBOND_PIN_RADIUS * 1.35 : HBOND_PIN_RADIUS;
 
-    const bondGeo = new THREE.CylinderGeometry(0.045, 0.045, Math.max(0.15, gapLen), 8);
+    for (let p = 0; p < hBondCount; p++) {
+      const yShift = (p - (hBondCount - 1) / 2) * pinOffsetStep;
+      const shiftVec = new THREE.Vector3(0, yShift, 0);
+      const pinStart = term1.clone().add(shiftVec);
+      const pinEnd = term2.clone().add(shiftVec);
 
-    for (let b = 0; b < bondsCount; b++) {
-      const yShift = (b - (bondsCount - 1) / 2) * 0.14;
-      const bMesh = new THREE.Mesh(bondGeo, bondMat);
-      const bPos = midPoint.clone().add(new THREE.Vector3(0, yShift, 0));
-      bMesh.position.copy(bPos);
-      bMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), unitDir);
-      mainHelixGroup.add(bMesh);
+      addCylinderBetween(mainHelixGroup, pinStart, pinEnd, pinRadius, pinMat);
     }
 
-    // Halo bioeléctrico de selección en el par activo
+    // Iluminación Focal y Halo Holográfico Bioluminiscente si el par está seleccionado
     if (isSelected) {
-      const haloGeo = new THREE.TorusGeometry(HELIX_RADIUS * 1.15, 0.06, 12, 32);
+      const midPoint = new THREE.Vector3().addVectors(s1, s2).multiplyScalar(0.5);
+
+      // 1. Luz puntual bioluminiscente que ilumina realmente los átomos del par seleccionado
+      const selectLight = new THREE.PointLight(0x38bdf8, 3.8, 6.5);
+      selectLight.position.copy(midPoint);
+      mainHelixGroup.add(selectLight);
+
+      // 2. Anillo holográfico exterior pulsante
+      const haloGeo = new THREE.TorusGeometry(HELIX_RADIUS * 1.15, 0.08, 16, 48);
       const haloMat = new THREE.MeshBasicMaterial({
-        color: 0x70d6ff,
+        color: 0x38bdf8,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.9,
         blending: THREE.AdditiveBlending
       });
       const halo = new THREE.Mesh(haloGeo, haloMat);
       halo.position.copy(midPoint);
       halo.rotation.x = Math.PI / 2;
+      halo.userData = { isPulseHalo: true, baseScale: 1.0 };
       mainHelixGroup.add(halo);
+
+      // 3. Anillo concéntrico interior pulsante
+      const innerHaloGeo = new THREE.TorusGeometry(HELIX_RADIUS * 0.72, 0.04, 12, 36);
+      const innerHaloMat = new THREE.MeshBasicMaterial({
+        color: 0x7dd3fc,
+        transparent: true,
+        opacity: 0.75,
+        blending: THREE.AdditiveBlending
+      });
+      const innerHalo = new THREE.Mesh(innerHaloGeo, innerHaloMat);
+      innerHalo.position.copy(midPoint);
+      innerHalo.rotation.x = Math.PI / 2;
+      innerHalo.userData = { isPulseHalo: true, baseScale: 0.95 };
+      mainHelixGroup.add(innerHalo);
+
+      // 4. Haz de luz cilíndrico holográfico conectando ambas hebras (3' y 5')
+      const beamDir = new THREE.Vector3().subVectors(s2, s1);
+      const beamLen = beamDir.length();
+      const beamGeo = new THREE.CylinderGeometry(0.32, 0.32, beamLen, 16, 1, true);
+      const beamMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.22,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide
+      });
+      const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+      beamMesh.position.copy(midPoint);
+      beamMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), beamDir.clone().normalize());
+      mainHelixGroup.add(beamMesh);
+
+      // 5. Marcadores de posición beacon en los azúcares 5' y 3'
+      const beaconGeo = new THREE.SphereGeometry(0.20, 14, 14);
+      const beaconMat = new THREE.MeshBasicMaterial({
+        color: 0x70d6ff,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending
+      });
+      const b1Mesh = new THREE.Mesh(beaconGeo, beaconMat);
+      b1Mesh.position.copy(s1);
+      b1Mesh.userData = { isPulseHalo: true, baseScale: 1.0 };
+      mainHelixGroup.add(b1Mesh);
+
+      const b2Mesh = new THREE.Mesh(beaconGeo, beaconMat);
+      b2Mesh.position.copy(s2);
+      b2Mesh.userData = { isPulseHalo: true, baseScale: 1.0 };
+      mainHelixGroup.add(b2Mesh);
     }
   }
 
@@ -712,18 +812,19 @@ function buildDNAHelix() {
   fitCameraToHelix(N);
 }
 
-// Función de encuadre orbital inteligente para evitar que la hélice se corte
+// Función de encuadre orbital inteligente para que la hélice se vea cercana, nítida y vibrante desde el inicio
 function fitCameraToHelix(N) {
   if (!camera || !controls) return;
   const totalHeight = N * VERTICAL_STEP;
   const fovRad = (camera.fov * Math.PI) / 180;
   const aspect = (camera.aspect && camera.aspect > 0) ? camera.aspect : 1.0;
-  const effectiveWidth = (HELIX_RADIUS * 2.6) + (trajectoryMode.value === 'curved' ? 5.5 : 0);
-  const effectiveHeight = totalHeight + 4.5;
+  const effectiveWidth = (HELIX_RADIUS * 2.6) + (trajectoryMode.value === 'curved' ? 4.0 : 0);
+  const effectiveHeight = totalHeight + 1.5;
 
   const distV = (effectiveHeight * 0.5) / Math.tan(fovRad * 0.5);
   const distH = (effectiveWidth * 0.5) / (Math.tan(fovRad * 0.5) * aspect);
-  const targetDist = Math.max(17.0, Math.max(distV, distH) * 1.18);
+  // Encuadre cercano e inmersivo desde el inicio: llena el visor con colores vivos y detalle
+  const targetDist = Math.max(12.0, Math.max(distV, distH) * 0.88);
 
   const currentDir = new THREE.Vector3(0.18, 0.08, 0.98).normalize();
   camera.position.copy(currentDir.multiplyScalar(targetDist));
@@ -732,7 +833,7 @@ function fitCameraToHelix(N) {
   camera.updateProjectionMatrix();
 
   controls.target.set(0, 0, 0);
-  controls.minDistance = 5.0;
+  controls.minDistance = 3.0;
   controls.maxDistance = targetDist * 3.5;
   controls.update();
 }
@@ -745,24 +846,25 @@ function buildChemicalAtmosphere(parentGroup) {
   const textures = types.map(t => createChemicalTexture(t));
   const sprites = [];
 
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 32; i++) {
     const tex = textures[i % textures.length];
     const mat = new THREE.SpriteMaterial({
       map: tex,
       transparent: true,
-      opacity: 0.18 + Math.random() * 0.28,
+      opacity: 0.12 + Math.random() * 0.18,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
 
     const sprite = new THREE.Sprite(mat);
-    const scale = 2.8 + Math.random() * 3.4;
+    const scale = 2.4 + Math.random() * 2.8;
     sprite.scale.set(scale, scale, 1);
 
+    // Ubicados en el fondo lejano para no entorpecer la vista de la doble hélice
     sprite.position.set(
       (Math.random() - 0.5) * 44,
       (Math.random() - 0.5) * 36,
-      -6 - Math.random() * 22
+      -12 - Math.random() * 20
     );
 
     sprite.userData = {
@@ -789,63 +891,62 @@ function initScene() {
   const height = container.clientHeight || 580;
 
   scene = new THREE.Scene();
-  // Niebla oceánica profunda
-  scene.fog = new THREE.FogExp2(0x021c3b, 0.022);
+  // SIN NIEBLA: Eliminamos la niebla para que los colores no se opaquen ni se laven a la distancia
 
   camera = new THREE.PerspectiveCamera(36, width / height, 0.1, 1000);
-  camera.position.set(3.5, 1.5, 17.5);
+  camera.position.set(2.5, 1.2, 14.5);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.45;
+  renderer.toneMappingExposure = 1.05; // Exposición balanceada de estudio fotorrealista sin sobreexposición
   container.appendChild(renderer.domElement);
 
   // OrbitControls con amortiguación suave
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
-  controls.minDistance = 4.0;
-  controls.maxDistance = 42.0;
+  controls.minDistance = 3.0;
+  controls.maxDistance = 45.0;
   controls.target.set(0, 0, 0);
 
-  // Iluminación Cinemática de Laboratorio
-  const ambientLight = new THREE.AmbientLight(0x062846, 1.8);
+  // Iluminación de Estudio Biofísico Equilibrada (Como en la Fotografía de Referencia)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
   scene.add(ambientLight);
 
-  const keyLight = new THREE.DirectionalLight(0xe0f2fe, 3.2);
+  const keyLight = new THREE.DirectionalLight(0xfffcf5, 2.0);
   keyLight.position.set(16, 20, 14);
   scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(0x0284c7, 2.2);
-  fillLight.position.set(-16, -12, -8);
+  const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.85);
+  fillLight.position.set(-16, -10, 8);
   scene.add(fillLight);
 
-  const rimLight = new THREE.DirectionalLight(0x70d6ff, 3.8);
-  rimLight.position.set(2, -14, -16);
+  const rimLight = new THREE.DirectionalLight(0xfff7ed, 1.2);
+  rimLight.position.set(2, -12, -14);
   scene.add(rimLight);
 
-  // Partículas Bokeh (Capa 1: Orbes Grandes Difusos)
+  // Partículas Bokeh (Capa 1: Orbes en el fondo lejano para no entorpecer la visión)
   const bokehTex = createBokehTexture();
   bokehGroup = new THREE.Group();
   scene.add(bokehGroup);
 
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 22; i++) {
     const sMat = new THREE.SpriteMaterial({
       map: bokehTex,
       transparent: true,
-      opacity: 0.22 + Math.random() * 0.35,
+      opacity: 0.15 + Math.random() * 0.25,
       blending: THREE.AdditiveBlending,
       depthWrite: false
     });
     const sp = new THREE.Sprite(sMat);
-    const sz = 1.8 + Math.random() * 3.6;
+    const sz = 1.6 + Math.random() * 3.0;
     sp.scale.set(sz, sz, 1);
     sp.position.set(
+      (Math.random() - 0.5) * 36,
       (Math.random() - 0.5) * 32,
-      (Math.random() - 0.5) * 28,
-      (Math.random() - 0.5) * 20
+      -10 - Math.random() * 20 // En el fondo, detrás del modelo
     );
     sp.userData = {
       baseY: sp.position.y,
@@ -855,14 +956,14 @@ function initScene() {
     bokehGroup.add(sp);
   }
 
-  // Partículas Bokeh (Capa 2: Polvo Fino Bioluminiscente)
+  // Partículas Bokeh (Capa 2: Polvo Fino Bioluminiscente en Fondo)
   const dustGeo = new THREE.BufferGeometry();
-  const dustCount = 480;
+  const dustCount = 360;
   const dustPos = new Float32Array(dustCount * 3);
   for (let i = 0; i < dustCount * 3; i += 3) {
-    dustPos[i] = (Math.random() - 0.5) * 42;
-    dustPos[i + 1] = (Math.random() - 0.5) * 38;
-    dustPos[i + 2] = (Math.random() - 0.5) * 28;
+    dustPos[i] = (Math.random() - 0.5) * 44;
+    dustPos[i + 1] = (Math.random() - 0.5) * 40;
+    dustPos[i + 2] = -12 - Math.random() * 24; // Fondo lejano para no entorpecer los colores del ADN
   }
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
   const dustMat = new THREE.PointsMaterial({
@@ -870,7 +971,7 @@ function initScene() {
     size: 0.08,
     map: bokehTex,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.40,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
@@ -935,6 +1036,17 @@ function animate() {
   // Rotación suave del modelo
   if (mainHelixGroup && isAutoRotating.value) {
     mainHelixGroup.rotation.y += 0.0036;
+  }
+
+  // Pulso holográfico suave en los anillos y marcadores del par seleccionado
+  if (mainHelixGroup) {
+    const pulse = 1.0 + Math.sin(t * 4.5) * 0.08;
+    mainHelixGroup.traverse(child => {
+      if (child.userData && child.userData.isPulseHalo) {
+        const base = child.userData.baseScale || 1.0;
+        child.scale.set(base * pulse, base * pulse, base * pulse);
+      }
+    });
   }
 
 
@@ -1137,7 +1249,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: grab;
-  background: radial-gradient(ellipse at 42% 38%, #09477d 0%, #04294f 35%, #01162c 70%, #000814 100%);
+  background: radial-gradient(ellipse at 50% 50%, #0d1117 0%, #06080c 55%, #010204 100%);
 }
 
 .dna-3d-card.cinema-expanded .canvas-wrapper {
@@ -1200,10 +1312,29 @@ onUnmounted(() => {
   box-shadow: 0 0 6px currentColor;
 }
 
-.spectral-pill.a { color: #f43f5e; }
-.spectral-pill.t { color: #10b981; }
-.spectral-pill.c { color: #06b6d4; }
-.spectral-pill.g { color: #f59e0b; }
+.spectral-pill.a { color: #ef4444; }
+.spectral-pill.t { color: #22c55e; }
+.spectral-pill.c { color: #2563eb; }
+.spectral-pill.g { color: #eab308; }
+.spectral-pill.phosphate { color: #f59e0b; }
+.spectral-pill.sugar { color: #94a3b8; }
+.spectral-pill.bond { color: #64748b; }
+.spectral-pill.hbond { color: #f8fafc; }
+
+.spectral-pill .swatch.rod {
+  width: 10px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #334155;
+  box-shadow: 0 0 4px #334155;
+}
+.spectral-pill .swatch.pin {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  background-color: #f8fafc;
+  box-shadow: 0 0 6px #ffffff;
+}
 
 .hud-top-right {
   top: 1.1rem;
@@ -1235,10 +1366,10 @@ onUnmounted(() => {
   font-weight: 800;
 }
 
-.base-badge.a { background: rgba(244, 63, 94, 0.2); color: #f43f5e; border-color: #f43f5e; }
-.base-badge.t { background: rgba(16, 185, 129, 0.2); color: #10b981; border-color: #10b981; }
-.base-badge.c { background: rgba(6, 182, 212, 0.2); color: #06b6d4; border-color: #06b6d4; }
-.base-badge.g { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: #f59e0b; }
+.base-badge.a { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; }
+.base-badge.t { background: rgba(34, 197, 94, 0.2); color: #22c55e; border-color: #22c55e; }
+.base-badge.c { background: rgba(37, 99, 235, 0.2); color: #2563eb; border-color: #2563eb; }
+.base-badge.g { background: rgba(234, 179, 8, 0.2); color: #eab308; border-color: #eab308; }
 
 .h-bond-indicator {
   display: flex;
@@ -1256,8 +1387,8 @@ onUnmounted(() => {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background-color: #70d6ff;
-  box-shadow: 0 0 6px #70d6ff;
+  background-color: #f8fafc;
+  box-shadow: 0 0 6px #ffffff;
 }
 
 .bond-caption {
@@ -1359,5 +1490,84 @@ onUnmounted(() => {
   font-weight: 700;
   color: #38bdf8;
   font-size: 0.62rem;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .header-chips {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.2rem;
+  }
+
+  .canvas-wrapper {
+    height: 460px;
+    min-height: 400px;
+  }
+
+  .dna-3d-card.cinema-expanded .canvas-wrapper {
+    height: 520px;
+  }
+
+  .hud-top-left {
+    top: 0.65rem;
+    left: 0.65rem;
+    padding: 0.45rem 0.65rem;
+  }
+
+  .spectral-legend-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.2rem 0.45rem;
+  }
+
+  .spectral-pill {
+    font-size: 0.64rem;
+  }
+
+  .hud-top-right {
+    top: auto;
+    bottom: 3.2rem;
+    right: 0.65rem;
+    padding: 0.45rem 0.65rem;
+    max-width: 220px;
+  }
+
+  .hud-backbone-detail {
+    display: none;
+  }
+
+  .hud-toolbar {
+    right: 0.5rem;
+    top: 40%;
+    padding: 0.25rem;
+    gap: 0.3rem;
+  }
+
+  .md3-icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hud-bottom-dock {
+    width: calc(100% - 1.2rem);
+    left: 0.6rem;
+    transform: none;
+    padding: 0.3rem 0.65rem;
+    bottom: 0.6rem;
+  }
+
+  .dock-content {
+    font-size: 0.62rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 </style>
