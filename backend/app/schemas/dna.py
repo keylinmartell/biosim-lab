@@ -20,14 +20,18 @@ class ComplementRequest(BaseModel):
 class ComplementResponse(BaseModel):
     original: str
     complement: str
+    reverse_complement: Optional[str] = None
     binary_repr: str
+    orientation_note: Optional[str] = None
     backbone_structure: Optional[Dict[str, Any]] = None
+    base_pairs: Optional[List[Dict[str, Any]]] = None
 
 class ControlledMutationRequest(BaseModel):
     sequence: str
     mutation_type: str = Field(..., description="'substitution', 'insertion', o 'deletion'")
-    position: int = Field(..., ge=0, description="Indice 0-based de la base a modificar")
+    position: int = Field(..., ge=0, description="Posicion de la base a modificar (0-based por defecto; 1-based si one_based=true)")
     new_base: Optional[str] = Field(None, description="A, T, C, G (requerido para sustitucion e insercion)")
+    one_based: bool = Field(False, description="Si es true, 'position' es un indice humano (1 = primera base)")
 
 class ReplicateRequest(BaseModel):
     sequence: str
@@ -77,14 +81,19 @@ class MismatchItem(BaseModel):
     is_canonical: bool
     status: str
     note: str
+    position_human: Optional[int] = None
+    geometry: Optional[str] = None
 
 class MismatchDetectionRequest(BaseModel):
     strand1: str = Field(..., description="Cadena sentido (5'->3' modelo simplificado)")
     strand2: str = Field(..., description="Cadena apareada o complementaria a comprobar")
+    orientation: str = Field("aligned", description="'aligned': strand2 ya alineada base a base (3'->5'); 'antiparallel': strand2 escrita 5'->3' y se invierte")
 
 class MismatchDetectionResponse(BaseModel):
     strand1: str
     strand2: str
+    strand2_aligned: Optional[str] = None
+    orientation: Optional[str] = "aligned"
     length: int
     is_fully_canonical: bool
     mismatch_count: int
@@ -111,6 +120,8 @@ class RepairWithReferenceResponse(BaseModel):
     event_id: str
     cell_cycle_phase: Optional[str] = "G1"
     checkpoint_status: Optional[Dict[str, Any]] = None
+    basis: Optional[str] = "reference_backed"
+    note: Optional[str] = None
 
 class BreakRepairRequest(BaseModel):
     sequence: str = Field(..., description="Secuencia que sufre una rotura bicatenaria (DSB)")

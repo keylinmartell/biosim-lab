@@ -14,6 +14,36 @@ class DNAEngine:
     BINARY_MAP = {"A": "00", "T": "11", "C": "01", "G": "10"}
     INV_BINARY_MAP = {"00": "A", "11": "T", "01": "C", "10": "G"}
 
+    # Quimica de las bases (figura: adenina/guanina = purinas de dos anillos; timina/citosina = pirimidinas de un anillo)
+    PURINES = {"A", "G"}
+    PYRIMIDINES = {"T", "C"}
+    # Puentes de hidrogeno del apareamiento Watson-Crick: A=T (2) y C≡G (3)
+    HYDROGEN_BONDS = {"A": 2, "T": 2, "C": 3, "G": 3}
+    BASE_NAMES = {"A": "Adenina", "T": "Timina", "C": "Citosina", "G": "Guanina"}
+
+    @classmethod
+    def base_class(cls, base: str) -> str:
+        return "purina" if base in cls.PURINES else "pirimidina"
+
+    @classmethod
+    def base_pairs(cls, sequence: str) -> List[Dict[str, Any]]:
+        """Pares de bases apareados (molde + nueva hebra) con puentes de H y tipo de base, como en la doble hebra (D)."""
+        clean = sequence.upper().strip()
+        if not cls.validate(clean):
+            raise ValueError("Secuencia invalida: contiene caracteres distintos a A, T, C, G")
+        return [
+            {
+                "position": i,
+                "position_human": i + 1,
+                "base": b,
+                "base_name": cls.BASE_NAMES[b],
+                "base_class": cls.base_class(b),
+                "partner": cls.COMPLEMENT_MAP[b],
+                "hydrogen_bonds": cls.HYDROGEN_BONDS[b],
+            }
+            for i, b in enumerate(clean)
+        ]
+
     @classmethod
     def validate(cls, sequence: str) -> bool:
         """Comprueba que una secuencia solo contenga A, T, C y G (insensible a mayusculas)."""
@@ -24,11 +54,19 @@ class DNAEngine:
 
     @classmethod
     def complement(cls, sequence: str) -> str:
-        """Genera la cadena complementaria A<->T y C<->G."""
+        """Genera la cadena complementaria en orientacion apareada directa (3'->5') A<->T y C<->G."""
         clean = sequence.upper().strip()
         if not cls.validate(clean):
             raise ValueError("Secuencia invalida: contiene caracteres distintos a A, T, C, G")
         return "".join(cls.COMPLEMENT_MAP[base] for base in clean)
+
+    @classmethod
+    def reverse_complement(cls, sequence: str) -> str:
+        """Genera la cadena complementaria en orientacion canonica (5'->3', complementaria inversa)."""
+        clean = sequence.upper().strip()
+        if not cls.validate(clean):
+            raise ValueError("Secuencia invalida: contiene caracteres distintos a A, T, C, G")
+        return "".join(cls.COMPLEMENT_MAP[base] for base in reversed(clean))
 
     @classmethod
     def to_binary(cls, sequence: str) -> str:
@@ -58,7 +96,8 @@ class DNAEngine:
         sequence: str,
         mutation_type: str,
         position: int,
-        new_base: Optional[str] = None
+        new_base: Optional[str] = None,
+        one_based: bool = False
     ) -> Dict[str, Any]:
         """
         Modo 2: Aplica una mutacion controlada como evento de prueba.
@@ -67,6 +106,12 @@ class DNAEngine:
         clean = sequence.upper().strip()
         if not cls.validate(clean):
             raise ValueError("Secuencia original invalida")
+
+        # one_based=True: la posicion se da con indice humano (1 = primera base); internamente se usa 0-based.
+        if one_based:
+            if position < 1:
+                raise ValueError("Con indice humano la posicion minima es 1")
+            position -= 1
 
         length = len(clean)
         m_type = mutation_type.lower()
@@ -118,6 +163,7 @@ class DNAEngine:
             "mutation": {
                 "type": m_type,
                 "position": position,
+                "position_human": position + 1,
                 "original_base": original_base if m_type != "insertion" else None,
                 "new_base": target_base,
                 "mode": "controlled"
@@ -165,9 +211,10 @@ class DNAEngine:
         for i in range(len(clean)):
             b = clean[i]
             if agent_clean == "uv_radiation":
-                # Afecta preferentemente timinas adyacentes o citosinas
-                if (b == "T" or b == "C") and random.random() < intensity:
-                    new_b = "A" if b == "T" else "T"
+                # Dimeros de pirimidina: solo una C contigua a otra pirimidina (C/T) sufre la transicion C->T.
+                neighbours = (clean[i - 1] if i > 0 else "") + (clean[i + 1] if i + 1 < len(clean) else "")
+                if b == "C" and any(n in cls.PYRIMIDINES for n in neighbours) and random.random() < intensity:
+                    new_b = "T"
                     seq_list[i] = new_b
                     lesions_log.append({
                         "position": i,
@@ -220,22 +267,32 @@ class DNAEngine:
             elif agent_clean == "deamination":
                 target_indices = [idx for idx, ch in enumerate(clean) if ch == "C"]
             elif agent_clean == "uv_radiation":
-                target_indices = [idx for idx, ch in enumerate(clean) if ch in ("T", "C")]
-
-            if not target_indices:
+                target_indices = [
+                    idx for idx, ch in enumerate(clean)
+                    if ch == "C" and any(
+                        n in cls.PYRIMIDINES
+                        for n in ((clean[idx - 1] if idx > 0 else "") + (clean[idx + 1] if idx + 1 < len(clean) else ""))
+                    )
+                ]
+            else:
                 target_indices = list(range(len(clean)))
 
-            idx = random.choice(target_indices)
-            b = clean[idx]
-            new_b = "T" if b in ("G", "C") else ("A" if b == "T" else "G")
-            seq_list[idx] = new_b
-            lesions_log.append({
-                "position": idx,
-                "original_base": b,
-                "damaged_base": new_b,
-                "type": f"{agent_clean}_induced_lesion",
-                "description": f"Lesión inducida por {agent_name} en posición {idx}: {b} -> {new_b}"
-            })
+            # Solo se fuerza una lesion si existe un sitio susceptible: no se inventan lesiones biologicamente imposibles.
+            if target_indices:
+                idx = random.choice(target_indices)
+                b = clean[idx]
+                if agent_clean in ("oxidative_ros", "deamination", "uv_radiation"):
+                    new_b = "T"
+                else:
+                    new_b = random.choice([x for x in sorted(cls.VALID_BASES) if x != b])
+                seq_list[idx] = new_b
+                lesions_log.append({
+                    "position": idx,
+                    "original_base": b,
+                    "damaged_base": new_b,
+                    "type": f"{agent_clean}_induced_lesion",
+                    "description": f"Lesión inducida por {agent_name} en posición {idx}: {b} -> {new_b}"
+                })
 
         damaged_seq = "".join(seq_list)
         is_damaged = (damaged_seq != clean)
@@ -437,7 +494,7 @@ class DNAEngine:
         }
 
     @classmethod
-    def detect_mismatches(cls, strand1: str, strand2: str) -> Dict[str, Any]:
+    def detect_mismatches(cls, strand1: str, strand2: str, orientation: str = "aligned") -> Dict[str, Any]:
         """
         3.1. Deteccion de apareamientos incorrectos (Mismatch Detection).
         Comprueba si cada pareja cumple las reglas canonicas A-T (o T-A) y C-G (o G-C).
@@ -449,6 +506,14 @@ class DNAEngine:
         s2 = strand2.upper().strip()
         if not cls.validate(s1) or not cls.validate(s2):
             raise ValueError("Ambas cadenas deben ser secuencias validas de A, T, C, G")
+        orient = (orientation or "aligned").lower()
+        if orient not in ("aligned", "antiparallel"):
+            raise ValueError("Orientacion no soportada. Use 'aligned' o 'antiparallel'.")
+        # 'aligned': strand2 ya viene alineada base a base con strand1 (strand2 leida 3'->5').
+        # 'antiparallel': strand2 se escribio 5'->3' (como una hebra normal); se invierte para alinearla.
+        aligned_s2 = s2[::-1] if orient == "antiparallel" else s2
+        s2_input = s2
+        s2 = aligned_s2
 
         max_len = max(len(s1), len(s2))
         mismatches = []
@@ -467,13 +532,24 @@ class DNAEngine:
             if is_canonical:
                 canonical_count += 1
             else:
+                geometry = None
+                if b1 and b2:
+                    if (b1 in cls.PURINES) == (b2 in cls.PURINES):
+                        geometry = (
+                            "purina-purina (dos anillos con dos anillos: no caben en la helice)" if b1 in cls.PURINES
+                            else "pirimidina-pirimidina (un anillo con un anillo: demasiado separadas para unirse por puentes de H)"
+                        )
+                    else:
+                        geometry = "purina-pirimidina pero no complementaria (los puentes de H no encajan)"
                 mismatches.append({
                     "position": i,
+                    "position_human": i + 1,
                     "base_strand1": b1,
                     "base_strand2": b2,
                     "pair": pair_label,
                     "is_canonical": False,
                     "status": "mismatch" if (b1 and b2) else ("unpaired_gap" if b1 else "extra_base"),
+                    "geometry": geometry,
                     "note": "Apareamiento no canonico detectado; no se puede inferir base original sin referencia fiable."
                 })
 
@@ -482,7 +558,7 @@ class DNAEngine:
             operation_type="mismatch_detection",
             initial_sequence=s1,
             final_sequence=s2,
-            parameters={"strand1_length": len(s1), "strand2_length": len(s2)},
+            parameters={"strand1_length": len(s1), "strand2_length": len(s2), "orientation": orient},
             reference_used=None,
             detection_result={
                 "mismatch_count": len(mismatches),
@@ -493,7 +569,9 @@ class DNAEngine:
         )
         return {
             "strand1": s1,
-            "strand2": s2,
+            "strand2": s2_input,
+            "strand2_aligned": s2,
+            "orientation": orient,
             "length": max_len,
             "is_fully_canonical": is_fully_canonical,
             "mismatch_count": len(mismatches),
@@ -529,34 +607,53 @@ class DNAEngine:
         alt_list = list(alt)
         repaired_positions = []
         escaped_positions = []
+        note = None
 
         eff = max(0.1, min(1.0, float(efficiency)))
 
-        for pos in sorted(target_positions):
-            if 0 <= pos < len(ref) and pos < len(alt_list):
-                if alt_list[pos] != ref[pos]:
-                    if eff >= 1.0 or random.random() < eff:
+        def _applies() -> bool:
+            return eff >= 1.0 or random.random() < eff
+
+        if len(alt) == len(ref):
+            # Sustituciones: solo se corrigen las posiciones autorizadas (0-based) que realmente difieren.
+            for pos in sorted(target_positions):
+                if 0 <= pos < len(ref) and alt_list[pos] != ref[pos]:
+                    if _applies():
                         alt_list[pos] = ref[pos]
                         repaired_positions.append(pos)
                     else:
                         escaped_positions.append(pos)
-            elif pos >= len(alt_list) and pos < len(ref):
-                if eff >= 1.0 or random.random() < eff:
-                    alt_list.append(ref[pos])
-                    repaired_positions.append(pos)
+        elif positions is None:
+            # Insercion/delecion: se realinea contra la referencia fiable (solo con autorizacion total).
+            import difflib
+            sm = difflib.SequenceMatcher(a=alt, b=ref, autojunk=False)
+            rebuilt: List[str] = []
+            for tag, a0, a1, b0, b1 in sm.get_opcodes():
+                if tag == "equal":
+                    rebuilt.extend(alt[a0:a1])
+                elif _applies():
+                    rebuilt.extend(ref[b0:b1])
+                    repaired_positions.extend(range(b0, max(b1, b0 + 1)))
                 else:
-                    escaped_positions.append(pos)
+                    rebuilt.extend(alt[a0:a1])
+                    escaped_positions.extend(range(b0, max(b1, b0 + 1)))
+            alt_list = rebuilt
+            note = "Longitudes distintas (inserción/deleción): se realineó contra la referencia fiable."
+        else:
+            note = "Las longitudes difieren y se indicaron posiciones concretas: la corrección posición a posición no es válida con indels."
 
         repaired_seq = "".join(alt_list)
         matches_reference = (repaired_seq == ref)
         remaining_diffs = cls.compare(ref, repaired_seq)
 
-        if matches_reference:
+        if not diffs:
+            status = "no_repair_needed"
+        elif matches_reference:
             status = "fully_repaired"
         elif len(repaired_positions) > 0:
             status = "partially_repaired"
         else:
-            status = "unrepairable_without_valid_positions"
+            status = "not_correctable_with_available_information"
 
         event = cls.log_event(
             operation_type="reference_guided_repair",
@@ -570,7 +667,9 @@ class DNAEngine:
                 "repaired_positions": repaired_positions,
                 "escaped_positions": escaped_positions,
                 "remaining_divergences": len(remaining_diffs),
-                "matches_reference": matches_reference
+                "matches_reference": matches_reference,
+                "basis": "reference_backed",
+                "note": note
             }
         )
 
@@ -595,6 +694,8 @@ class DNAEngine:
             "remaining_divergences": len(remaining_diffs),
             "event_id": event["experiment_id"],
             "cell_cycle_phase": "G1",
+            "basis": "reference_backed",
+            "note": note,
             "checkpoint_status": checkpoint_status
         }
 

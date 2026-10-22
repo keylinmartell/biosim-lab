@@ -153,5 +153,50 @@ class TestDNAPhase1(unittest.TestCase):
         self.assertIn("p21", cp["sensor"])
         self.assertIn("Autorizado a Fase S", cp["outcome"])
 
+    def test_13_mutacion_indice_humano(self):
+        """Guia: ATCG; cambiar posicion 2 a A (indice humano) -> AACG, solo esa posicion."""
+        res = self.engine.apply_controlled_mutation("ATCG", "substitution", 2, "A", one_based=True)
+        self.assertEqual(res["modified_sequence"], "AACG")
+        self.assertEqual(res["mutation"]["position"], 1)
+        self.assertEqual(res["mutation"]["position_human"], 2)
+        with self.assertRaises(ValueError):
+            self.engine.apply_controlled_mutation("ATCG", "substitution", 0, "A", one_based=True)
+
+    def test_14_figura_polaridad_antiparalela(self):
+        """Figura (C): GTAA... en la original corresponde a ...TTAC en la nueva hebra."""
+        self.assertEqual(self.engine.reverse_complement("GTAA"), "TTAC")
+        self.assertEqual(self.engine.complement("GTAA"), "CATT")
+        # Hebra 2 escrita 5'->3' debe aparear en orientacion antiparalela
+        res = self.engine.detect_mismatches("GTAA", "TTAC", orientation="antiparallel")
+        self.assertTrue(res["is_fully_canonical"])
+        res_wrong = self.engine.detect_mismatches("GTAA", "TTAC", orientation="aligned")
+        self.assertFalse(res_wrong["is_fully_canonical"])
+
+    def test_15_figura_puentes_h_y_geometria(self):
+        """Figura: A=T (2 puentes), C≡G (3 puentes); purina-purina (A-G) no encaja."""
+        pairs = self.engine.base_pairs("ATCG")
+        self.assertEqual([p["hydrogen_bonds"] for p in pairs], [2, 2, 3, 3])
+        self.assertEqual(pairs[0]["base_class"], "purina")
+        self.assertEqual(pairs[1]["base_class"], "pirimidina")
+        res = self.engine.detect_mismatches("A", "G")
+        self.assertIn("purina-purina", res["mismatches"][0]["geometry"])
+
+    def test_16_reparacion_estados_y_longitudes(self):
+        """Sin divergencias no hay reparacion; con indels se realinea solo con autorizacion total."""
+        self.assertEqual(self.engine.repair_with_reference("ATCG", "ATCG")["status"], "no_repair_needed")
+        res = self.engine.repair_with_reference("ATG", "ATCG")  # delecion de C
+        self.assertEqual(res["repaired_sequence"], "ATCG")
+        res2 = self.engine.repair_with_reference("ATG", "ATCG", positions=[2])
+        self.assertEqual(res2["status"], "not_correctable_with_available_information")
+        self.assertEqual(res2["repaired_sequence"], "ATG")
+
+    def test_17_dano_uv_solo_c_en_dimeros(self):
+        """UV solo produce C->T en citosinas contiguas a pirimidinas; nunca T->A."""
+        for _ in range(20):
+            res = self.engine.simulate_environmental_damage("ATTTA", "uv_radiation", 1.0)
+            self.assertEqual(res["damaged_sequence"], "ATTTA")  # sin C no hay sitio susceptible
+            res = self.engine.simulate_environmental_damage("ACTGA", "uv_radiation", 1.0)
+            self.assertEqual(res["damaged_sequence"], "ATTGA")
+
 if __name__ == "__main__":
     unittest.main()

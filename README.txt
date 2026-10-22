@@ -37,34 +37,22 @@ y mutaciones controladas (sustitucion, insercion, delecion).
 - experiments: Pruebas in silico con condiciones ambientales, intervenciones, controles y resultados.
 - cell_events: Historial cronologico de eventos de cada celula (divisiones, exposiciones, cambios de fase).
 
-4. MOTOR DE ADN (DNA ENGINE - FASE 1 CERRADA)
-- Representacion y Validacion: Almacenamiento en alfabeto A, T, C, G; deteccion reactiva de caracteres no permitidos y manejo controlado.
-- Complementariedad: Generacion de cadena complementaria bajo reglas canonicas Watson-Crick (A<->T, C<->G) antiparalela (5'->3' frente a 3'->5').
-- Copia fidedigna: Generacion de copias sin cambios y verificacion automatica de identidad (100% match).
-- Precision de Terminos Biologicos (Dano/Lesion vs Mutacion):
-  * En Fase G1 pre-replicativa, las alteraciones son 'lesiones fisicas/quimicas' o 'aductos' reparables (ej. dimeros T-T, 8-oxo-G, uracilo).
-  * La 'mutacion' permanente solo se consolida e incorpora en el genoma si la lesion escapa a la reparacion y se replica en Fase S.
-- Checkpoint G1/S y Sensor Molecular p53 / MDM2:
-  * Reposo: p53 tiene vida media corta (~20 min); la ubiquitina ligasa MDM2 lo poliubiquitina y degrada continuamente en el proteasoma 26S. p21 inactivo.
-  * Dano leve/moderado: Quinasas sensoras ATM/ATR fosforilan a p53 (Ser15/Ser20), impidiendo su degradacion por MDM2; p53 induce la transcripcion de p21 (CIP1/WAF1), inhibiendo CDK4/6 y CDK2, manteniendo a Rb hipofosforilado (secuestra a E2F), congelando el ciclo en G1 y activando BER/NER.
-  * Dano masivo/irreparable: Fosforilacion sostenida (Ser46/Lys120) activa promotores de baja afinidad: efectores proapoptoticos BAX, PUMA y NOXA (permeabilizacion mitocondrial MOMP, liberacion de citocromo c y caspasas).
-  * Separacion Conceptual del Punto R: El Punto R solo evalua factores mitogenicos de crecimiento (Ciclina D/CDK4/6/Rb/E2F) y no detecta danos directamente. El freno por lesiones es un bypass impuesto externamente por la via ATM/ATR -> p53 -> p21.
-- Induccion de Lesiones y Edicion Dirigida (Modulo 1.1):
-  * Dano ambiental estocastico: Radiacion UV (dimeros T-T), Estres oxidativo ROS (8-oxo-G) y Desaminacion espontanea (C->U/T) modulados por slider de intensidad.
-  * Edicion exogena (CRISPR-Cas9 in silico): Lesion puntual/aducto (sustitucion), insercion (+1 base, frameshift) y delecion (-1 base, frameshift).
-- Deteccion de Desapareamientos en el Molde (Modulo 1.2):
-  * Evaluacion duplex de pares de bases canonicos vs no canonicos frente a la complementaria parental intacta.
-- Mecanismos de Reparacion Pre-Replicativa (Modulo 1.3 - BER / NER / Homologia):
-  * Cinetica enzimatica real probabilistica con slider de eficiencia (50% a 98%): modela la probabilidad finita de escision y el escape de lesiones por saturacion.
-  * Control asistido 100% fiel: restauracion determinista limpia con secuencia de referencia homologa.
-- Replicacion en Fase S y Triple Filtro MMR (Fase S):
-  * Replicacion con tasa de error de polimerasa y filtro de desapareamientos post-replicativo (MutS/MutL).
-- Roturas Bicatenarias DSB (Fase G2/M):
-  * Comparacion mecanistica entre HDR (asistida por cromatida hermana, 100% fiel) y NHEJ (union directa propensa a microdeleciones).
-- Trazabilidad y Registro de Experimentos (Modulo 3 / Seccion 7):
-  * Persistencia inmutable (EXP-xxxx) con secuencias inicial/final, diagnostico, parametros y notas de laboratorio.
-- Marco Cientifico (Seccion 10):
-  * Documentado como modelo computacional didactico basado en reglas abstractas; no reproduce la cinetica estequiometrica total in vivo.
+4. MOTOR DE ADN Y LABORATORIO DE MUTAGENESIS (ESTRUCTURA MODULAR FASE 1 CERRADA)
+- Representacion y Validacion: Almacenamiento en alfabeto A, T, C, G; deteccion reactiva de caracteres no permitidos, telemetria de longitud, contenido GC% y composicion del esqueleto azucar-fosfato.
+- Alineamiento 2D y Modelo 3D Reactivo (B-DNA): Mapa de alineamiento de nucleotidos con enlaces de hidrogeno, monomeros (fosfato + 2'-desoxirribosa) y helice 3D interactiva en WebGL/Three.js.
+- Modulo 1: Mutagenesis y Reparacion de ADN
+  * 1.1 Induccion de Daño en el Molde: Daño ambiental estocastico (UV con dimeros T-T, estres oxidativo ROS con 8-oxo-G, desaminacion hidrolitica C->U/T) vs Herramienta exogena CRISPR-Cas9 (sustitucion puntual, insercion y delecion dirigida con selector de base).
+  * Checkpoint G1/S y Sensor Molecular p53 / MDM2: Reposo (degradacion por MDM2), daño leve/moderado (fosforilacion Ser15/Ser20, p21 activo, arresto celular en G1, reparacion BER/NER) y daño masivo (apoptosis BAX, PUMA, NOXA). Desacople conceptual del Punto R.
+  * 1.2 Deteccion de Apareamientos Incorrectos: Evaluacion duplex de pares Watson-Crick canonicos vs no canonicos (ej. A-G, C-T) frente a la hebra complementaria con tira visual interactiva e induccion de errores. Regla del modelo: marca el error sin conjeturar la base original sin plantilla.
+  * 1.3 Reparacion del Molde (BER / NER / Homologia): Restauracion pre-replicativa guiada por referencia homologa con Cinetica Enzimatica Probabilistica Real (slider de eficiencia de escision del 50% al 98%) y reporte de lesiones escapadas por saturacion.
+- Modulo 2: Reporte Diferencial (Diff Inspector)
+  * Alineamiento comparativo de secuencia de referencia vs modificada, conteo de mutaciones detectadas y tarjetas de eventos con coordenadas, tipo de alteracion y transicion de bases.
+- Modulo 3: Registro de Experimentos & Trazabilidad de Operaciones
+  * Auditoria inmutable de ensayos (EXP-xxxx) con secuencias, metodos, estado y boton de carga rapida para restaurar el laboratorio.
+  * Persistencia transaccional de experimentos con nombre personalizado y notas de investigacion.
+- Manual Tecnico y Guia Operativa del Lab (Modal Interactivo):
+  * Flujo Operativo del Laboratorio, catalogo exhaustivo de botones y controles, protocolos estandarizados de ensayo y fundamentos con FAQ.
+
 
 5. FASES DE DESARROLLO
 - Fase 1 [CERRADA Y VALIDADA]: Secuencias, reglas geneticas basicas, copia, mutaciones, apareamientos incorrectos, reparacion por referencia, extension DSB, registro de experimentos, tests unitarios y laboratorio reactivo.
@@ -273,6 +261,7 @@ Cierre de la Primera Fase: ADN, Copia, Mutaciones y Mecanismos de Reparacion
        - Dialogo modal 'Cargar Experimento Guardado' con tarjetas informativas y previsualizacion de secuencias.
        - Boton directo 'Cargar' en la tabla de bitacora para restaurar el laboratorio con un solo clic.
        - Restauracion completa del estado del laboratorio: secuencia de entrada, hélice 3D, mapa de nucleotidos, coordenadas de mutacion y reportes diff.
+<<<<<<< HEAD
    * 12. Flujo Cientifico Experimental Unificado (Stepper Guiado de 5 Pasos):
         - Paso 1: Molde Inicial Validado (secuencia de entrada del usuario como referencia parental inmutable).
         - Paso 2: Copia de Trabajo Activa (duplicacion fidedigna para ensayos sin alterar el molde).
@@ -316,3 +305,23 @@ Alineacion Biologica Fase G1, Eje p53/MDM2, Separacion Punto R y Actualizacion
   * Actualizacion del manual interactivo en pantalla (DNALab.vue), guia tecnica externa (MANUAL_LABORATORIO_ADN.txt)
     y bitacora del proyecto (README.txt).
 
+=======
+================================================================================
+Fecha: 2026-10-20
+Refactorización Integral, Depuración de Interfaz y Rigor Biológico
+================================================================================
+- Depuración profunda de la vista del Laboratorio de ADN (DNALab.vue):
+  * Eliminación de sobrecarga visual en la estación de trabajo: retirada de barras de progreso artificiales (stepper de pasos por fases) y banners gigantescos de telemetría molecular invasiva (antigua tarjeta p53/p21) que congestionaban la pantalla.
+  * Reorganización en 3 módulos funcionales limpios, directos e intuitivos:
+    - Módulo 1: Mutagénesis y Reparación de ADN (Submódulos 1.1 Daño Ambiental / CRISPR-Cas9, 1.2 Detección de Apareamientos Incorrectos y 1.3 Reparación Pre-Replicativa BER/NER/Homología con soporte de cinética enzimática estocástica o control asistido).
+    - Módulo 2: Reporte Diferencial (Diff Inspector) con mapa de transiciones y recuento de mutaciones.
+    - Módulo 3: Registro de Experimentos & Trazabilidad de Operaciones (bitácora inmutable EXP-xxxx, persistencia transaccional con notas y restauración en un clic).
+  * Centralización pedagógica en el 'Manual del Lab':
+    - Todo el marco científico exhaustivo (eje ATM/ATR -> p53/MDM2 -> p21, puntos de control, los 3 filtros de fidelidad replicativa y mecanismos de resolución DSB HDR vs NHEJ) fue migrado al diálogo modal interactivo 'Manual del Lab', manteniendo la mesa de trabajo ágil y despejada.
+    - Pestañas organizadas: 1. Flujo del Ciclo, 2. Guía de Botones, 3. Protocolos de Ensayo, 4. Fundamentos & FAQ.
+  * Sincronización molecular reactiva: al aplicar mutaciones dirigidas, lesiones ambientales o reparaciones, se calculan y actualizan automáticamente los apareamientos (mismatches) y el reporte diferencial (diff) sin pasos manuales redundantes.
+  * Diseño responsivo y balance de cuadrículas: corrección de layout en CSS (.g1-actions-grid, .g1-repair-card, .s-replication-grid) para visualización consistente en monitores y portátiles.
+- Rigor Biológico en el Motor de ADN (backend/app/services/dna_engine.py):
+  * Distinción científica fundamental entre el Punto de Restricción R (que evalúa señales mitogénicas vía Ciclina D-CDK4/6-Rb-E2F) y el arresto por daño al ADN en G1 (impuesto por la vía sensor colateral ATM/ATR -> fosforilación de p53 en Ser15/Ser20 para escapar de la ubiquitinación por MDM2 -> inducción de p21).
+  * Aclaración de que una lesión física/química no constituye mutación consolidada hasta ser replicada por la polimerasa en Fase S.
+>>>>>>> origin/main

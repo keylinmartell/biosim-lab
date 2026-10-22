@@ -42,11 +42,11 @@
   --md-sys-color-inverse-on-surface: #0b0f17;
   --md-sys-color-inverse-primary: #0284c7;
 
-  /* Nucleotide Spectral Colors (Standard Molecular Biology) */
-  --bio-base-a: #ef4444;       /* Adenina - Carmín */
-  --bio-base-t: #10b981;       /* Timina - Esmeralda */
-  --bio-base-c: #06b6d4;       /* Citosina - Cian */
-  --bio-base-g: #f59e0b;       /* Guanina - Ámbar */
+  /* Nucleotide Spectral Colors (Alineados con el modelado molecular de las figuras de referencia) */
+  --bio-base-a: #ea580c;       /* Adenina - Naranja (Purina, 2 anillos, figura 1) */
+  --bio-base-t: #64748b;       /* Timina - Gris (Pirimidina, 1 anillo, figura 1) */
+  --bio-base-c: #2563eb;       /* Citosina - Azul (Pirimidina, 1 anillo, figura 1) */
+  --bio-base-g: #16a34a;       /* Guanina - Verde (Purina, 2 anillos, figura 1) */
   --bio-fluo-dapi: #3b82f6;    /* Núcleo DAPI */
   --bio-fluo-foci: #a3e635;    /* Horquillas / Centrosomas */
 

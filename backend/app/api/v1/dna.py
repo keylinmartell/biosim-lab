@@ -79,6 +79,7 @@ def complement_sequence(payload: ComplementRequest):
     try:
         seq = payload.sequence.upper().strip()
         comp = dna_engine.complement(seq)
+        rev_comp = dna_engine.reverse_complement(seq)
         binary = dna_engine.to_binary(seq)
         backbone_structure = {
             "strand_5_to_3": {
@@ -87,17 +88,29 @@ def complement_sequence(payload: ComplementRequest):
                 "polarity": "5' -> 3'"
             },
             "strand_3_to_5": {
-                "label": "Hebra Complementaria Antisentido",
+                "label": "Hebra Complementaria Antisentido (Apareada)",
                 "backbone": f"3'-OH - [{' - '.join(comp)}] - P-5'",
-                "polarity": "3' -> 5' (Antiparalela)"
+                "polarity": "3' -> 5' (Antiparalela alineada)"
+            },
+            "strand_rev_5_to_3": {
+                "label": "Hebra Complementaria Inversa (Dirección estándar)",
+                "backbone": f"5'-P - [{' - '.join(rev_comp)}] - OH-3'",
+                "polarity": "5' -> 3' (Lectura estándar)"
             },
             "backbone_type": "Doble esqueleto antiparalelo de azúcar-fosfato"
         }
+        orientation_note = (
+            f"Orientación apareada directa (3'->5'): {comp} (alineada base a base con el molde). "
+            f"Orientación de polimerización estándar (5'->3', complementaria inversa): {rev_comp}."
+        )
         return ComplementResponse(
             original=seq,
             complement=comp,
+            reverse_complement=rev_comp,
             binary_repr=binary,
-            backbone_structure=backbone_structure
+            orientation_note=orientation_note,
+            backbone_structure=backbone_structure,
+            base_pairs=dna_engine.base_pairs(seq)
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -110,7 +123,8 @@ def mutate_controlled(payload: ControlledMutationRequest):
             sequence=payload.sequence,
             mutation_type=payload.mutation_type,
             position=payload.position,
-            new_base=payload.new_base
+            new_base=payload.new_base,
+            one_based=payload.one_based
         )
         return result
     except ValueError as e:
@@ -165,7 +179,7 @@ def copy_sequence(payload: CopyDnaRequest):
 def detect_mismatches_endpoint(payload: MismatchDetectionRequest):
     """3.1 Deteccion de apareamientos no canonicos entre dos cadenas alineadas."""
     try:
-        result = dna_engine.detect_mismatches(payload.strand1, payload.strand2)
+        result = dna_engine.detect_mismatches(payload.strand1, payload.strand2, payload.orientation)
         return MismatchDetectionResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
