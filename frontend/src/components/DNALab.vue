@@ -39,8 +39,133 @@
       <button class="toast-close-btn" @click="experimentNotification = null" title="Cerrar">✕</button>
     </div>
 
-    <!-- Panel de Entrada de Cadena y Citometría de Bases -->
-    <div class="dna-input-section md3-card-outlined">
+    <!-- ═══════════════════════ BARRA DE NAVEGACIÓN POR FASES (TABS) ═══════════════════════ -->
+    <nav class="phase-tabs-nav">
+      <button
+        :class="['phase-tab-btn', { active: activePhaseTab === 'phase1' }]"
+        @click="activePhaseTab = 'phase1'"
+      >
+        <Icon name="biotech" size="18" />
+        <span class="tab-label">Fase 1: Integridad y Reparación del Molde (ADN)</span>
+        <span class="tab-badge" v-if="cleanSequence">{{ cleanSequence.length }} bp</span>
+      </button>
+      <button
+        :class="['phase-tab-btn', { active: activePhaseTab === 'phase2' }]"
+        @click="activePhaseTab = 'phase2'"
+      >
+        <Icon name="genetics" size="18" />
+        <span class="tab-label">Fase 2: Expresión Génica &amp; Proteínas (Dogma Central)</span>
+        <span class="tab-badge phase2-badge" v-if="selectedGene">{{ selectedGene.name }}</span>
+      </button>
+      <div class="tab-indicator" :class="activePhaseTab"></div>
+    </nav>
+
+    <!-- ═══════════════════════ CABECERA GENERAL COMPARTIDA: SELECTOR DE GENES ═══════════════════════ -->
+    <div class="shared-gene-selector-card md3-card-outlined">
+      <div class="shared-selector-header">
+        <div class="shared-selector-title">
+          <div class="selector-badge-avatar">
+            <Icon name="genetics" size="18" />
+          </div>
+          <div>
+            <span class="selector-title-text">Genoma de Referencia / Catálogo de Genes</span>
+            <span class="selector-subtext">Selecciona un gen modelo para inyectar su secuencia codificante (CDS) en tiempo real en todo el laboratorio:</span>
+          </div>
+        </div>
+
+        <!-- Selector de Gen (Chips) -->
+        <div class="gene-selector-row">
+          <button
+            :class="['gene-chip', 'free-chip', { active: selectedGeneId === null }]"
+            @click="selectGene(null)"
+            title="Modo de entrada libre: introduce cualquier secuencia personalizada en el secuenciador"
+          >
+            <Icon name="edit_note" size="16" />
+            <span class="gene-chip-name">Entrada Libre / Personalizada</span>
+            <span class="chip-bp">Manual</span>
+            <span class="chip-active-dot" v-if="selectedGeneId === null">●</span>
+          </button>
+
+          <button
+            v-for="gene in genesCatalog"
+            :key="gene.id"
+            :class="['gene-chip', { active: selectedGeneId === gene.id, disabled: gene.id === 'tp53_hsapiens' }]"
+            :disabled="gene.id === 'tp53_hsapiens'"
+            @click="gene.id === 'tp53_hsapiens' ? null : selectGene(gene.id)"
+            :title="gene.id === 'tp53_hsapiens' ? 'En desarrollo: próximamente disponible con intrones' : (gene.id === 'didactic_min_control' ? `Cargar secuencia genómica de ${gene.name} (16 bp con intrón GTAG)` : `Cargar secuencia CDS de ${gene.name} (${gene.cds_info?.cds_sequence?.length || 0} bp)`)"
+          >
+            <Icon :name="gene.gene_type === 'protein_coding' ? 'genetics' : 'science'" size="15" />
+            <span class="gene-chip-name">{{ gene.name }}</span>
+            <span class="chip-dev-badge" v-if="gene.id === 'tp53_hsapiens'">En desarrollo</span>
+            <span class="chip-bp" v-else>{{ gene.id === 'didactic_min_control' ? '16 bp (Genómico)' : `${gene.cds_info?.cds_sequence?.length || (gene.end_coord - gene.start_coord)} bp CDS` }}</span>
+            <span class="chip-active-dot" v-if="selectedGeneId === gene.id">●</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ CONTENEDOR FASE 1 ═══════════════════════ -->
+    <div class="phase-content-wrapper" v-show="activePhaseTab === 'phase1'">
+
+      <!-- Ficha Compacta del Gen Activo en Fase 1 -->
+      <div class="gene-compact-card md3-card-outlined" v-if="selectedGene">
+        <div class="compact-card-left">
+          <div class="compact-gene-indicator">
+            <Icon name="biotech" size="20" class="compact-icon" />
+            <div class="compact-gene-info">
+              <div class="compact-name-row">
+                <span class="compact-prefix">GEN ACTIVO:</span>
+                <strong class="compact-name">{{ selectedGene.name }}</strong>
+                <span :class="['provenance-pill', selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'curated' : 'didactic']">
+                  <Icon :name="selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'verified' : 'school'" size="12" />
+                  <span>{{ selectedGene.data_source.type === 'secuencia_curada_publicada' ? selectedGene.data_source.database : 'Didáctica' }}</span>
+                </span>
+              </div>
+              <div class="compact-meta-row">
+                <span class="meta-tag"><strong>Organismo:</strong> {{ selectedGene.organism }}</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-tag font-mono"><strong>Coordenadas:</strong> {{ selectedGene.data_source.chromosome || `${selectedGene.start_coord}–${selectedGene.end_coord} bp` }}</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-tag"><strong>Hebra:</strong> {{ selectedGene.strand_orientation === '+' ? '5\'→3\' (+)' : '3\'→5\' (−)' }}</span>
+                <span class="meta-separator">•</span>
+                <span class="meta-tag font-mono"><strong>CDS:</strong> {{ selectedGene.cds_info?.cds_sequence?.length || 0 }} bp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compact-card-right">
+          <button class="compact-inspect-btn" @click="activePhaseTab = 'phase2'" title="Inspeccionar estructura exón/intrón y ficha técnica completa en Fase 2">
+            <span>Ficha Completa &amp; Estructura</span>
+            <Icon name="arrow_forward" size="14" />
+          </button>
+        </div>
+      </div>
+
+      <div class="gene-compact-card custom-mode md3-card-outlined" v-else>
+        <div class="compact-card-left">
+          <div class="compact-gene-indicator">
+            <Icon name="edit_note" size="20" class="compact-icon custom" />
+            <div class="compact-gene-info">
+              <div class="compact-name-row">
+                <span class="compact-prefix">MODO:</span>
+                <strong class="compact-name">Secuencia Personalizada / Entrada Libre</strong>
+                <span class="provenance-pill custom">
+                  <Icon name="edit" size="12" />
+                  <span>Manual</span>
+                </span>
+              </div>
+              <div class="compact-meta-row">
+                <span class="meta-tag" v-if="cleanSequence">Secuencia libre de <strong>{{ cleanSequence.length }} bp</strong> activa en el secuenciador.</span>
+                <span class="meta-tag" v-else>Introduce cualquier secuencia canónica (A, T, C, G) o selecciona un gen modelo del catálogo superior.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel de Entrada de Cadena y Citometría de Bases -->
+      <div class="dna-input-section md3-card-outlined">
       <div class="input-primary-row">
         <div class="md3-textfield flex-grow">
           <label for="dna-seq-input">Hebra Codificante de Entrada (5' &rarr; 3'):</label>
@@ -173,6 +298,34 @@
           </div>
         </div>
 
+        <!-- Navegador de Ventana Activa 2D (cuando la secuencia supera 70 pb) -->
+        <div class="filmstrip-window-navigator" v-if="cleanSequence && cleanSequence.length > 70">
+          <div class="f-nav-info">
+            <Icon name="view_timeline" size="16" />
+            <span class="font-mono">Ventana 2D: pb {{ filmstripStartPos + 1 }} – {{ Math.min(cleanSequence.length, filmstripStartPos + 70) }} <small class="text-dim">de {{ cleanSequence.length }} pb</small></span>
+          </div>
+          <div class="f-nav-controls">
+            <button class="nav-arrow-btn" @click="scrollFilmstrip(-35)" :disabled="filmstripStartPos <= 0" title="Retroceder 35 pb">
+              <Icon name="arrow_back" size="14" />
+            </button>
+            <input 
+              type="range" 
+              class="filmstrip-scrubber"
+              :min="0" 
+              :max="Math.max(0, cleanSequence.length - 70)" 
+              v-model.number="filmstripStartPos" 
+              :title="`Desplazar ventana (pb ${filmstripStartPos + 1})`"
+            />
+            <button class="nav-arrow-btn" @click="scrollFilmstrip(35)" :disabled="filmstripStartPos >= cleanSequence.length - 70" title="Avanzar 35 pb">
+              <Icon name="arrow_forward" size="14" />
+            </button>
+            <button class="md3-chip interactive-chip center-btn" @click="centerFilmstripOnSelected" v-if="selectedPosition !== null" title="Centrar en el nucleótido seleccionado">
+              <Icon name="my_location" size="12" />
+              <span>Centrar pb {{ selectedPosition }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Segmento Gráfico de Bases con Esqueleto Azúcar-Fosfato (5' a 3' y complementaria 3' a 5') -->
         <div class="track-viewport">
           <div class="track-polarity-col left">
@@ -183,12 +336,12 @@
 
           <div class="bases-filmstrip">
             <div 
-              v-for="(base, idx) in cleanSequence" 
-              :key="idx"
-              :class="['base-column', base.toLowerCase(), { selected: selectedPosition === idx }]"
-              @click="selectBaseForMutation(idx, base)"
+              v-for="item in visibleFilmstripBases" 
+              :key="item.idx"
+              :class="['base-column', item.base.toLowerCase(), { selected: selectedPosition === item.idx }]"
+              @click="selectBaseForMutation(item.idx, item.base)"
             >
-              <span class="pos-index font-mono">{{ idx }}</span>
+              <span class="pos-index font-mono">{{ item.idx }}</span>
 
               <!-- Esqueleto Superior Azúcar-Fosfato (5' -> 3') -->
               <div class="bb-monomer top" title="Monómero 5': Fosfato (PO4) + 2'-Desoxirribosa">
@@ -199,20 +352,20 @@
               </div>
 
               <!-- Base Nitrogenada Sentido (5' -> 3') -->
-              <div class="base-capsule primary-strand" :title="`Base nitrogenada: ${base} (unida al C1' de la desoxirribosa)`">
-                <span class="letter font-mono">{{ base }}</span>
+              <div class="base-capsule primary-strand" :title="`Base nitrogenada: ${item.base} (unida al C1' de la desoxirribosa)`">
+                <span class="letter font-mono">{{ item.base }}</span>
               </div>
 
               <!-- Enlaces de Hidrógeno Watson-Crick -->
-              <div class="hydrogen-bond" :title="base === 'C' || base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)'">
+              <div class="hydrogen-bond" :title="item.base === 'C' || item.base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)'">
                 <span class="h-line"></span>
                 <span class="h-line"></span>
-                <span class="h-line" v-if="base === 'C' || base === 'G'"></span>
+                <span class="h-line" v-if="item.base === 'C' || item.base === 'G'"></span>
               </div>
 
               <!-- Base Nitrogenada Complementaria (3' -> 5') -->
-              <div class="base-capsule comp-strand" :title="`Base complementaria: ${complementMap[base]}`">
-                <span class="letter font-mono">{{ complementMap[base] }}</span>
+              <div class="base-capsule comp-strand" :title="`Base complementaria: ${complementMap[item.base]}`">
+                <span class="letter font-mono">{{ complementMap[item.base] }}</span>
               </div>
 
               <!-- Esqueleto Inferior Antiparalelo Azúcar-Fosfato (3' -> 5') -->
@@ -508,6 +661,12 @@
             </div>
           </div>
 
+          <!-- Alerta de Validación de Longitudes Desincronizadas -->
+          <div class="status-banner warning duplex-length-warning" v-if="duplexLengthMismatch">
+            <Icon name="warning" size="18" />
+            <span>Las cadenas tienen longitudes diferentes. Pulsa 'Complementaria' para regenerar el dúplex pareado.</span>
+          </div>
+
           <button class="md3-button-filled" @click="runMismatchDetection" :disabled="loading">
             <Icon name="analytics" size="18" />
             <span>Escanear Apareamientos</span>
@@ -526,12 +685,12 @@
 
             <div class="pairs-visual-strip">
               <div 
-                v-for="(pair, idx) in duplexPairsDisplay" 
-                :key="idx" 
+                v-for="pair in visibleDuplexPairs" 
+                :key="pair.idx" 
                 :class="['pair-pill', pair.is_canonical ? 'canonical' : 'non-canonical']"
                 :title="pair.note"
               >
-                <span class="p-idx font-mono">{{ idx }}</span>
+                <span class="p-idx font-mono">{{ pair.idx }}</span>
                 <span class="p-b1 font-mono">{{ pair.b1 }}</span>
                 <span class="p-conn">:</span>
                 <span class="p-b2 font-mono">{{ pair.b2 }}</span>
@@ -771,6 +930,537 @@
         <span>No hay eventos de mutación o reparación registrados en esta sesión.</span>
       </div>
     </div>
+
+    </div><!-- /phase-content-wrapper Phase 1 -->
+
+    <!-- ═══════════════════════ CONTENEDOR FASE 2: EXPRESIÓN GÉNICA ═══════════════════════ -->
+    <div class="phase-content-wrapper" v-show="activePhaseTab === 'phase2'">
+
+      <!-- Módulo A: Inspección y Arquitectura del Gen Modelo -->
+      <div class="module-a-gene-card md3-card-outlined" v-if="selectedGene">
+        <div class="module-a-header">
+          <div class="module-a-title-group">
+            <div class="module-a-avatar">A</div>
+            <div>
+              <div class="module-a-title-row">
+                <h3>Módulo A: Inspección y Arquitectura del Gen Modelo</h3>
+                <span class="gene-active-pill">{{ selectedGene.name }}</span>
+              </div>
+              <span class="subtext">Ficha biofísica detallada, organización exón/intrón y marco de lectura para la expresión génica</span>
+            </div>
+          </div>
+          <div :class="['provenance-badge', selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'curated' : 'didactic']">
+            <Icon :name="selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'verified' : 'school'" size="14" />
+            <span>{{ selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'Curada Oficial' : 'Didáctica Sintética' }}</span>
+          </div>
+        </div>
+
+        <div class="module-a-body">
+
+        <!-- Cuadrícula de Telemetría -->
+        <div class="hud-telemetry-grid">
+          <div class="hud-cell">
+            <span class="hud-label">Organismo</span>
+            <span class="hud-value">{{ selectedGene.organism }}</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Tipo Celular</span>
+            <span class="hud-value">{{ selectedGene.cell_type }}</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Coordenadas Genómicas</span>
+            <span class="hud-value font-mono">{{ selectedGene.data_source.chromosome || `${selectedGene.start_coord}–${selectedGene.end_coord}` }}</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Hebra Molde</span>
+            <span :class="['hud-value', 'strand-badge', selectedGene.strand_orientation === '+' ? 'sense' : 'antisense']">
+              {{ selectedGene.strand_orientation === '+' ? '+ Sentido (5→3)' : '− Antisentido (3→5)' }}
+            </span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Tipo de Gen</span>
+            <span :class="['hud-value', 'genetype-badge', selectedGene.gene_type]">
+              {{ selectedGene.gene_type === 'protein_coding' ? '🧬 Codificante de Proteína' : '🔬 ARN No Codificante' }}
+            </span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Marco de Lectura (ORF)</span>
+            <span class="hud-value font-mono">Frame {{ selectedGene.cds_info.reading_frame }}</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Promotor (TSS)</span>
+            <span class="hud-value font-mono">{{ selectedGene.promoter.region }}</span>
+          </div>
+          <div class="hud-cell">
+            <span class="hud-label">Codones CDS</span>
+            <span class="hud-value font-mono">{{ selectedGene.cds_info.start_codon }} &rarr; {{ selectedGene.cds_info.stop_codon }} ({{ selectedGene.cds_info.cds_sequence.length }} bp)</span>
+          </div>
+        </div>
+
+        <!-- Trazabilidad de Fuente -->
+        <div class="hud-source-bar">
+          <Icon name="info" size="14" />
+          <span class="source-label">Fuente &amp; Trazabilidad:</span>
+          <span class="source-value" v-if="selectedGene.data_source.type === 'secuencia_curada_publicada'">
+            {{ selectedGene.data_source.database }} · Acceso: {{ selectedGene.data_source.accession }} · Versión: {{ selectedGene.data_source.version }} · Gen ID: {{ selectedGene.data_source.gene_id || 'N/A' }}
+          </span>
+          <span class="source-value" v-else>
+            {{ selectedGene.data_source.description || 'Secuencia didáctica inventada para fines pedagógicos — no proviene de bases de datos biológicas.' }}
+          </span>
+        </div>
+
+        <!-- Estructura Exón / Intrón Visual -->
+        <div class="exon-intron-track">
+          <div class="track-label-row">
+            <Icon name="view_timeline" size="16" />
+            <h5>Estructura Exón / Intrón (Arquitectura de Transcritos)</h5>
+          </div>
+          <div class="structure-strip">
+            <div
+              v-for="(segment, idx) in selectedGene.structure"
+              :key="idx"
+              :class="['strip-segment', segment.type]"
+              :style="{ flex: (segment.end - segment.start) }"
+              :title="`${segment.type === 'exon' ? 'Exón' : 'Intrón'} ${segment.label}: ${segment.start}–${segment.end} (${segment.end - segment.start} bp)`"
+            >
+              <span class="seg-label">{{ segment.label }}</span>
+              <span class="seg-coords font-mono">{{ segment.start }}–{{ segment.end }}</span>
+            </div>
+          </div>
+          <div class="structure-legend">
+            <span class="legend-item exon"><span class="legend-dot"></span> Exón (secuencia codificante conservada)</span>
+            <span class="legend-item intron"><span class="legend-dot"></span> Intrón (región intercalada que se remueve por empalme)</span>
+            <span class="legend-item splice"><span class="legend-dot"></span> Sitios de empalme consenso (GU...AG)</span>
+          </div>
+        </div>
+
+        <!-- Secuencia CDS para referencia rápida -->
+        <div class="cds-preview-bar" v-if="selectedGene.cds_info.cds_sequence">
+          <div class="cds-header-row">
+            <div class="cds-label-group">
+              <Icon name="code" size="16" />
+              <span class="cds-label">Secuencia Codificante CDS ({{ selectedGene.cds_info.cds_sequence.length }} bp):</span>
+            </div>
+            <button class="cds-copy-btn" @click="handleCopySequence(selectedGene.cds_info.cds_sequence)" title="Copiar secuencia CDS">
+              <Icon name="content_copy" size="14" />
+              <span>Copiar CDS</span>
+            </button>
+          </div>
+          <code class="font-mono cds-code">{{ selectedGene.cds_info.cds_sequence }}</code>
+        </div>
+      </div>
+    </div>
+
+      <!-- ═══════════════════════ MÓDULO B: TRANSCRIPCIÓN (ADN → PRE-ARNM) ═══════════════════════ -->
+      <div class="module-b-transcription-card md3-card-outlined" id="module-b-transcription-card" v-if="selectedGene || cleanSequence">
+        <div class="module-b-header">
+          <div class="module-b-title-group">
+            <div class="module-b-avatar">B</div>
+            <div>
+              <div class="module-b-title-row">
+                <h3>Módulo B: Transcripción in Silico (ADN → Pre-ARNm)</h3>
+                <span :class="['module-b-pill', { 'synthesized': !!transcriptionResult }]">
+                  {{ transcriptionResult ? 'Transcrito Primario Activo' : 'ARN Polimerasa II en Espera' }}
+                </span>
+              </div>
+              <span class="subtext">Catálisis enzimática por ARN Polimerasa II: lectura de hebra molde 3'&rarr;5' y síntesis complementaria de ribonucleótidos 5'&rarr;3'</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-b-body">
+          <!-- Contexto Enzimático: ARN Polimerasa II -->
+          <div class="enzyme-context-box">
+            <div class="enzyme-icon-circle">
+              <Icon name="biotech" size="22" />
+            </div>
+            <div class="enzyme-text">
+              <div class="enzyme-headline">
+                <strong>ARN Polimerasa II (Pol II)</strong>
+                <span class="enzyme-tag">Maquinaria de Transcripción Eucariota</span>
+              </div>
+              <p>
+                La enzima desenrolla la doble hélice de ADN a partir de la región promotora y recorre la <strong>Hebra Molde en dirección 3' &rarr; 5'</strong>.
+                Incorpora ribonucleótidos trifosfato (rNTPs) canónicos complementarios: <strong>A&rarr;U, T&rarr;A, C&rarr;G, G&rarr;C</strong>,
+                sintetizando el <strong>Pre-ARNm en dirección 5' &rarr; 3'</strong> con <strong>Uracilo (U)</strong> como base pirimidínica del ARN.
+              </p>
+            </div>
+          </div>
+
+          <!-- Caja de Inspección Pre-Transcripcional (Visible siempre en Módulo B) -->
+          <div class="pre-transcription-dna-box">
+            <div class="dna-buffer-header">
+              <div class="dna-buffer-title-row">
+                <div class="dna-buffer-title-group">
+                  <Icon name="science" size="18" class="text-teal" />
+                  <h4>ADN Activo en Buffer (Molde para ARN Pol II)</h4>
+                </div>
+                <div class="dna-buffer-badges">
+                  <span class="dna-len-badge font-mono">
+                    <Icon name="straighten" size="13" />
+                    <strong>{{ activeDnaSequence.length }} bp</strong>
+                  </span>
+                  <span :class="['mold-status-badge', isDnaMoldModified ? 'mutated' : 'intact']">
+                    <Icon :name="isDnaMoldModified ? 'warning' : 'verified'" size="14" />
+                    <span>{{ isDnaMoldModified ? 'Molde Alterado en Fase 1 (Mutación activa / no reparada)' : 'Molde Canónico Intacto' }}</span>
+                  </span>
+                </div>
+              </div>
+              <p class="dna-buffer-notice">
+                <Icon name="info" size="14" />
+                <span>Esta es la secuencia exacta que leerá la ARN Polimerasa II al iniciar la transcripción.</span>
+              </p>
+            </div>
+
+            <!-- Secuencia de ADN en tipografía mono -->
+            <div class="dna-buffer-sequence-wrapper font-mono">
+              <span class="dna-end-label">5'-</span>
+              <div class="dna-buffer-code-ribbon">
+                <span 
+                  v-for="(base, idx) in activeDnaSequence" 
+                  :key="idx"
+                  :class="['dna-char', `base-${base.toLowerCase()}`, { 'char-modified': isBaseModifiedAt(idx) }]"
+                  :title="`Posición ${idx + 1}: ${base}${isBaseModifiedAt(idx) ? ' [Base alterada respecto al molde inicial]' : ''}`"
+                >{{ base }}</span>
+              </div>
+              <span class="dna-end-label">-3'</span>
+            </div>
+
+            <!-- Botón de Acción Principal y Estado -->
+            <div class="dna-buffer-action-row">
+              <div class="dna-buffer-status-text">
+                <template v-if="transcriptionResult">
+                  <span class="sync-status text-green">
+                    <Icon name="check_circle" size="15" />
+                    Transcrito de <strong>{{ transcriptionResult.length }} nt</strong> sintetizado y sincronizado con este ADN.
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="sync-status text-dim">
+                    <Icon name="play_arrow" size="15" />
+                    Pulsa para que la ARN Polimerasa II abra la burbuja transcripcional y sintetice el Pre-ARNm.
+                  </span>
+                </template>
+              </div>
+
+              <button
+                class="transcribe-action-btn md3-btn-filled"
+                @click="runTranscription"
+                :disabled="isTranscribing || !activeDnaSequence"
+                id="btn-run-transcription"
+                :title="isTranscribing ? 'Sintetizando pre-ARNm con ARN Polimerasa II...' : 'Iniciar síntesis enzimática de Pre-ARNm 5\' → 3\''"
+              >
+                <span class="btn-spinner" v-if="isTranscribing"></span>
+                <Icon :name="isTranscribing ? 'autorenew' : (transcriptionResult ? 'restart_alt' : 'play_arrow')" size="18" v-else />
+                <span>{{ isTranscribing ? 'ARN Polimerasa II Sintetizando...' : (transcriptionResult ? 'Re-sintetizar Pre-ARNm (5\' → 3\')' : 'Sintetizar Pre-ARNm (Transcripción 5\' → 3\')') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Panel de Alineamiento Bioquímico de 3 Carriles (Visible cuando transcriptionResult exista) -->
+          <div class="transcription-alignment-panel" v-if="transcriptionResult">
+            <div class="alignment-panel-header">
+              <div class="alignment-title-group">
+                <Icon name="view_week" size="18" class="alignment-icon" />
+                <div>
+                  <h4>Panel de Alineamiento Bioquímico de Transcripción (3 Carriles)</h4>
+                  <span class="alignment-subtext">Hebra Codificante 5'&rarr;3' &bull; Hebra Molde 3'&rarr;5' &bull; Pre-ARNm Transcrito Primario 5'&rarr;3'</span>
+                </div>
+              </div>
+
+              <!-- Controles de Ventana/Paginación para secuencias de mayor longitud -->
+              <div class="alignment-window-controls" v-if="transcriptionResult.length > TRANSCRIPTION_PAGE_SIZE">
+                <span class="font-mono window-range-text">
+                  nt {{ transcriptionWindowStart + 1 }}–{{ Math.min(transcriptionResult.length, transcriptionWindowStart + TRANSCRIPTION_PAGE_SIZE) }}
+                  <small class="text-dim">de {{ transcriptionResult.length }} nt</small>
+                </span>
+                <button
+                  class="nav-arrow-btn"
+                  @click="scrollTranscriptionWindow(-TRANSCRIPTION_PAGE_SIZE)"
+                  :disabled="transcriptionWindowStart === 0"
+                  title="Retroceder ventana de ribonucleótidos"
+                >
+                  <Icon name="chevron_left" size="16" />
+                </button>
+                <button
+                  class="nav-arrow-btn"
+                  @click="scrollTranscriptionWindow(TRANSCRIPTION_PAGE_SIZE)"
+                  :disabled="transcriptionWindowStart >= transcriptionResult.length - TRANSCRIPTION_PAGE_SIZE"
+                  title="Avanzar ventana de ribonucleótidos"
+                >
+                  <Icon name="chevron_right" size="16" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Carriles alineados tridimensionales / cinta ribbon -->
+            <div class="alignment-lanes-container">
+              <!-- Carril 1: Hebra Codificante ADN (5' → 3') -->
+              <div class="alignment-lane lane-coding">
+                <div class="lane-header-col">
+                  <span class="lane-role-badge coding">Hebra Codificante ADN</span>
+                  <span class="lane-orientation font-mono">5' &rarr; 3'</span>
+                </div>
+                <div class="lane-bases-track">
+                  <div
+                    v-for="col in visibleTranscriptionColumns"
+                    :key="'cod-' + col.pos"
+                    :class="['lane-base-cell', `base-${col.coding.toLowerCase()}`, { 'in-intron': col.isIntron }]"
+                    :title="`Posición ${col.pos}: ${col.coding} (Hebra Codificante de Entrada)`"
+                  >
+                    <span class="pos-index font-mono">{{ col.pos }}</span>
+                    <span class="base-char font-mono">{{ col.coding }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Carril Intermedio 1-2: Puentes de Hidrógeno Watson-Crick -->
+              <div class="alignment-lane lane-connectors">
+                <div class="lane-header-col connector-label">
+                  <span>Puentes H</span>
+                </div>
+                <div class="lane-bases-track">
+                  <div
+                    v-for="col in visibleTranscriptionColumns"
+                    :key="'conn1-' + col.pos"
+                    class="lane-connector-cell"
+                    :title="(col.coding === 'A' || col.coding === 'T') ? '2 Puentes de Hidrógeno (A=T)' : '3 Puentes de Hidrógeno (G≡C)'"
+                  >
+                    <span class="h-bond-symbol font-mono">{{ (col.coding === 'A' || col.coding === 'T') ? '::' : ':::' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Carril 2: Hebra Molde ADN (3' → 5') -->
+              <div class="alignment-lane lane-template">
+                <div class="lane-header-col">
+                  <span class="lane-role-badge template">Hebra Molde ADN</span>
+                  <span class="lane-orientation font-mono">3' &rarr; 5'</span>
+                </div>
+                <div class="lane-bases-track">
+                  <div
+                    v-for="col in visibleTranscriptionColumns"
+                    :key="'tpl-' + col.pos"
+                    :class="['lane-base-cell', `base-${col.template.toLowerCase()}`, { 'in-intron': col.isIntron }]"
+                    :title="`Posición ${col.pos}: ${col.template} (Hebra Molde complementaria leída por ARN Pol II)`"
+                  >
+                    <span class="base-char font-mono">{{ col.template }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Carril Intermedio 2-3: Flecha de Catálisis ARN Polimerasa II -->
+              <div class="alignment-lane lane-pol-arrow">
+                <div class="lane-header-col pol-label">
+                  <span>ARN Pol II &darr;</span>
+                </div>
+                <div class="lane-bases-track">
+                  <div
+                    v-for="col in visibleTranscriptionColumns"
+                    :key="'pol-' + col.pos"
+                    class="lane-connector-cell pol-arrow-cell"
+                    :title="`ARN Pol II lee molde ${col.template} e incorpora ribonucleótido ${col.rna}`"
+                  >
+                    <span class="pol-arrow">&darr;</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Carril 3: Pre-ARNm Transcrito Primario (5' → 3') -->
+              <div class="alignment-lane lane-rna">
+                <div class="lane-header-col">
+                  <span class="lane-role-badge rna">Pre-ARNm Primario</span>
+                  <span class="lane-orientation font-mono">5' &rarr; 3'</span>
+                </div>
+                <div class="lane-bases-track">
+                  <div
+                    v-for="col in visibleTranscriptionColumns"
+                    :key="'rna-' + col.pos"
+                    :class="[
+                      'lane-base-cell',
+                      'rna-cell',
+                      `base-${col.rna.toLowerCase()}`,
+                      { 'is-uracil': col.isUracil, 'in-intron': col.isIntron }
+                    ]"
+                    :title="`Ribonucleótido ${col.pos}: ${col.rna} ${col.isUracil ? '(Uracilo incorporado en lugar de Timina)' : ''} ${col.isIntron ? '[Segmento Intrónico]' : ''}`"
+                  >
+                    <span class="base-char font-mono">{{ col.rna }}</span>
+                    <span class="u-glow-dot" v-if="col.isUracil"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Leyenda del Alineamiento -->
+            <div class="alignment-legend-bar">
+              <div class="legend-chip">
+                <span class="legend-color-dot coding-dot"></span>
+                <span>Hebra Codificante ADN (5'&rarr;3')</span>
+              </div>
+              <div class="legend-chip">
+                <span class="legend-color-dot template-dot"></span>
+                <span>Hebra Molde ADN (3'&rarr;5')</span>
+              </div>
+              <div class="legend-chip highlight-uracil">
+                <span class="legend-color-dot uracil-dot"></span>
+                <span>Ribonucleótido Uracilo (U) &bull; Sustitución Canónica de Timina</span>
+              </div>
+              <div class="legend-chip" v-if="transcriptionResult.has_introns">
+                <span class="legend-color-dot intron-dot"></span>
+                <span>Región Intrón (GTAG / GUAG)</span>
+              </div>
+            </div>
+
+            <!-- HUD de Telemetría del Pre-ARNm -->
+            <div class="transcription-hud-grid">
+              <div class="hud-stat-card">
+                <div class="stat-header">
+                  <Icon name="straighten" size="16" />
+                  <span>Longitud Total</span>
+                </div>
+                <div class="stat-value font-mono">
+                  <span class="value-number">{{ transcriptionResult.length }}</span>
+                  <span class="value-unit">nt</span>
+                </div>
+                <span class="stat-subtext">Ribonucleótidos sintetizados por ARN Pol II</span>
+              </div>
+
+              <div class="hud-stat-card">
+                <div class="stat-header">
+                  <Icon name="science" size="16" />
+                  <span>Contenido de Uracilo</span>
+                </div>
+                <div class="stat-value font-mono">
+                  <span class="value-number text-uracil">{{ transcriptionResult.uracil_content }}</span>
+                  <span class="value-unit">%</span>
+                </div>
+                <div class="stat-progress-bar">
+                  <div class="stat-progress-fill uracil-fill" :style="{ width: `${transcriptionResult.uracil_content}%` }"></div>
+                </div>
+                <span class="stat-subtext">{{ transcriptionResult.base_counts.U }} de {{ transcriptionResult.length }} ribonucleótidos son Uracilo (U)</span>
+              </div>
+
+              <div class="hud-stat-card ribonucleotide-distribution-card">
+                <div class="stat-header">
+                  <Icon name="pie_chart" size="16" />
+                  <span>Distribución de Ribonucleótidos</span>
+                </div>
+                <div class="ribo-distribution-row">
+                  <div class="ribo-count-pill ribo-a">
+                    <span class="pill-base">A</span>
+                    <span class="pill-val font-mono">{{ transcriptionResult.base_counts.A }}</span>
+                  </div>
+                  <div class="ribo-count-pill ribo-u highlight">
+                    <span class="pill-base">U</span>
+                    <span class="pill-val font-mono">{{ transcriptionResult.base_counts.U }}</span>
+                  </div>
+                  <div class="ribo-count-pill ribo-c">
+                    <span class="pill-base">C</span>
+                    <span class="pill-val font-mono">{{ transcriptionResult.base_counts.C }}</span>
+                  </div>
+                  <div class="ribo-count-pill ribo-g">
+                    <span class="pill-base">G</span>
+                    <span class="pill-val font-mono">{{ transcriptionResult.base_counts.G }}</span>
+                  </div>
+                </div>
+                <span class="stat-subtext">Composición estequiométrica del transcrito primario</span>
+              </div>
+
+              <div class="hud-stat-card status-card" :class="{ 'has-intron-warning': transcriptionResult.has_introns }">
+                <div class="stat-header">
+                  <Icon :name="transcriptionResult.has_introns ? 'warning' : 'info'" size="16" />
+                  <span>Estado Biofísico del Transcrito</span>
+                </div>
+                <div class="immature-status-banner">
+                  <strong>Transcrito Primario Inmaduro</strong>
+                  <span class="status-detail">Requiere procesamiento de Splicing en Módulo C</span>
+                </div>
+                <div class="intron-flag-pill" v-if="transcriptionResult.has_introns">
+                  <Icon name="content_cut" size="13" />
+                  <span>Intrones presentes (ej. GUAG) &bull; No traducible directamente</span>
+                </div>
+                <div class="intron-flag-pill no-introns" v-else>
+                  <Icon name="check" size="13" />
+                  <span>Secuencia homogénea (preparada para procesamiento)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Secuencia Completa de Pre-ARNm (5' → 3') -->
+            <div class="pre-mrna-sequence-box">
+              <div class="seq-box-header">
+                <div class="seq-box-title">
+                  <Icon name="code" size="16" />
+                  <span class="cds-label">Cadena Completa de Pre-ARNm (5' &rarr; 3') [{{ transcriptionResult.length }} nt]:</span>
+                </div>
+                <button class="cds-copy-btn" @click="copyPreMrnaSequence" title="Copiar cadena de Pre-ARNm al portapapeles">
+                  <Icon name="content_copy" size="14" />
+                  <span>Copiar Pre-ARNm</span>
+                </button>
+              </div>
+              <code class="font-mono pre-mrna-code"><span class="end-tag">5'-</span><template v-for="(char, cIdx) in transcriptionResult.pre_mrna" :key="cIdx"><span :class="['rna-char', { 'char-u': char === 'U' }]">{{ char }}</span></template><span class="end-tag">-3'</span></code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline Roadmap Preview (Próximos Módulos) -->
+      <div class="phase2-pipeline-preview md3-card-outlined" v-if="selectedGene || cleanSequence">
+        <div class="pipeline-header">
+          <Icon name="schema" size="20" class="pipeline-icon" />
+          <div class="pipeline-text">
+            <h5>Pipeline del Dogma Central (Fase 2: Expresión Génica)</h5>
+            <span>Flujo molecular secuencial desde el ADN genómico hasta el polipéptido maduro:</span>
+          </div>
+        </div>
+        <div class="pipeline-steps-preview">
+          <!-- Paso B: Transcripción (Activo / Completado) -->
+          <div :class="['pipeline-step-card', transcriptionResult ? 'completed' : 'active-step']">
+            <div class="step-num">B</div>
+            <div class="step-info">
+              <strong>Transcripción (Módulo B)</strong>
+              <span>Síntesis de Pre-ARNm 5'&rarr;3' mediante ARN Polimerasa II.</span>
+            </div>
+            <span :class="['step-status', transcriptionResult ? 'status-done' : 'status-current']">
+              <Icon :name="transcriptionResult ? 'check_circle' : 'play_circle'" size="12" />
+              {{ transcriptionResult ? 'Pre-ARNm Sintetizado' : 'Módulo Activo' }}
+            </span>
+          </div>
+
+          <!-- Paso C: Splicing & Capping (Siguiente) -->
+          <div class="pipeline-step-card disabled">
+            <div class="step-num">C</div>
+            <div class="step-info">
+              <strong>Splicing &amp; Capping</strong>
+              <span>Remoción de intrones por espliceosoma y maduración del ARNm.</span>
+            </div>
+            <span class="step-status">Módulo Siguiente</span>
+          </div>
+
+          <!-- Paso D: Traducción Peptídica (Siguiente) -->
+          <div class="pipeline-step-card disabled">
+            <div class="step-num">D</div>
+            <div class="step-info">
+              <strong>Traducción Peptídica</strong>
+              <span>Decodificación ribosómica por codones y síntesis de proteína.</span>
+            </div>
+            <span class="step-status">Módulo Siguiente</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado Informativo cuando selectedGene es null (Entrada Libre / Personalizada) -->
+      <div class="phase2-empty-state md3-card-outlined" v-if="!selectedGene">
+        <div class="empty-state-content">
+          <div class="empty-icon-box">
+            <Icon name="biotech" size="38" class="empty-icon-large" />
+          </div>
+          <h3>Secuencia Personalizada / Entrada Libre</h3>
+          <p>Introduce cualquier secuencia canónica (A, T, C, G) en el campo superior o selecciona un gen modelo del catálogo para cargar su estructura biofísica oficial.</p>
+        </div>
+      </div>
+
+    </div><!-- /phase-content-wrapper Phase 2 -->
 
     <!-- Diálogo Modal: Guardar Experimento con Nombre Personalizado -->
     <div class="md3-dialog-backdrop" v-if="showSaveDialog" @click.self="showSaveDialog = false">
@@ -1485,7 +2175,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '../api/client';
 import Icon from './Icon.vue';
 import DNAHelix3D from './DNAHelix3D.vue';
@@ -1547,6 +2237,296 @@ const showManualDialog = ref(false);
 const manualActiveTab = ref('flow');
 const experimentNotification = ref(null);
 const lastMutationApplied = ref(null);
+
+// ═══════════════════════ FASE 2: EXPRESIÓN GÉNICA — MÓDULO A ═══════════════════════
+const activePhaseTab = ref('phase1'); // 'phase1' | 'phase2'
+const selectedGeneId = ref(null);
+
+const genesCatalog = ref([
+  {
+    id: 'didactic_min_control',
+    name: 'Control Didáctico Mínimo',
+    organism: 'Sintético',
+    cell_type: 'No especificado',
+    strand_orientation: '+',
+    start_coord: 0,
+    end_coord: 16,
+    genomic_sequence: 'ATGGAAGTAGTTTTGA',
+    promoter: {
+      region: 'TATAAA (didáctico)',
+      tss: -1
+    },
+    gene_type: 'protein_coding',
+    structure: [
+      { type: 'exon', label: 'Exón 1', start: 0, end: 6, sequence: 'ATGGAA' },
+      { type: 'intron', label: 'Intrón 1', start: 6, end: 10, sequence: 'GTAG', splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 2', start: 10, end: 16, sequence: 'TTTTGA' }
+    ],
+    cds_info: {
+      cds_sequence: 'ATGGAATTTTGA',
+      reading_frame: 0,
+      start_codon: 'ATG',
+      stop_codon: 'TGA',
+      cds_start: 0,
+      cds_end: 12
+    },
+    data_source: {
+      type: 'secuencia_didactica_inventada',
+      description: 'Secuencia genómica didáctica de 16 bp (Exón 1 [6 bp] + Intrón 1 [4 bp GTAG] + Exón 2 [6 bp]) diseñada exclusivamente para demostración pedagógica del flujo transcripción → splicing → traducción.'
+    }
+  },
+  {
+    id: 'tp53_hsapiens',
+    name: 'Gen TP53 — Supresor Tumoral',
+    organism: 'Homo sapiens',
+    cell_type: 'Línea de referencia estándar',
+    strand_orientation: '-',
+    start_coord: 7668402,
+    end_coord: 7687550,
+    promoter: {
+      region: 'Promotor CpG-island (Chr17:7687490–7687550)',
+      tss: 7687490
+    },
+    gene_type: 'protein_coding',
+    structure: [
+      { type: 'exon', label: 'Exón 1', start: 0, end: 68, sequence: null },
+      { type: 'intron', label: 'Intrón 1', start: 68, end: 11150, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 2', start: 11150, end: 11326, sequence: null },
+      { type: 'intron', label: 'Intrón 2', start: 11326, end: 11439, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 3', start: 11439, end: 11561, sequence: null },
+      { type: 'intron', label: 'Intrón 3', start: 11561, end: 11709, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 4', start: 11709, end: 12004, sequence: null },
+      { type: 'intron', label: 'Intrón 4', start: 12004, end: 13055, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 5', start: 13055, end: 13238, sequence: null },
+      { type: 'intron', label: 'Intrón 5', start: 13238, end: 13320, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 6', start: 13320, end: 13477, sequence: null },
+      { type: 'intron', label: 'Intrón 6', start: 13477, end: 14588, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 7', start: 14588, end: 14738, sequence: null },
+      { type: 'intron', label: 'Intrón 7', start: 14738, end: 14875, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 8', start: 14875, end: 15032, sequence: null },
+      { type: 'intron', label: 'Intrón 8', start: 15032, end: 17468, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 9', start: 17468, end: 17603, sequence: null },
+      { type: 'intron', label: 'Intrón 9', start: 17603, end: 18595, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 10', start: 18595, end: 18679, sequence: null },
+      { type: 'intron', label: 'Intrón 10', start: 18679, end: 19073, sequence: null, splice_donor: 'GU', splice_acceptor: 'AG' },
+      { type: 'exon', label: 'Exón 11', start: 19073, end: 19148, sequence: null }
+    ],
+    cds_info: {
+      cds_sequence: 'ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGAGTCAGGAAACATTTTCAGACCTATGGAAACTACTTCCTGAAAACAACGTTCTGTCCCCCTTGCCGTCCCAAGCAATGGATGATTTGATGCTGTCCCCGGACGATATTGAACAATGGTTCACTGAAGACCCAGGTCCAGATGAAGCTCCCAGAATGCCAGAGGCTGCTCCCCCCGTGGCCCCTGCACCAGCAGCTCCTACACCGGCGGCCCCTGCACCAGCCCCCTCCTGGCCCCTGTCATCTTCTGTCCCTTCCCAGAAAACCTACCAGGGCAGCTACGGTTTCCGTCTGGGCTTCTTGCATTCTGGGACAGCCAAGTCTGTGACTTGCACGTACTCCCCTGCCCTCAACAAGATGTTTTGCCAACTGGCCAAGACCTGCCCTGTGCAGCTGTGGGTTGATTCCACACCCCCGCCCGGCACCCGCGTCCGCGCCATGGCCATCTACAAGCAGTCACAGCACATGACGGAGGTTGTGAGGCGCTGCCCCCACCATGAGCGCTGCTCAGATAGCGATGGTCTGGCCCCTCCTCAGCATCTTATCCGAGTGGAAGGAAATTTGCGTGTGGAGTATTTGGATGACAGAAACACTTTTCGACATAGTGTGGTGGTGCCCTATGAGCCGCCTGAGGTTGGCTCTGACTGTACCACCATCCACTACAACTACATGTGTAACAGTTCCTGCATGGGCGGCATGAACCGGAGGCCCATCCTCACCATCATCACACTGGAAGACTCCAGTGGTAATCTACTGGGACGGAACAGCTTTGAGGTGCGTGTTTGTGCCTGTCCTGGGAGAGACCGGCGCACAGAGGAAGAGAATCTCCGCAAGAAAGGGGAGCCTCACCACGAGCTGCCCCCAGGGAGCACTAAGCGAGCACTGCCCAACAACACCAGCTCCTCTCCCCAGCCAAAGAAGAAACCACTGGATGGAGAATATTTCACCCTTCAGATCCGTGGGCGTGAGCGCTTCGAGATGTTCCGAGAGCTGAATGAGGCCTTGGAACTCAAGGATGCCCAGGCTGGGAAGGAGCCAGGGGGGAGCAGGGCTCACTCCAGCCACCTGAAGTCCAAAAAGGGTCAGTCTACCTCCCGCCATAAAAAACTCATGTTCAAGACAGAAGGGCCTGACTCAGACTGA',
+      reading_frame: 0,
+      start_codon: 'ATG',
+      stop_codon: 'TGA',
+      cds_start: 203,
+      cds_end: 1384,
+      protein_length: 393,
+      protein_name: 'Proteína p53 (Guardián del Genoma)'
+    },
+    data_source: {
+      type: 'secuencia_curada_publicada',
+      database: 'UniProt / NCBI RefSeq',
+      accession: 'P04637 / NM_000546.6',
+      version: 'GRCh38.p14 (hg38)',
+      gene_id: 'ENSG00000141510',
+      chromosome: 'Chr17:7,668,402–7,687,550',
+      description: 'Ficha técnica de referencia curada para la proteína tumoral p53 humana. Coordenadas genómicas según ensamblaje GRCh38.'
+    }
+  }
+]);
+
+const selectedGene = computed(() => {
+  if (!selectedGeneId.value) return null;
+  return genesCatalog.value.find(g => g.id === selectedGeneId.value) || null;
+});
+
+function selectGene(geneId, showToast = true) {
+  if (geneId === 'tp53_hsapiens') {
+    return;
+  }
+  selectedGeneId.value = geneId;
+  if (!geneId) {
+    return;
+  }
+  const gene = genesCatalog.value.find(g => g.id === geneId);
+  if (gene) {
+    // Si es didactic_min_control, cargamos su secuencia genomica (16 bp con intron GTAG); si es TP53, cargamos su CDS
+    const seqToLoad = gene.id === 'didactic_min_control'
+      ? (gene.genomic_sequence || gene.cds_info?.cds_sequence)
+      : gene.cds_info?.cds_sequence;
+
+    if (seqToLoad) {
+      sequenceInput.value = seqToLoad;
+      initialMoldSequence.value = seqToLoad;
+      transcriptionResult.value = null; // Reiniciar transcripcion previa para el nuevo gen
+      validateAndProcess(true);
+      if (showToast) {
+        experimentNotification.value = {
+          title: `Gen Activo: ${gene.name}`,
+          message: gene.id === 'didactic_min_control'
+            ? `Secuencia genómica previa a transcripción (${seqToLoad.length} bp, con intrón GTAG) cargada en el laboratorio.`
+            : `Secuencia CDS (${seqToLoad.length} bp) inyectada al molde y sincronizada en el visor 3D y sensores.`
+        };
+        setTimeout(() => {
+          experimentNotification.value = null;
+        }, 3500);
+      }
+    }
+  }
+}
+
+function handleCopySequence(seq) {
+  if (!seq) return;
+  if (navigator?.clipboard?.writeText) {
+    navigator.clipboard.writeText(seq).then(() => {
+      copyNotification.value = `Secuencia copiada (${seq.length} bp)`;
+      setTimeout(() => {
+        copyNotification.value = '';
+      }, 3500);
+    });
+  }
+}
+
+// ═══════════════════════ FASE 2: MÓDULO B — MOTOR DE TRANSCRIPCIÓN (ADN → PRE-ARNM) ═══════════════════════
+const transcriptionResult = ref(null);
+const isTranscribing = ref(false);
+const transcriptionWindowStart = ref(0);
+const TRANSCRIPTION_PAGE_SIZE = 40;
+
+const activeDnaSequence = computed(() => {
+  return (cleanSequence.value || sequenceInput.value.trim().toUpperCase()).replace(/[^ATCG]/g, '');
+});
+
+const isDnaMoldModified = computed(() => {
+  if (!initialMoldSequence.value) return false;
+  return activeDnaSequence.value !== initialMoldSequence.value.trim().toUpperCase();
+});
+
+function isBaseModifiedAt(idx) {
+  if (!initialMoldSequence.value) return false;
+  const initial = initialMoldSequence.value.trim().toUpperCase();
+  if (idx >= initial.length) return true;
+  return activeDnaSequence.value[idx] !== initial[idx];
+}
+
+const rnaPolTranscriptionMap = {
+  A: 'U', // Molde A -> Pre-ARNm U
+  T: 'A', // Molde T -> Pre-ARNm A
+  C: 'G', // Molde C -> Pre-ARNm G
+  G: 'C'  // Molde G -> Pre-ARNm C
+};
+
+async function runTranscription() {
+  const rawDna = activeDnaSequence.value;
+  if (!rawDna) return;
+
+  isTranscribing.value = true;
+
+  // Latencia biocatalítica simulada (ARN Polimerasa II)
+  await new Promise(resolve => setTimeout(resolve, 380));
+
+  try {
+    const coding_dna = rawDna;
+
+    // 1. Determina Hebra Molde (Antisentido 3' → 5') complementaria a la codificante (5' → 3') por Watson-Crick
+    const dnaComplementMap = { A: 'T', T: 'A', C: 'G', G: 'C' };
+    const template_dna = coding_dna.split('').map(b => dnaComplementMap[b] || 'N').join('');
+
+    // 2. ARN Polimerasa II leyendo la hebra molde en 3' → 5' y sintetizando Pre-ARNm en 5' → 3'
+    // A→U, T→A, C→G, G→C respecto a la hebra molde.
+    // El Pre-ARNm resultante equivale a la hebra codificante sustituyendo T por U.
+    const pre_mrna = template_dna.split('').map(b => rnaPolTranscriptionMap[b] || 'N').join('');
+
+    // 3. Métricas Bioquímicas
+    const length = pre_mrna.length;
+    let countA = 0, countU = 0, countC = 0, countG = 0;
+    for (let i = 0; i < length; i++) {
+      const b = pre_mrna[i];
+      if (b === 'A') countA++;
+      else if (b === 'U') countU++;
+      else if (b === 'C') countC++;
+      else if (b === 'G') countG++;
+    }
+    const base_counts = { A: countA, U: countU, C: countC, G: countG };
+    const uracil_content = length > 0 ? Number(((countU / length) * 100).toFixed(1)) : 0;
+
+    // 4. Detección de intrones (ej. contiene 'GUAG' en el control didáctico)
+    const has_introns = Boolean(
+      pre_mrna.includes('GUAG') ||
+      (selectedGene.value?.id === 'didactic_min_control' && length === 16) ||
+      (selectedGene.value?.structure?.some(s => s.type === 'intron' && s.sequence && pre_mrna.includes(s.sequence.replace(/T/g, 'U'))))
+    );
+
+    transcriptionResult.value = {
+      coding_dna,
+      template_dna,
+      pre_mrna,
+      length,
+      uracil_content,
+      base_counts,
+      has_introns,
+      timestamp: new Date().toLocaleTimeString()
+    };
+    transcriptionWindowStart.value = 0;
+
+    experimentNotification.value = {
+      title: 'Transcripción Enzimática Exitosa',
+      message: `ARN Polimerasa II sintetizó el Pre-ARNm (${length} nt, ${uracil_content}% Uracilo). Transcrito inmaduro listo para Módulo C.`
+    };
+    setTimeout(() => {
+      experimentNotification.value = null;
+    }, 4000);
+  } catch (err) {
+    console.error('Error durante la transcripción in silico:', err);
+  } finally {
+    isTranscribing.value = false;
+  }
+}
+
+function resetTranscription() {
+  transcriptionResult.value = null;
+  transcriptionWindowStart.value = 0;
+}
+
+function copyPreMrnaSequence() {
+  if (!transcriptionResult.value?.pre_mrna) return;
+  const seq = transcriptionResult.value.pre_mrna;
+  if (navigator?.clipboard?.writeText) {
+    navigator.clipboard.writeText(seq).then(() => {
+      copyNotification.value = `Pre-ARNm copiado (${seq.length} nt)`;
+      setTimeout(() => {
+        copyNotification.value = '';
+      }, 3500);
+    });
+  }
+}
+
+function scrollTranscriptionWindow(delta) {
+  if (!transcriptionResult.value) return;
+  const maxStart = Math.max(0, transcriptionResult.value.length - TRANSCRIPTION_PAGE_SIZE);
+  transcriptionWindowStart.value = Math.max(0, Math.min(maxStart, transcriptionWindowStart.value + delta));
+}
+
+const visibleTranscriptionColumns = computed(() => {
+  if (!transcriptionResult.value) return [];
+  const start = transcriptionWindowStart.value;
+  const end = Math.min(transcriptionResult.value.length, start + TRANSCRIPTION_PAGE_SIZE);
+  const cols = [];
+  for (let i = start; i < end; i++) {
+    const coding = transcriptionResult.value.coding_dna[i];
+    const template = transcriptionResult.value.template_dna[i];
+    const rna = transcriptionResult.value.pre_mrna[i];
+    // Intrón 1 para didactic_min_control está en las posiciones 6 a 9 (0-indexado)
+    const isIntron = (selectedGene.value?.id === 'didactic_min_control' && i >= 6 && i < 10);
+    cols.push({
+      pos: i + 1,
+      coding,
+      template,
+      rna,
+      isIntron,
+      isUracil: rna === 'U'
+    });
+  }
+  return cols;
+});
 
 const isFullyRepaired = computed(() => {
   return repairResult.value?.matches_reference === true || (breakResult.value?.matches_initial === true && diffResult.value?.difference_count === 0);
@@ -2116,16 +3096,49 @@ function formatBreakDescription(res) {
 
 
 
+const FILMSTRIP_WINDOW_SIZE = 70;
+const filmstripStartPos = ref(0);
+
+function scrollFilmstrip(delta) {
+  const maxStart = Math.max(0, (cleanSequence.value?.length || 0) - FILMSTRIP_WINDOW_SIZE);
+  filmstripStartPos.value = Math.max(0, Math.min(maxStart, filmstripStartPos.value + delta));
+}
+
+function centerFilmstripOnSelected() {
+  if (selectedPosition.value === null || !cleanSequence.value) return;
+  const maxStart = Math.max(0, cleanSequence.value.length - FILMSTRIP_WINDOW_SIZE);
+  filmstripStartPos.value = Math.max(0, Math.min(maxStart, selectedPosition.value - Math.floor(FILMSTRIP_WINDOW_SIZE / 2)));
+}
+
+const visibleFilmstripBases = computed(() => {
+  const seq = cleanSequence.value;
+  if (!seq) return [];
+  if (seq.length <= FILMSTRIP_WINDOW_SIZE) {
+    return seq.split('').map((base, idx) => ({ base, idx }));
+  }
+  const maxStart = Math.max(0, seq.length - FILMSTRIP_WINDOW_SIZE);
+  const start = Math.max(0, Math.min(maxStart, filmstripStartPos.value));
+  const end = Math.min(seq.length, start + FILMSTRIP_WINDOW_SIZE);
+  const list = [];
+  for (let i = start; i < end; i++) {
+    list.push({ base: seq[i], idx: i });
+  }
+  return list;
+});
+
 const duplexPairsDisplay = computed(() => {
   const s1 = cleanSequence.value || sequenceInput.value.trim().toUpperCase();
   const s2 = duplexStrand.value.trim().toUpperCase() || complementStrand.value;
-  const maxLen = Math.max(s1.length, s2.length);
+  if (!s1 || !s2) return [];
+  // Si s1.length !== s2.length, limita la comparación a la longitud mínima común sin casillas artificiales '∅'
+  const minLen = Math.min(s1.length, s2.length);
   const pairs = [];
-  for (let i = 0; i < maxLen; i++) {
-    const b1 = s1[i] || '∅';
-    const b2 = s2[i] || '∅';
-    const isCanon = (b1 !== '∅' && b2 !== '∅' && complementMap[b1] === b2);
+  for (let i = 0; i < minLen; i++) {
+    const b1 = s1[i];
+    const b2 = s2[i];
+    const isCanon = complementMap[b1] === b2;
     pairs.push({
+      idx: i,
       b1,
       b2,
       is_canonical: isCanon,
@@ -2135,8 +3148,43 @@ const duplexPairsDisplay = computed(() => {
   return pairs;
 });
 
+const duplexLengthMismatch = computed(() => {
+  const s1 = cleanSequence.value || sequenceInput.value.trim().toUpperCase();
+  const s2 = duplexStrand.value.trim().toUpperCase() || complementStrand.value;
+  return Boolean(s1 && s2 && s1.length !== s2.length);
+});
+
+const visibleDuplexPairs = computed(() => {
+  const all = duplexPairsDisplay.value;
+  if (all.length <= FILMSTRIP_WINDOW_SIZE) return all;
+  const maxStart = Math.max(0, all.length - FILMSTRIP_WINDOW_SIZE);
+  const start = Math.max(0, Math.min(maxStart, filmstripStartPos.value));
+  return all.slice(start, start + FILMSTRIP_WINDOW_SIZE);
+});
+
+watch(selectedPosition, (newPos) => {
+  if (newPos !== null && cleanSequence.value && cleanSequence.value.length > FILMSTRIP_WINDOW_SIZE) {
+    if (newPos < filmstripStartPos.value || newPos >= filmstripStartPos.value + FILMSTRIP_WINDOW_SIZE) {
+      centerFilmstripOnSelected();
+    }
+  }
+});
+
+// Invalidation / Reset Automático: si la secuencia de ADN cambia (mutación, reparación o edición manual), resetea el Pre-ARNm
+watch(cleanSequence, (newSeq, oldSeq) => {
+  if (newSeq !== oldSeq) {
+    transcriptionResult.value = null;
+    transcriptionWindowStart.value = 0;
+  }
+});
+
 function handleInput() {
   sequenceInput.value = sequenceInput.value.toUpperCase();
+  if (selectedGeneId.value !== null) {
+    selectedGeneId.value = null;
+  }
+  mismatchResult.value = null;
+  duplexStrand.value = '';
 }
 
 function loadSample(seq) {
@@ -2173,6 +3221,7 @@ async function validateAndProcess(isInitialMold = true) {
     repairResult.value = null;
     breakResult.value = null;
     copyNotification.value = '';
+    transcriptionResult.value = null;
     return;
   }
 
@@ -2182,6 +3231,10 @@ async function validateAndProcess(isInitialMold = true) {
     validationData.value = valRes;
 
     if (valRes.is_valid) {
+      if (transcriptionResult.value && transcriptionResult.value.coding_dna !== raw) {
+        transcriptionResult.value = null;
+        transcriptionWindowStart.value = 0;
+      }
       const compRes = await api.complementDNA(raw);
       complementStrand.value = compRes.complement;
       binaryStrand.value = compRes.binary_repr;
@@ -2494,6 +3547,8 @@ async function replicateWithProbabilities() {
 onMounted(() => {
   if (sequenceInput.value) {
     validateAndProcess();
+  } else if (selectedGeneId.value) {
+    selectGene(selectedGeneId.value, false);
   }
   fetchLogs();
   fetchSavedExperiments();
@@ -2917,6 +3972,79 @@ onMounted(() => {
   font-size: 0.9rem;
   color: #38bdf8;
   padding: 0 0.4rem;
+}
+
+.filmstrip-window-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 0.6rem;
+  background: rgba(14, 28, 48, 0.65);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.f-nav-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #38bdf8;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.f-nav-info .text-dim {
+  color: rgba(148, 163, 184, 0.7);
+  font-weight: 400;
+}
+
+.f-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 480px;
+}
+
+.filmstrip-scrubber {
+  flex: 1;
+  accent-color: #38bdf8;
+  cursor: pointer;
+  height: 6px;
+  background: rgba(8, 15, 28, 0.8);
+  border-radius: 999px;
+}
+
+.nav-arrow-btn {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-arrow-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+}
+
+.nav-arrow-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.center-btn {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
 }
 
 .bases-filmstrip {
@@ -6290,6 +7418,1929 @@ onMounted(() => {
 
   .cp-grid-3col {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* BARRA DE NAVEGACIÓN POR FASES (TABS BIO-TECH)                         */
+/* ═══════════════════════════════════════════════════════════════════════ */
+.phase-tabs-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  background: linear-gradient(135deg, rgba(10, 18, 30, 0.85), rgba(16, 28, 48, 0.9));
+  border: 1px solid rgba(0, 240, 200, 0.12);
+  border-radius: 14px;
+  position: relative;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 20px rgba(0, 200, 160, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.phase-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: rgba(178, 198, 220, 0.65);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.phase-tab-btn:hover {
+  color: rgba(200, 230, 255, 0.85);
+  background: rgba(0, 200, 180, 0.06);
+}
+
+.phase-tab-btn.active {
+  color: #e0f7fa;
+  background: linear-gradient(135deg, rgba(0, 200, 180, 0.14), rgba(0, 120, 200, 0.1));
+  border-color: rgba(0, 240, 200, 0.25);
+  box-shadow:
+    0 0 16px rgba(0, 240, 200, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+}
+
+.phase-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 20%;
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 200, 0.7), transparent);
+  border-radius: 1px;
+}
+
+.tab-label {
+  font-size: 0.82rem;
+}
+
+.tab-badge {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 240, 200, 0.12);
+  color: rgba(0, 240, 200, 0.85);
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  border: 1px solid rgba(0, 240, 200, 0.15);
+}
+
+.tab-badge.phase2-badge {
+  background: rgba(130, 80, 255, 0.12);
+  color: rgba(180, 140, 255, 0.9);
+  border-color: rgba(130, 80, 255, 0.2);
+}
+
+.tab-indicator {
+  display: none; /* indicator is handled via .active pseudo-element */
+}
+
+/* Phase content wrapper */
+.phase-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ═══════════════════════ CABECERA GENERAL COMPARTIDA: SELECTOR DE GENES ═══════════════════════ */
+.shared-gene-selector-card {
+  background: linear-gradient(135deg, rgba(10, 16, 32, 0.94), rgba(16, 26, 48, 0.9));
+  border: 1px solid rgba(0, 220, 200, 0.22);
+  border-radius: 16px;
+  padding: 1rem 1.4rem;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 15px rgba(0, 220, 200, 0.05);
+  transition: all 0.3s ease;
+}
+
+.shared-gene-selector-card:hover {
+  border-color: rgba(0, 220, 200, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 220, 200, 0.08);
+}
+
+.shared-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.shared-selector-title {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 260px;
+}
+
+.selector-badge-avatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.2), rgba(130, 80, 255, 0.2));
+  border: 1px solid rgba(0, 220, 200, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00f0d0;
+  box-shadow: 0 0 12px rgba(0, 220, 200, 0.2);
+}
+
+.selector-title-text {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(230, 245, 255, 0.95);
+  letter-spacing: 0.02em;
+}
+
+.selector-subtext {
+  display: block;
+  font-size: 0.74rem;
+  color: rgba(160, 190, 220, 0.7);
+  margin-top: 2px;
+}
+
+.gene-selector-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.gene-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(130, 80, 255, 0.08);
+  border: 1px solid rgba(130, 80, 255, 0.2);
+  color: rgba(200, 215, 240, 0.85);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+}
+
+.gene-chip:hover {
+  background: rgba(130, 80, 255, 0.16);
+  border-color: rgba(130, 80, 255, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(130, 80, 255, 0.15);
+}
+
+.gene-chip.active {
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.2), rgba(130, 80, 255, 0.25));
+  border-color: rgba(0, 220, 200, 0.6);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 16px rgba(0, 220, 200, 0.25);
+}
+
+.gene-chip.free-chip.active {
+  background: linear-gradient(135deg, rgba(80, 160, 240, 0.22), rgba(0, 200, 180, 0.25));
+  border-color: rgba(0, 220, 200, 0.6);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 220, 200, 0.22);
+}
+
+.gene-chip-name {
+  font-weight: 600;
+}
+
+.chip-bp {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(160, 210, 255, 0.8);
+}
+
+.gene-chip.active .chip-bp {
+  background: rgba(0, 220, 200, 0.2);
+  color: #70fff0;
+}
+
+.gene-chip:disabled,
+.gene-chip.disabled,
+.gene-chip:disabled:hover,
+.gene-chip.disabled:hover {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(160, 180, 210, 0.5) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.chip-dev-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 171, 0, 0.14);
+  border: 1px solid rgba(255, 171, 0, 0.35);
+  color: #ffb74d;
+  letter-spacing: 0.02em;
+}
+
+.chip-active-dot {
+  color: #00f0d0;
+  font-size: 0.75rem;
+  animation: pulse-dot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ═══════════════════════ FICHA COMPACTA GEN ACTIVO (FASE 1) ═══════════════════════ */
+.gene-compact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: linear-gradient(135deg, rgba(12, 18, 34, 0.88), rgba(16, 24, 42, 0.82));
+  border: 1px solid rgba(80, 160, 240, 0.18);
+  border-left: 4px solid #00c8b4;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.compact-card-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.compact-gene-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.compact-icon {
+  color: #00c8b4;
+}
+
+.compact-gene-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compact-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compact-prefix {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(140, 170, 210, 0.65);
+}
+
+.compact-name {
+  font-size: 0.92rem;
+  color: #eaf2ff;
+  letter-spacing: 0.01em;
+}
+
+.provenance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.provenance-pill.curated {
+  background: rgba(0, 200, 120, 0.12);
+  color: #50e6a0;
+  border-color: rgba(0, 200, 120, 0.3);
+}
+
+.provenance-pill.didactic {
+  background: rgba(255, 180, 50, 0.12);
+  color: #ffc864;
+  border-color: rgba(255, 180, 50, 0.3);
+}
+
+.provenance-pill.custom {
+  background: rgba(80, 160, 240, 0.12);
+  color: #70b8ff;
+  border-color: rgba(80, 160, 240, 0.3);
+}
+
+.gene-compact-card.custom-mode {
+  border-left-color: rgba(80, 160, 240, 0.7);
+}
+
+.compact-icon.custom {
+  color: #50a0f0;
+}
+
+.compact-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: rgba(160, 185, 215, 0.75);
+  flex-wrap: wrap;
+}
+
+.meta-tag strong {
+  color: rgba(190, 210, 240, 0.9);
+}
+
+.meta-separator {
+  color: rgba(120, 140, 180, 0.35);
+}
+
+.compact-card-right {
+  display: flex;
+  align-items: center;
+}
+
+.compact-inspect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(130, 80, 255, 0.12);
+  border: 1px solid rgba(130, 80, 255, 0.28);
+  color: #d6c6ff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.compact-inspect-btn:hover {
+  background: rgba(130, 80, 255, 0.25);
+  border-color: rgba(130, 80, 255, 0.5);
+  color: #ffffff;
+  transform: translateX(2px);
+  box-shadow: 0 0 12px rgba(130, 80, 255, 0.25);
+}
+
+/* ═══════════════════════ MÓDULO A: INSPECCIÓN Y ARQUITECTURA (FASE 2) ═══════════════════════ */
+.module-a-gene-card {
+  background: linear-gradient(155deg, rgba(8, 14, 28, 0.95), rgba(12, 20, 38, 0.92));
+  border: 1px solid rgba(130, 80, 255, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.3);
+}
+
+.module-a-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(130, 80, 255, 0.04);
+  border-bottom: 1px solid rgba(130, 80, 255, 0.12);
+}
+
+.module-a-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.module-a-avatar {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(130, 80, 255, 0.28), rgba(200, 100, 255, 0.18));
+  border: 1px solid rgba(130, 80, 255, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(210, 175, 255, 0.98);
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(130, 80, 255, 0.18);
+}
+
+.module-a-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.module-a-title-row h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: rgba(230, 240, 255, 0.95);
+}
+
+.gene-active-pill {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(0, 220, 200, 0.12);
+  border: 1px solid rgba(0, 220, 200, 0.3);
+  color: #00f0d0;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.module-a-title-group .subtext {
+  font-size: 0.78rem;
+  color: rgba(160, 180, 210, 0.7);
+  margin-top: 2px;
+  display: block;
+}
+
+.module-a-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hud-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hud-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(200, 220, 255, 0.9);
+}
+
+.hud-title-row h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+/* Provenance Badge */
+.provenance-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid;
+}
+
+.provenance-badge.curated {
+  background: rgba(0, 200, 120, 0.08);
+  color: rgba(80, 230, 160, 0.95);
+  border-color: rgba(0, 200, 120, 0.25);
+  box-shadow: 0 0 10px rgba(0, 200, 120, 0.08);
+}
+
+.provenance-badge.didactic {
+  background: rgba(255, 180, 50, 0.08);
+  color: rgba(255, 200, 100, 0.95);
+  border-color: rgba(255, 180, 50, 0.25);
+  box-shadow: 0 0 10px rgba(255, 180, 50, 0.08);
+}
+
+/* Telemetry Grid */
+.hud-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.hud-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(130, 80, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.hud-cell:hover {
+  background: rgba(130, 80, 255, 0.05);
+  border-color: rgba(130, 80, 255, 0.18);
+}
+
+.hud-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(140, 160, 200, 0.6);
+  font-weight: 600;
+}
+
+.hud-value {
+  font-size: 0.82rem;
+  color: rgba(220, 230, 255, 0.9);
+  font-weight: 500;
+}
+
+.strand-badge.sense {
+  color: rgba(80, 200, 255, 0.95);
+}
+
+.strand-badge.antisense {
+  color: rgba(255, 140, 180, 0.95);
+}
+
+.genetype-badge.protein_coding {
+  color: rgba(80, 230, 180, 0.95);
+}
+
+.genetype-badge.functional_rna {
+  color: rgba(255, 200, 80, 0.95);
+}
+
+/* Source Bar */
+.hud-source-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(130, 80, 255, 0.06);
+  font-size: 0.74rem;
+  color: rgba(140, 160, 200, 0.6);
+}
+
+.source-label {
+  font-weight: 600;
+  color: rgba(160, 180, 210, 0.75);
+}
+
+.source-value {
+  color: rgba(180, 195, 220, 0.8);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ESTRUCTURA EXÓN / INTRÓN VISUAL STRIP                                  */
+/* ═══════════════════════════════════════════════════════════════════════ */
+.exon-intron-track {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.track-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(180, 200, 230, 0.8);
+}
+
+.track-label-row h5 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.structure-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-height: 42px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(130, 80, 255, 0.1);
+}
+
+.strip-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  min-width: 28px;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.strip-segment.exon {
+  background: linear-gradient(180deg, rgba(80, 200, 255, 0.18), rgba(60, 160, 220, 0.1));
+  border-bottom: 2px solid rgba(80, 200, 255, 0.45);
+}
+
+.strip-segment.exon:hover {
+  background: linear-gradient(180deg, rgba(80, 200, 255, 0.28), rgba(60, 160, 220, 0.18));
+}
+
+.strip-segment.intron {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 180, 50, 0.04),
+    rgba(255, 180, 50, 0.04) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  border-bottom: 2px dashed rgba(255, 180, 50, 0.3);
+}
+
+.strip-segment.intron:hover {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 180, 50, 0.08),
+    rgba(255, 180, 50, 0.08) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.seg-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.strip-segment.exon .seg-label {
+  color: rgba(100, 210, 255, 0.9);
+}
+
+.strip-segment.intron .seg-label {
+  color: rgba(255, 200, 100, 0.75);
+}
+
+.seg-coords {
+  font-size: 0.58rem;
+  color: rgba(160, 180, 210, 0.5);
+}
+
+.structure-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  color: rgba(160, 180, 210, 0.65);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+}
+
+.legend-item.exon .legend-dot {
+  background: rgba(80, 200, 255, 0.6);
+  box-shadow: 0 0 4px rgba(80, 200, 255, 0.3);
+}
+
+.legend-item.intron .legend-dot {
+  background: rgba(255, 180, 50, 0.5);
+  box-shadow: 0 0 4px rgba(255, 180, 50, 0.25);
+}
+
+.legend-item.splice .legend-dot {
+  background: rgba(255, 100, 130, 0.5);
+  box-shadow: 0 0 4px rgba(255, 100, 130, 0.25);
+}
+
+/* CDS Preview */
+.cds-preview-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 200, 180, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 200, 180, 0.12);
+}
+
+.cds-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cds-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(0, 220, 180, 0.85);
+}
+
+.cds-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(0, 220, 180, 0.9);
+}
+
+.cds-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 220, 180, 0.1);
+  border: 1px solid rgba(0, 220, 180, 0.25);
+  color: #00f0d0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cds-copy-btn:hover {
+  background: rgba(0, 220, 180, 0.2);
+  border-color: rgba(0, 220, 180, 0.45);
+  color: #ffffff;
+}
+
+.cds-code {
+  font-size: 0.78rem;
+  color: rgba(0, 240, 200, 0.95);
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  line-height: 1.6;
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 220, 200, 0.15);
+}
+
+/* ═══════════════════════ ROADMAP PIPELINE PREVIEW (FASE 2) ═══════════════════════ */
+.phase2-pipeline-preview {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.88), rgba(14, 22, 40, 0.82));
+  border: 1px dashed rgba(130, 80, 255, 0.22);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  backdrop-filter: blur(10px);
+}
+
+.pipeline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pipeline-icon {
+  color: rgba(130, 80, 255, 0.7);
+}
+
+.pipeline-text h5 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(210, 225, 250, 0.9);
+}
+
+.pipeline-text span {
+  font-size: 0.74rem;
+  color: rgba(150, 175, 210, 0.65);
+  margin-top: 2px;
+  display: block;
+}
+
+.pipeline-steps-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pipeline-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(130, 80, 255, 0.1);
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.pipeline-step-card.disabled {
+  opacity: 0.65;
+}
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: rgba(130, 80, 255, 0.15);
+  border: 1px solid rgba(130, 80, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #cbb4ff;
+}
+
+.step-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.step-info strong {
+  font-size: 0.82rem;
+  color: rgba(220, 235, 255, 0.9);
+}
+
+.step-info span {
+  font-size: 0.7rem;
+  color: rgba(150, 175, 210, 0.65);
+  line-height: 1.4;
+}
+
+.step-status {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 0.64rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(130, 80, 255, 0.08);
+  border: 1px solid rgba(130, 80, 255, 0.18);
+  color: rgba(190, 175, 240, 0.7);
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pipeline-step-card.active-step {
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.08), rgba(0, 150, 255, 0.05));
+  border-color: rgba(0, 220, 200, 0.35);
+  box-shadow: 0 0 16px rgba(0, 220, 200, 0.12);
+}
+
+.pipeline-step-card.completed {
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 200, 180, 0.04));
+  border-color: rgba(0, 230, 118, 0.35);
+  box-shadow: 0 0 14px rgba(0, 230, 118, 0.1);
+}
+
+.pipeline-step-card.completed .step-num {
+  background: rgba(0, 230, 118, 0.2);
+  border-color: rgba(0, 230, 118, 0.4);
+  color: #00e676;
+}
+
+.pipeline-step-card.active-step .step-num {
+  background: rgba(0, 220, 200, 0.2);
+  border-color: rgba(0, 220, 200, 0.45);
+  color: #00f0d0;
+}
+
+.step-status.status-done {
+  background: rgba(0, 230, 118, 0.12);
+  border-color: rgba(0, 230, 118, 0.35);
+  color: #00e676;
+}
+
+.step-status.status-current {
+  background: rgba(0, 220, 200, 0.12);
+  border-color: rgba(0, 220, 200, 0.35);
+  color: #00f0d0;
+}
+
+/* ═══════════════════════ MÓDULO B: TRANSCRIPCIÓN (FASE 2) ═══════════════════════ */
+.module-b-transcription-card {
+  background: linear-gradient(155deg, rgba(8, 16, 32, 0.95), rgba(10, 24, 44, 0.92));
+  border: 1px solid rgba(0, 220, 200, 0.22);
+  border-radius: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.3);
+  margin-top: 1.25rem;
+}
+
+.module-b-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(0, 220, 200, 0.04);
+  border-bottom: 1px solid rgba(0, 220, 200, 0.12);
+  flex-wrap: wrap;
+}
+
+.module-b-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.module-b-avatar {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.28), rgba(0, 150, 255, 0.2));
+  border: 1px solid rgba(0, 220, 200, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00f0d0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  box-shadow: 0 0 14px rgba(0, 220, 200, 0.25);
+}
+
+.module-b-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.module-b-title-row h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: rgba(230, 245, 255, 0.95);
+}
+
+.module-b-pill {
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgba(0, 220, 200, 0.1);
+  border: 1px solid rgba(0, 220, 200, 0.25);
+  color: #00f0d0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.module-b-pill.synthesized {
+  background: rgba(0, 230, 118, 0.12);
+  border-color: rgba(0, 230, 118, 0.35);
+  color: #00e676;
+}
+
+.module-b-title-group .subtext {
+  font-size: 0.78rem;
+  color: rgba(160, 190, 220, 0.7);
+  margin-top: 2px;
+  display: block;
+}
+
+.module-b-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transcribe-action-btn {
+  background: linear-gradient(135deg, #00c4aa 0%, #0088ff 100%);
+  color: #050d1a;
+  font-weight: 700;
+  font-size: 0.82rem;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 196, 170, 0.35);
+  transition: all 0.25s ease;
+}
+
+.transcribe-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 196, 170, 0.5);
+  filter: brightness(1.08);
+}
+
+.transcribe-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(5, 13, 26, 0.3);
+  border-top-color: #050d1a;
+  border-radius: 50%;
+  animation: spin-transcribe 0.8s linear infinite;
+}
+
+@keyframes spin-transcribe {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.module-b-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Banner Informativo Enzimático */
+.enzyme-context-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.05), rgba(0, 140, 255, 0.03));
+  border: 1px solid rgba(0, 220, 200, 0.16);
+}
+
+.enzyme-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 220, 200, 0.12);
+  border: 1px solid rgba(0, 220, 200, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00f0d0;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.enzyme-text {
+  flex: 1;
+}
+
+.enzyme-headline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.enzyme-headline strong {
+  color: #00f0d0;
+  font-size: 0.88rem;
+}
+
+.enzyme-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(160, 210, 255, 0.8);
+  background: rgba(0, 150, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 150, 255, 0.2);
+}
+
+.enzyme-text p {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(180, 205, 235, 0.8);
+}
+
+.enzyme-text p strong {
+  color: #ffffff;
+}
+
+/* ═══════════════════════ CAJA DE INSPECCIÓN PRE-TRANSCRIPCIONAL ═══════════════════════ */
+.pre-transcription-dna-box {
+  background: linear-gradient(145deg, rgba(6, 12, 26, 0.92), rgba(10, 20, 38, 0.88));
+  border: 1px solid rgba(0, 220, 200, 0.22);
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.dna-buffer-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dna-buffer-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dna-buffer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dna-buffer-title-group h4 {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: rgba(230, 245, 255, 0.95);
+}
+
+.dna-buffer-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dna-len-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(0, 220, 200, 0.12);
+  border: 1px solid rgba(0, 220, 200, 0.3);
+  color: #00f0d0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.mold-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mold-status-badge.intact {
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  color: #00e676;
+}
+
+.mold-status-badge.mutated {
+  background: rgba(255, 171, 0, 0.14);
+  border: 1px solid rgba(255, 171, 0, 0.45);
+  color: #ffb74d;
+  box-shadow: 0 0 12px rgba(255, 171, 0, 0.18);
+}
+
+.dna-buffer-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(160, 190, 225, 0.75);
+  line-height: 1.4;
+}
+
+.dna-buffer-sequence-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(2, 6, 16, 0.75);
+  border: 1px solid rgba(0, 220, 200, 0.18);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.dna-end-label {
+  color: rgba(140, 175, 210, 0.65);
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.dna-buffer-code-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.dna-char {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 28px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.15s ease;
+}
+
+.dna-char:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.2);
+}
+
+.dna-char.char-modified {
+  border-color: #ff9100;
+  background: rgba(255, 145, 0, 0.2);
+  color: #ffb74d;
+  box-shadow: 0 0 8px rgba(255, 145, 0, 0.45);
+}
+
+.dna-buffer-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.dna-buffer-status-text {
+  font-size: 0.75rem;
+  color: rgba(170, 195, 225, 0.7);
+}
+
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sync-status.text-green {
+  color: #00e676;
+}
+
+.sync-status.text-dim {
+  color: rgba(160, 190, 220, 0.65);
+}
+
+/* ═══════════════════════ PANEL DE ALINEAMIENTO DE 3 CARRILES ═══════════════════════ */
+.transcription-alignment-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.alignment-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alignment-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alignment-icon {
+  color: #00f0d0;
+}
+
+.alignment-title-group h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(225, 240, 255, 0.95);
+}
+
+.alignment-subtext {
+  font-size: 0.72rem;
+  color: rgba(150, 180, 215, 0.65);
+  display: block;
+  margin-top: 2px;
+}
+
+.alignment-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 220, 200, 0.15);
+}
+
+.window-range-text {
+  font-size: 0.74rem;
+  color: #00f0d0;
+}
+
+.alignment-lanes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: rgba(4, 10, 22, 0.8);
+  border: 1px solid rgba(0, 220, 200, 0.18);
+  border-radius: 12px;
+  overflow-x: auto;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.alignment-lane {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: max-content;
+}
+
+.lane-header-col {
+  width: 155px;
+  min-width: 155px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  left: 0;
+  background: rgba(4, 10, 22, 0.95);
+  padding: 4px 8px 4px 0;
+  z-index: 2;
+}
+
+.lane-role-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.lane-role-badge.coding {
+  background: rgba(80, 200, 255, 0.15);
+  border: 1px solid rgba(80, 200, 255, 0.35);
+  color: #70d4ff;
+}
+
+.lane-role-badge.template {
+  background: rgba(180, 130, 255, 0.15);
+  border: 1px solid rgba(180, 130, 255, 0.35);
+  color: #caa0ff;
+}
+
+.lane-role-badge.rna {
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.2), rgba(255, 150, 0, 0.15));
+  border: 1px solid rgba(0, 220, 200, 0.4);
+  color: #00f0d0;
+}
+
+.lane-orientation {
+  font-size: 0.65rem;
+  color: rgba(160, 185, 215, 0.6);
+  text-align: center;
+}
+
+.connector-label,
+.pol-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(140, 170, 200, 0.5);
+  text-align: center;
+}
+
+.pol-label {
+  color: rgba(0, 220, 200, 0.75);
+}
+
+.lane-bases-track {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lane-base-cell {
+  width: 28px;
+  height: 38px;
+  min-width: 28px;
+  border-radius: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.lane-base-cell .pos-index {
+  font-size: 0.55rem;
+  color: rgba(150, 175, 205, 0.5);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.lane-base-cell .base-char {
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lane-base-cell.base-a .base-char { color: #00e676; }
+.lane-base-cell.base-t .base-char { color: #ff5252; }
+.lane-base-cell.base-c .base-char { color: #40c4ff; }
+.lane-base-cell.base-g .base-char { color: #ffd740; }
+
+.lane-base-cell.in-intron {
+  background: rgba(255, 171, 0, 0.08);
+  border-color: rgba(255, 171, 0, 0.35);
+}
+
+/* Ribonucleótidos y Uracilo */
+.lane-base-cell.rna-cell {
+  background: rgba(0, 220, 200, 0.05);
+  border-color: rgba(0, 220, 200, 0.2);
+}
+
+.lane-base-cell.rna-cell.is-uracil {
+  background: linear-gradient(180deg, rgba(255, 145, 0, 0.22), rgba(255, 110, 0, 0.1));
+  border: 1.5px solid #ff9100;
+  box-shadow: 0 0 12px rgba(255, 145, 0, 0.4);
+}
+
+.lane-base-cell.rna-cell.is-uracil .base-char {
+  color: #ff9d00;
+  text-shadow: 0 0 8px rgba(255, 157, 0, 0.6);
+}
+
+.u-glow-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ff9100;
+  box-shadow: 0 0 4px #ff9100;
+}
+
+/* Conectores */
+.lane-connector-cell {
+  width: 28px;
+  min-width: 28px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.h-bond-symbol {
+  font-size: 0.65rem;
+  letter-spacing: -1px;
+  color: rgba(140, 180, 230, 0.45);
+}
+
+.pol-arrow-cell .pol-arrow {
+  color: #00f0d0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+/* Leyenda */
+.alignment-legend-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 6px 4px;
+}
+
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: rgba(170, 195, 225, 0.75);
+}
+
+.legend-chip.highlight-uracil {
+  color: #ffb74d;
+  font-weight: 600;
+}
+
+.legend-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.coding-dot { background: #50c8ff; }
+.template-dot { background: #b482ff; }
+.uracil-dot {
+  background: #ff9100;
+  box-shadow: 0 0 6px rgba(255, 145, 0, 0.6);
+}
+.intron-dot { background: #ffb432; }
+
+/* ═══════════════════════ HUD DE TELEMETRÍA DEL PRE-ARNM ═══════════════════════ */
+.transcription-hud-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.hud-stat-card {
+  background: rgba(6, 12, 26, 0.75);
+  border: 1px solid rgba(0, 220, 200, 0.16);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(160, 200, 235, 0.8);
+}
+
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.value-number {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #e0f2fe;
+}
+
+.value-number.text-uracil {
+  color: #ff9800;
+  text-shadow: 0 0 10px rgba(255, 152, 0, 0.35);
+}
+
+.value-unit {
+  font-size: 0.85rem;
+  color: rgba(160, 195, 230, 0.65);
+}
+
+.stat-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin: 2px 0;
+}
+
+.stat-progress-fill.uracil-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff9100, #ffb300);
+  box-shadow: 0 0 8px rgba(255, 145, 0, 0.5);
+  transition: width 0.4s ease;
+}
+
+.stat-subtext {
+  font-size: 0.68rem;
+  color: rgba(150, 175, 205, 0.6);
+  line-height: 1.35;
+}
+
+/* Distribución ribonucleotídica */
+.ribo-distribution-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+  flex-wrap: wrap;
+}
+
+.ribo-count-pill {
+  flex: 1;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ribo-count-pill .pill-base {
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ribo-count-pill .pill-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ribo-count-pill.ribo-a .pill-base { color: #00e676; }
+.ribo-count-pill.ribo-c .pill-base { color: #40c4ff; }
+.ribo-count-pill.ribo-g .pill-base { color: #ffd740; }
+
+.ribo-count-pill.ribo-u.highlight {
+  background: rgba(255, 145, 0, 0.16);
+  border-color: rgba(255, 145, 0, 0.45);
+}
+
+.ribo-count-pill.ribo-u.highlight .pill-base,
+.ribo-count-pill.ribo-u.highlight .pill-val {
+  color: #ff9800;
+}
+
+/* Estado del Transcrito */
+.immature-status-banner {
+  background: rgba(255, 145, 0, 0.1);
+  border: 1px solid rgba(255, 145, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.immature-status-banner strong {
+  font-size: 0.8rem;
+  color: #ffb74d;
+}
+
+.immature-status-banner .status-detail {
+  font-size: 0.7rem;
+  color: rgba(255, 225, 185, 0.75);
+}
+
+.intron-flag-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  color: #ffb74d;
+  margin-top: 2px;
+}
+
+.intron-flag-pill.no-introns {
+  color: #00e676;
+}
+
+/* Secuencia Completa Pre-ARNm */
+.pre-mrna-sequence-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(4, 10, 22, 0.85);
+  border: 1px solid rgba(0, 220, 200, 0.16);
+  border-radius: 12px;
+}
+
+.seq-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.seq-box-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #00f0d0;
+}
+
+.pre-mrna-code {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  word-break: break-all;
+  line-height: 1.6;
+  max-height: 130px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 220, 200, 0.12);
+  color: #bbf7d0;
+}
+
+.pre-mrna-code .end-tag {
+  color: rgba(160, 195, 230, 0.55);
+}
+
+.pre-mrna-code .char-u {
+  color: #ff9800;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(255, 152, 0, 0.55);
+}
+
+/* Estado Idle (Espera) */
+.transcription-idle-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 2rem 1.5rem;
+  border: 1px dashed rgba(0, 220, 200, 0.22);
+  border-radius: 12px;
+  background: rgba(0, 220, 200, 0.02);
+}
+
+.idle-icon-wrap {
+  color: #00f0d0;
+  opacity: 0.85;
+}
+
+.idle-text-wrap strong {
+  display: block;
+  font-size: 0.92rem;
+  color: rgba(220, 240, 255, 0.92);
+  margin-bottom: 4px;
+}
+
+.idle-text-wrap p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(160, 190, 220, 0.65);
+  line-height: 1.45;
+}
+
+/* Phase 2 Empty State */
+.phase2-empty-state {
+  background: linear-gradient(145deg, rgba(10, 16, 32, 0.88), rgba(14, 22, 40, 0.84));
+  border: 1px dashed rgba(130, 80, 255, 0.2);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+}
+
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.empty-icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 220, 200, 0.12), rgba(130, 80, 255, 0.15));
+  border: 1px solid rgba(0, 220, 200, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+  box-shadow: 0 0 18px rgba(0, 220, 200, 0.15);
+}
+
+.empty-icon-large {
+  color: #00f0d0;
+  opacity: 0.9;
+}
+
+.empty-state-content h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: rgba(200, 210, 240, 0.8);
+}
+
+.empty-state-content p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(160, 180, 210, 0.55);
+  max-width: 460px;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════ RESPONSIVE PHASE TABS ═══════════════════════ */
+@media (max-width: 820px) {
+  .pipeline-steps-preview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .phase-tabs-nav {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .phase-tab-btn {
+    justify-content: flex-start;
+    padding: 10px 14px;
+    font-size: 0.76rem;
+  }
+
+  .tab-label {
+    font-size: 0.76rem;
+  }
+
+  .hud-telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gene-selector-row {
+    flex-direction: column;
+  }
+
+  .shared-selector-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gene-compact-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .compact-card-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .hud-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .structure-strip {
+    min-height: 36px;
+  }
+
+  .hud-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .module-a-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

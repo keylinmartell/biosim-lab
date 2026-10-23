@@ -94,6 +94,18 @@
       <line x1="5" y1="12" x2="19" y2="12" />
       <polyline points="12 5 19 12 12 19" />
     </g>
+    <g v-else-if="name === 'arrow_back'">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </g>
+    <g v-else-if="name === 'my_location'">
+      <circle cx="12" cy="12" r="8" />
+      <line x1="12" y1="2" x2="12" y2="6" />
+      <line x1="12" y1="18" x2="12" y2="22" />
+      <line x1="2" y1="12" x2="6" y2="12" />
+      <line x1="18" y1="12" x2="22" y2="12" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+    </g>
 
     <!-- Info -->
     <g v-else-if="name === 'info'">
@@ -259,6 +271,48 @@
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
       <line x1="12" y1="6" x2="16" y2="6" />
       <line x1="12" y1="10" x2="16" y2="10" />
+    </g>
+
+    <!-- Verificado / Certificado -->
+    <g v-else-if="name === 'verified'">
+      <path d="M9 12l2 2 4-4" />
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" />
+    </g>
+
+    <!-- Escuela / Didáctico -->
+    <g v-else-if="name === 'school'">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+      <path d="M6 12v5c3 3 9 3 12 0v-5" />
+    </g>
+
+    <!-- Dashboard / Tablero -->
+    <g v-else-if="name === 'dashboard'">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="4" rx="1" />
+      <rect x="14" y="10" width="7" height="11" rx="1" />
+      <rect x="3" y="13" width="7" height="8" rx="1" />
+    </g>
+
+    <!-- Sincronizar -->
+    <g v-else-if="name === 'sync'">
+      <path d="M21.5 2v6h-6" />
+      <path d="M2.5 22v-6h6" />
+      <path d="M21.34 8A10 10 0 0 0 4.26 5.68L2.5 8" />
+      <path d="M2.66 16A10 10 0 0 0 19.74 18.32L21.5 16" />
+    </g>
+
+    <!-- Entrada / Input -->
+    <g v-else-if="name === 'input'">
+      <path d="M21 3H3v18h18" />
+      <polyline points="9 12 13 12" />
+      <polyline points="11 9 14 12 11 15" />
+    </g>
+
+    <!-- Línea de Tiempo / Timeline -->
+    <g v-else-if="name === 'view_timeline'">
+      <rect x="2" y="3" width="20" height="4" rx="1" />
+      <rect x="4" y="10" width="16" height="4" rx="1" />
+      <rect x="6" y="17" width="12" height="4" rx="1" />
     </g>
 
     <!-- Caja / Vacío -->
