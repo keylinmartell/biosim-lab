@@ -14,11 +14,11 @@
         </div>
         <div>
           <div class="title-with-badge">
-            <h3>ADN-B · Modelo Atómico Real (ADN Prueba)</h3>
+            <h3>ADN-B · Modelo Atómico Real</h3>
             <span class="locus-pill" :class="'locus-' + activeGeneId">
               Locus: {{ activeGeneId }} ({{ activeGeneProduct }}) · Hebra {{ currentLocus?.gene.strand }}
             </span>
-            <span class="atomic-badge">855 átomos · 985 enlaces · 21 pb</span>
+            <span class="atomic-badge">{{ activeLocusSeq.length }} pb · Modelo Paramétrico</span>
           </div>
           <span class="subtext">
             Segmento activo según especificación celular: <strong>{{ activeReason }}</strong>
@@ -37,67 +37,32 @@
             </option>
           </select>
         </div>
-
-        <button class="btn-ctrl" @click="toggleRotate" :title="rotating ? 'Pausar giro' : 'Girar'">
-          <Icon :name="rotating ? 'pause' : 'play_arrow'" size="15" />
-          <span>{{ rotating ? 'Pausar giro' : 'Girar' }}</span>
-        </button>
-        <button class="btn-ctrl" @click="resetView" title="Restablecer posición inicial de la cámara">
-          <Icon name="restart_alt" size="15" />
-          <span>Vista inicial</span>
-        </button>
       </div>
     </div>
 
-    <!-- Visor Atómico WebGL (Fiel a ADN Prueba) con Panel Flotante -->
+    <!-- Barra de Estado Biológico del Locus -->
+    <div class="watermark-status-bar">
+      <span class="status-chip" :class="{ transcribing: isTranscribing }">
+        <Icon name="biotech" size="14" />
+        {{ isTranscribing ? 'ARN Polimerasa II Transcribiendo Hebra Molde (R19)' : 'Cromatina en Reposo' }}
+      </span>
+      <span v-if="p53Bound" class="status-chip p53-active">
+        <Icon name="shield" size="14" />
+        ✦ p53 unido al Surco Mayor (R28)
+      </span>
+      <span v-if="hasDsb" class="status-chip dsb-chip">
+        <Icon name="warning" size="14" />
+        ⚠ Rotura Doble Cadena (DSB) en Locus (R30)
+      </span>
+    </div>
+
+    <!-- Visor Atómico Tridimensional (Componente DNAHelix3D) -->
     <div class="adn-viewer-container">
-      <div ref="holder" class="adn-canvas"></div>
-
-      <!-- Panel Flotante Lateral Fiel a ADN Prueba -->
-      <div class="adn-panel">
-        <h2>ADN-B · Modelo atómico real</h2>
-        <p>21 pares de bases · 855 átomos · 985 enlaces<br>
-          Generado desde cero paramétricamente (ADN Prueba).</p>
-
-        <div class="seq-info-box">
-          <span class="strand-title">Locus Activo ({{ activeGeneId }}):</span>
-          <p>Hebra 1 (5' → 3'):</p>
-          <code>{{ active21bpStrand1 }}</code>
-          <p>Hebra 2 (complementaria 3' → 5'):</p>
-          <code>{{ active21bpStrand2 }}</code>
-        </div>
-
-        <!-- Leyenda de Colores Atómicos Original de ADN Prueba -->
-        <p class="adn-leyenda">
-          <i style="background:#8cccff"></i>A &nbsp;
-          <i style="background:#4080f2"></i>T &nbsp;
-          <i style="background:#bfe0ff"></i>G &nbsp;
-          <i style="background:#2659d9"></i>C &nbsp;
-          <i style="background:#738cbf"></i>azúcar &nbsp;
-          <i style="background:#a6d9ff"></i>O &nbsp;
-          <i style="background:#3373e6"></i>P
-        </p>
-
-        <p class="adn-hint">Arrastra para girar · Rueda para acercar · Clic derecho para desplazar</p>
-
-        <div class="adn-actions">
-          <button @click="toggleRotate">{{ rotating ? 'Pausar giro' : 'Girar' }}</button>
-          <button @click="resetView">Vista inicial</button>
-        </div>
-      </div>
-
-      <!-- Watermark de Estado Biológico -->
-      <div class="watermark-status">
-        <span class="status-chip" :class="{ transcribing: isTranscribing }">
-          {{ isTranscribing ? 'ARN Polimerasa II Transcribiendo Hebra Molde (R19)' : 'Cromatina en Reposo' }}
-        </span>
-        <span v-if="p53Bound" class="status-chip p53-active">
-          ✦ p53 unido al Surco Mayor (R28)
-        </span>
-        <span v-if="hasDsb" class="status-chip dsb-chip">
-          ⚠ Rotura Doble Cadena (DSB) en Locus (R30)
-        </span>
-      </div>
+      <DNAHelix3D 
+        :sequence="activeLocusSeq" 
+        :selectedPosition="selectedPosition" 
+        @selectBase="selectedPosition = $event" 
+      />
     </div>
 
     <!-- Panel de Reglas del Dogma Central (Fase 2 Módulos A-F) -->
@@ -174,11 +139,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { ref, computed } from 'vue';
 import Icon from './Icon.vue';
-import { ATOMIC_DNA_DATA } from '../sim/dnaAtomicData';
+import DNAHelix3D from './DNAHelix3D.vue';
 import { buildLocus, express, pickActiveGene, AA3 } from '../sim/dnaEngine';
 
 const props = defineProps({
@@ -189,18 +152,8 @@ const props = defineProps({
   alive: { type: Boolean, default: true }
 });
 
-const holder = ref(null);
-const rotating = ref(true);
 const selectedLocusKey = ref('AUTO');
-
-let renderer = null;
-let scene = null;
-let camera = null;
-let controls = null;
-let rafId = null;
-let resizeObserver = null;
-const camPos0 = new THREE.Vector3();
-const target0 = new THREE.Vector3();
+const selectedPosition = ref(0);
 
 // Loci disponibles de la base de conocimiento
 const availableLoci = computed(() => {
@@ -237,194 +190,16 @@ const currentLocus = computed(() => {
   return buildLocus(g);
 });
 
-// Segmento de 21 pb exactos para el modelo atómico
-const active21bpStrand1 = computed(() => {
-  if (!currentLocus.value) return ATOMIC_DNA_DATA.meta.secuencia_hebra1;
-  const fwd = currentLocus.value.forward;
-  if (fwd.length >= 21) return fwd.slice(0, 21);
-  return fwd.padEnd(21, 'A');
-});
-
-const active21bpStrand2 = computed(() => {
-  if (!currentLocus.value) return ATOMIC_DNA_DATA.meta.secuencia_hebra2;
-  const rev = currentLocus.value.reverse;
-  if (rev.length >= 21) return rev.slice(0, 21);
-  return rev.padEnd(21, 'T');
+// Secuencia activa para el modelo 3D
+const activeLocusSeq = computed(() => {
+  if (!currentLocus.value?.forward) return 'ATCGATCGATCGATCGATCGAT';
+  return currentLocus.value.forward;
 });
 
 // Expresión génica (Transcripción, Splicing y Traducción)
 const expressionResult = computed(() => {
   if (!currentLocus.value) return null;
   return express(currentLocus.value);
-});
-
-// ==========================================
-// RENDERIZADOR ATÓMICO 100% FIEL A ADN PRUEBA
-// ==========================================
-const PALETA = {
-  A: 0x8cccff, T: 0x4080f2, G: 0xbfe0ff, C: 0x2659d9,
-  Caz: 0x738cbf, O: 0xa6d9ff, P: 0x3373e6
-};
-
-function crearBase() {
-  if (!holder.value) return;
-  const w = holder.value.clientWidth || 800;
-  const h = holder.value.clientHeight || 520;
-
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(w, h);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-  holder.value.innerHTML = '';
-  holder.value.appendChild(renderer.domElement);
-
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x06111e);
-  scene.fog = new THREE.Fog(0x06111e, 200, 520);
-
-  camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 3000);
-
-  // Iluminación fiel a ADN Prueba
-  scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x0a1230, 0.85));
-
-  const clave = new THREE.DirectionalLight(0xffffff, 1.9);
-  clave.position.set(60, 90, 50);
-  scene.add(clave);
-
-  const borde = new THREE.DirectionalLight(0x60a5fa, 1.4);
-  borde.position.set(-70, -30, -60);
-  scene.add(borde);
-
-  controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.06;
-  controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.9;
-  controls.screenSpacePanning = true;
-}
-
-function encuadrar(puntos) {
-  const caja = new THREE.Box3();
-  puntos.forEach((p) => caja.expandByPoint(new THREE.Vector3(p[0], p[1], p[2])));
-  const centro = caja.getCenter(new THREE.Vector3());
-  const tam = caja.getSize(new THREE.Vector3());
-  const dist = Math.max(tam.x, tam.y, tam.z) * 1.55;
-  camera.position.set(centro.x + dist * 0.55, centro.y + dist * 0.3, centro.z + dist);
-  controls.target.copy(centro);
-  camPos0.copy(camera.position);
-  target0.copy(centro);
-  controls.update();
-}
-
-function construir() {
-  const radios = ATOMIC_DNA_DATA.meta.radios;
-  const atomos = ATOMIC_DNA_DATA.atomos;
-  const enlaces = ATOMIC_DNA_DATA.enlaces;
-
-  // 1. Átomos (InstancedMesh esferas)
-  const geoEsfera = new THREE.SphereGeometry(1, 24, 18);
-  const matEsfera = new THREE.MeshStandardMaterial({ roughness: 0.32, metalness: 0.08 });
-  const mallaAtomos = new THREE.InstancedMesh(geoEsfera, matEsfera, atomos.length);
-  const dummy = new THREE.Object3D();
-  const color = new THREE.Color();
-
-  atomos.forEach((a, i) => {
-    dummy.position.set(a[0], a[1], a[2]);
-    const r = (radios[a[3]] || 0.7) * 1.15;
-    dummy.scale.setScalar(r);
-    dummy.updateMatrix();
-    mallaAtomos.setMatrixAt(i, dummy.matrix);
-    mallaAtomos.setColorAt(i, color.setHex(PALETA[a[4]] ?? 0x94a3b8));
-  });
-  scene.add(mallaAtomos);
-
-  // 2. Enlaces (InstancedMesh cilindros)
-  const geoCil = new THREE.CylinderGeometry(1, 1, 1, 10);
-  const matCil = new THREE.MeshStandardMaterial({ roughness: 0.5, metalness: 0.05 });
-  const mallaEnlaces = new THREE.InstancedMesh(geoCil, matCil, enlaces.length);
-  const up = new THREE.Vector3(0, 1, 0);
-  const p1 = new THREE.Vector3();
-  const p2 = new THREE.Vector3();
-  const dir = new THREE.Vector3();
-  const med = new THREE.Vector3();
-
-  enlaces.forEach((e, i) => {
-    const a = atomos[e[0]];
-    const b = atomos[e[1]];
-    p1.set(a[0], a[1], a[2]);
-    p2.set(b[0], b[1], b[2]);
-    dir.subVectors(p2, p1);
-    const len = dir.length();
-    med.addVectors(p1, p2).multiplyScalar(0.5);
-    dummy.position.copy(med);
-    dummy.quaternion.setFromUnitVectors(up, dir.normalize());
-    dummy.scale.set(e[2] === 'h' ? 0.09 : 0.17, len, e[2] === 'h' ? 0.09 : 0.17);
-    dummy.updateMatrix();
-    mallaEnlaces.setMatrixAt(i, dummy.matrix);
-    mallaEnlaces.setColorAt(i, color.setHex(e[2] === 'h' ? 0x8fb4e0 : 0x4a6390));
-  });
-  scene.add(mallaEnlaces);
-
-  encuadrar(atomos.map((a) => [a[0], a[1], a[2]]));
-}
-
-function toggleRotate() {
-  rotating.value = !rotating.value;
-  if (controls) controls.autoRotate = rotating.value;
-}
-
-function resetView() {
-  if (!camera || !controls) return;
-  camera.position.copy(camPos0);
-  controls.target.copy(target0);
-  controls.update();
-}
-
-function onResize() {
-  if (!renderer || !holder.value) return;
-  const w = holder.value.clientWidth;
-  const h = holder.value.clientHeight;
-  if (w <= 0 || h <= 0) return;
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
-  renderer.setSize(w, h);
-}
-
-function animar() {
-  rafId = requestAnimationFrame(animar);
-  if (controls) controls.update();
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera);
-  }
-}
-
-// Watchers para cuando la célula cambia de estado
-watch(() => [props.cellFate, props.cellState?.p53, props.cellState?.dsb, selectedLocusKey.value], () => {
-  // El locus y los metadatos se actualizan reactivamente
-});
-
-onMounted(() => {
-  crearBase();
-  construir();
-  window.addEventListener('resize', onResize);
-  if (window.ResizeObserver && holder.value) {
-    resizeObserver = new ResizeObserver(() => onResize());
-    resizeObserver.observe(holder.value);
-  }
-  setTimeout(onResize, 60);
-  setTimeout(onResize, 250);
-  animar();
-});
-
-onBeforeUnmount(() => {
-  cancelAnimationFrame(rafId);
-  window.removeEventListener('resize', onResize);
-  if (resizeObserver) resizeObserver.disconnect();
-  if (controls) controls.dispose();
-  if (renderer) renderer.dispose();
 });
 </script>
 
@@ -568,130 +343,20 @@ onBeforeUnmount(() => {
 /* ==========================================================
    ESTILOS ORIGINALES DE ADN PRUEBA (ADNAtomico.vue)
    ========================================================== */
+.watermark-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.85rem;
+  background: rgba(15, 23, 42, 0.65);
+  border-radius: var(--md-sys-shape-corner-small);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
 .adn-viewer-container {
   position: relative;
   width: 100%;
-  height: 520px;
-  background: #020612;
-  overflow: hidden;
-  border-radius: var(--md-sys-shape-corner-small);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  font-family: system-ui, sans-serif;
-}
-
-.adn-canvas {
-  position: absolute;
-  inset: 0;
-}
-
-/* Panel Flotante Fiel a ADNAtomico.vue */
-.adn-panel {
-  position: absolute;
-  left: 16px;
-  top: 16px;
-  max-width: 340px;
-  max-height: calc(100% - 32px);
-  overflow-y: auto;
-  z-index: 10;
-  background: rgba(4, 12, 32, 0.85);
-  border: 1px solid rgba(125, 180, 255, 0.25);
-  border-radius: 12px;
-  padding: 14px 16px;
-  color: #dbeafe;
-  backdrop-filter: blur(8px);
-}
-
-.adn-panel h2 {
-  margin: 0 0 6px;
-  font-size: 17px;
-  color: #e0f2fe;
-}
-
-.adn-panel p {
-  margin: 6px 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: #bfdbfe;
-}
-
-.seq-info-box {
-  margin: 8px 0;
-}
-
-.strand-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #38bdf8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.adn-panel code {
-  display: block;
-  background: #06122b;
-  border-radius: 6px;
-  padding: 6px 8px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: #a5f3fc;
-  overflow-x: auto;
-  margin: 3px 0 6px;
-  font-family: var(--md-ref-typeface-mono);
-}
-
-.adn-leyenda {
-  font-size: 12px;
-  color: #93c5fd;
-  line-height: 1.7;
-  margin: 8px 0;
-}
-
-.adn-leyenda i {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-.adn-hint {
-  font-size: 11px;
-  color: #7dd3fc;
-  margin-top: 6px;
-}
-
-.adn-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.adn-actions button {
-  cursor: pointer;
-  border: 1px solid rgba(125, 180, 255, 0.4);
-  background: rgba(30, 64, 175, 0.35);
-  color: #e0f2fe;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  transition: all 0.15s ease;
-}
-
-.adn-actions button:hover {
-  background: rgba(30, 64, 175, 0.6);
-}
-
-/* Watermark de Estado Biológico */
-.watermark-status {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  z-index: 10;
 }
 
 .status-chip {

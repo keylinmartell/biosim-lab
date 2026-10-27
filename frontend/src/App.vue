@@ -43,16 +43,14 @@
           <div class="active-indicator"></div>
         </button>
 
-        <!-- 
-        <button 
+        <!-- <button 
           :class="['md3-tab-item', { active: currentTab === 'experimental' }]" 
           @click="currentTab = 'experimental'"
         >
           <Icon name="science" size="20" class="tab-icon" />
           <span class="tab-label">Modelo Experimental</span>
           <div class="active-indicator"></div>
-        </button> 
-        -->
+        </button> -->
       </nav>
 
       <!-- Instrumentation & Telemetry Status -->

@@ -71,7 +71,7 @@
       <!-- HUD Atómico Superior Derecho: Detalle del Par -->
       <div class="hud-card hud-top-right" v-if="selectedBaseData">
         <div class="hud-card-header">
-          <span class="hud-label">Nucleótido Dúplex (Posición {{ selectedPosition }})</span>
+          <span class="hud-label">Nucleótido Dúplex (Posición {{ effectiveSelectedPos }})</span>
         </div>
         <div class="pair-display-row">
           <div :class="['base-badge', selectedBaseData.strand1.toLowerCase()]">
@@ -136,11 +136,11 @@
 
         <div class="toolbar-sep"></div>
 
-        <!-- Botones de Zoom Diferenciados: Acercar (+) y Alejar (-) -->
-        <button class="md3-icon-btn" @click="zoomIn" title="Acercar (Ampliar zoom)">
+        <!-- Botones de Zoom: Acercar par enfocado (+) y Ver ADN completo (-) -->
+        <button class="md3-icon-btn" @click="zoomIn" title="Acercar y enfocar par seleccionado (+)">
           <Icon name="zoom_in" size="18" />
         </button>
-        <button class="md3-icon-btn" @click="zoomOut" title="Alejar (Reducir zoom)">
+        <button class="md3-icon-btn" @click="zoomOut" title="Ver ADN completo (-)">
           <Icon name="zoom_out" size="18" />
         </button>
 
@@ -194,7 +194,23 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['selectBase']);
+const emit = defineEmits(['selectBase', 'update:selectedPosition']);
+
+const internalSelectedPos = ref(props.selectedPosition ?? 0);
+
+watch(() => props.selectedPosition, (newVal) => {
+  if (newVal !== undefined && newVal !== null) {
+    internalSelectedPos.value = newVal;
+    buildDNAHelix(false);
+  }
+});
+
+const effectiveSelectedPos = computed(() => {
+  if (internalSelectedPos.value !== null && internalSelectedPos.value !== undefined) {
+    return internalSelectedPos.value;
+  }
+  return props.selectedPosition ?? 0;
+});
 
 const canvasContainer = ref(null);
 const atomicCanvasHolder = ref(null);
@@ -241,7 +257,7 @@ const displayedSequence = computed(() => {
     return extended.slice(0, 8);
   }
   if (viewMode3D.value === 'window' && clean.length > 64) {
-    const sel = (props.selectedPosition !== null && props.selectedPosition !== undefined && props.selectedPosition >= 0) ? props.selectedPosition : 0;
+    const sel = (effectiveSelectedPos.value !== null && effectiveSelectedPos.value !== undefined && effectiveSelectedPos.value >= 0) ? effectiveSelectedPos.value : 0;
     const start = Math.max(0, Math.min(sel - 32, clean.length - 64));
     return clean.slice(start, start + 64);
   }
@@ -251,7 +267,7 @@ const displayedSequence = computed(() => {
 // Desplazamiento inicial si estamos en modo ventana
 const windowStartOffset = computed(() => {
   if (viewMode3D.value === 'window' && cleanFullSequence.value.length > 64) {
-    const sel = (props.selectedPosition !== null && props.selectedPosition !== undefined && props.selectedPosition >= 0) ? props.selectedPosition : 0;
+    const sel = (effectiveSelectedPos.value !== null && effectiveSelectedPos.value !== undefined && effectiveSelectedPos.value >= 0) ? effectiveSelectedPos.value : 0;
     return Math.max(0, Math.min(sel - 32, cleanFullSequence.value.length - 64));
   }
   return 0;
@@ -259,7 +275,7 @@ const windowStartOffset = computed(() => {
 
 const selectedBaseData = computed(() => {
   const clean = props.sequence.toUpperCase().replace(/[^ATCG]/g, '');
-  const pos = props.selectedPosition;
+  const pos = effectiveSelectedPos.value;
   if (!clean || pos === null || pos === undefined || pos < 0 || pos >= clean.length) return null;
   const s1 = clean[pos];
   const s2 = COMPLEMENT_MAP[s1] || 'T';
@@ -305,7 +321,7 @@ function buildDNAHelix(reframe = false) {
     pairsCount: atomicData.pairs.length
   };
 
-  const selGlobal = props.selectedPosition;
+  const selGlobal = effectiveSelectedPos.value;
   const offset = windowStartOffset.value;
   const selLocal = (selGlobal !== null && selGlobal !== undefined) ? (selGlobal - offset) : -1;
 
@@ -524,7 +540,10 @@ function initScene() {
         if (obj.userData?.atomPairMap && hit.instanceId !== undefined) {
           const globalPairIdx = obj.userData.atomPairMap[hit.instanceId];
           if (globalPairIdx !== undefined) {
+            internalSelectedPos.value = globalPairIdx;
             emit('selectBase', globalPairIdx);
+            emit('update:selectedPosition', globalPairIdx);
+            buildDNAHelix(false);
           }
         }
       }
@@ -596,24 +615,52 @@ function panDown() {
   controls.update();
 }
 
-// Zoom centrado a lo largo de la línea de mira hacia el target actual
+// Zoom enfocado en el par de bases y su complementaria seleccionado
 function zoomIn() {
   if (!camera || !controls) return;
-  const offset = camera.position.clone().sub(controls.target);
-  const dist = offset.length();
-  const newDist = Math.max(controls.minDistance, dist * 0.82);
-  offset.setLength(newDist);
-  camera.position.copy(controls.target).add(offset);
-  controls.update();
+
+  const sel = effectiveSelectedPos.value;
+  const clean = cleanFullSequence.value;
+
+  if (sel !== null && sel !== undefined && sel >= 0 && clean.length > 0) {
+    const N = clean.length;
+    const VERTICAL_STEP = 3.4;
+    const zCenter = ((N - 1) * VERTICAL_STEP) / 2;
+    const targetY = sel * VERTICAL_STEP - zCenter;
+
+    // Centrar la vista exactamente en la altura Y de este par de bases
+    controls.target.set(0, targetY, 0);
+
+    // Calcular dirección actual de la cámara respecto al centro del par para mantener el ángulo
+    const camDir = camera.position.clone().sub(controls.target);
+    camDir.y = 0;
+    if (camDir.lengthSq() < 0.01) camDir.set(0, 0, 1);
+    camDir.normalize();
+
+    // Distancia cercana para inspección detallada de ambos nucleótidos y puentes de H (24 Å)
+    const closeDist = 24.0;
+    camera.position.set(
+      camDir.x * closeDist,
+      targetY + 1.8,
+      camDir.z * closeDist
+    );
+    controls.update();
+  } else {
+    // Si no hay selección, zoom hacia adelante estándar
+    const offset = camera.position.clone().sub(controls.target);
+    const dist = offset.length();
+    const newDist = Math.max(controls.minDistance, dist * 0.82);
+    offset.setLength(newDist);
+    camera.position.copy(controls.target).add(offset);
+    controls.update();
+  }
 }
 
+// Zoom out: Restablece la vista para mostrar el ADN completo de nuevo
 function zoomOut() {
   if (!camera || !controls) return;
-  const offset = camera.position.clone().sub(controls.target);
-  const dist = offset.length();
-  const newDist = Math.min(controls.maxDistance, dist * 1.22);
-  offset.setLength(newDist);
-  camera.position.copy(controls.target).add(offset);
+  camera.position.copy(camPos0);
+  controls.target.copy(target0);
   controls.update();
 }
 
