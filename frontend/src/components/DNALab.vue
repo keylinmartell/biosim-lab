@@ -26,6 +26,10 @@
           <Icon name="menu_book" size="18" />
           <span>Manual del Lab</span>
         </button>
+        <button class="md3-button-outlined dna-test-btn" @click="showDnaTestDialog = true" title="Abrir modelos 3D reales de ADN Prueba (Atómico y Fotorrealista)">
+          <Icon name="dna" size="18" />
+          <span>ADN Prueba</span>
+        </button>
       </div>
     </div>
 
@@ -1404,51 +1408,6 @@
         </div>
       </div>
 
-      <!-- Pipeline Roadmap Preview (Próximos Módulos) -->
-      <div class="phase2-pipeline-preview md3-card-outlined" v-if="selectedGene || cleanSequence">
-        <div class="pipeline-header">
-          <Icon name="schema" size="20" class="pipeline-icon" />
-          <div class="pipeline-text">
-            <h5>Pipeline del Dogma Central (Fase 2: Expresión Génica)</h5>
-            <span>Flujo molecular secuencial desde el ADN genómico hasta el polipéptido maduro:</span>
-          </div>
-        </div>
-        <div class="pipeline-steps-preview">
-          <!-- Paso B: Transcripción (Activo / Completado) -->
-          <div :class="['pipeline-step-card', transcriptionResult ? 'completed' : 'active-step']">
-            <div class="step-num">B</div>
-            <div class="step-info">
-              <strong>Transcripción (Módulo B)</strong>
-              <span>Síntesis de Pre-ARNm 5'&rarr;3' mediante ARN Polimerasa II.</span>
-            </div>
-            <span :class="['step-status', transcriptionResult ? 'status-done' : 'status-current']">
-              <Icon :name="transcriptionResult ? 'check_circle' : 'play_circle'" size="12" />
-              {{ transcriptionResult ? 'Pre-ARNm Sintetizado' : 'Módulo Activo' }}
-            </span>
-          </div>
-
-          <!-- Paso C: Splicing & Capping (Siguiente) -->
-          <div class="pipeline-step-card disabled">
-            <div class="step-num">C</div>
-            <div class="step-info">
-              <strong>Splicing &amp; Capping</strong>
-              <span>Remoción de intrones por espliceosoma y maduración del ARNm.</span>
-            </div>
-            <span class="step-status">Módulo Siguiente</span>
-          </div>
-
-          <!-- Paso D: Traducción Peptídica (Siguiente) -->
-          <div class="pipeline-step-card disabled">
-            <div class="step-num">D</div>
-            <div class="step-info">
-              <strong>Traducción Peptídica</strong>
-              <span>Decodificación ribosómica por codones y síntesis de proteína.</span>
-            </div>
-            <span class="step-status">Módulo Siguiente</span>
-          </div>
-        </div>
-      </div>
-
       <!-- Estado Informativo cuando selectedGene es null (Entrada Libre / Personalizada) -->
       <div class="phase2-empty-state md3-card-outlined" v-if="!selectedGene">
         <div class="empty-state-content">
@@ -2171,6 +2130,91 @@
         </div>
       </div>
     </div>
+
+    <!-- Diálogo Modal: Renderizado ADN Prueba (Modelos Reales: ADN Atómico y ADN Fotorrealista) -->
+    <div class="md3-dialog-backdrop" v-if="showDnaTestDialog" @click.self="showDnaTestDialog = false">
+      <div class="md3-dialog-surface dna-test-dialog-surface md3-card-outlined">
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <div class="dna-test-icon-badge">
+              <Icon name="dna" size="24" class="dialog-icon highlight" />
+            </div>
+            <div>
+              <h3>ADN Prueba · Modelos Reales de ADN-B (21 pb)</h3>
+              <span class="dialog-sub">Estructuras derivadas del modelo molecular real · 855 átomos, 985 enlaces y esqueleto paramétrico</span>
+            </div>
+          </div>
+
+          <!-- Switcher de Modelos -->
+          <div class="dna-test-model-switcher">
+            <button 
+              class="model-tab-btn" 
+              :class="{ active: dnaTestActiveModel === 'atomico' }"
+              @click="dnaTestActiveModel = 'atomico'"
+              title="Ver Modelo Atómico Fiel con 855 átomos y 985 enlaces"
+            >
+              <span class="tab-dot dot-atomico"></span>
+              <span>Modelo Atómico</span>
+              <span class="tab-badge">855 Átomos</span>
+            </button>
+            <button 
+              class="model-tab-btn" 
+              :class="{ active: dnaTestActiveModel === 'fotorealista' }"
+              @click="dnaTestActiveModel = 'fotorealista'"
+              title="Ver Vista Fotorrealista con tubos brillantes y clearcoat"
+            >
+              <span class="tab-dot dot-foto"></span>
+              <span>Fotorrealista</span>
+              <span class="tab-badge">Tubos PBR</span>
+            </button>
+            <button 
+              class="model-tab-btn" 
+              :class="{ active: dnaTestActiveModel === 'dual' }"
+              @click="dnaTestActiveModel = 'dual'"
+              title="Comparar ambos modelos lado a lado"
+            >
+              <span>⚡ Comparativa Dual</span>
+            </button>
+          </div>
+
+          <button class="dialog-close-btn" @click="showDnaTestDialog = false" title="Cerrar ADN Prueba">✕</button>
+        </div>
+
+        <div class="dna-test-dialog-body" :class="{ 'is-dual-view': dnaTestActiveModel === 'dual' }">
+          <!-- Vista Atómica -->
+          <div v-if="dnaTestActiveModel === 'atomico'" class="dna-model-wrapper">
+            <ADNAtomico />
+          </div>
+
+          <!-- Vista Fotorrealista -->
+          <div v-else-if="dnaTestActiveModel === 'fotorealista'" class="dna-model-wrapper">
+            <ADNFotorrealista />
+          </div>
+
+          <!-- Vista Dual Lado a Lado -->
+          <div v-else-if="dnaTestActiveModel === 'dual'" class="dna-dual-container">
+            <div class="dual-pane">
+              <div class="dual-pane-header">
+                <span class="dual-badge atomico-badge">Modelo Atómico Fiel</span>
+                <span class="dual-info">855 átomos · 985 enlaces</span>
+              </div>
+              <div class="dual-pane-canvas">
+                <ADNAtomico />
+              </div>
+            </div>
+            <div class="dual-pane">
+              <div class="dual-pane-header">
+                <span class="dual-badge foto-badge">Vista Fotorrealista PBR</span>
+                <span class="dual-info">Esqueleto de fósforos · Tubos PBR</span>
+              </div>
+              <div class="dual-pane-canvas">
+                <ADNFotorrealista />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -2179,6 +2223,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { api } from '../api/client';
 import Icon from './Icon.vue';
 import DNAHelix3D from './DNAHelix3D.vue';
+import ADNAtomico from './ADNAtomico.vue';
+import ADNFotorrealista from './ADNFotorrealista.vue';
 
 const sequenceInput = ref('');
 const initialMoldSequence = ref('');
@@ -2234,6 +2280,8 @@ const saveExpForm = ref({
   notes: ''
 });
 const showManualDialog = ref(false);
+const showDnaTestDialog = ref(false);
+const dnaTestActiveModel = ref('atomico');
 const manualActiveTab = ref('flow');
 const experimentNotification = ref(null);
 const lastMutationApplied = ref(null);
@@ -9342,5 +9390,193 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Estilos para el botón y modal de ADN Prueba (DnaHelix) */
+.dna-test-btn {
+  background: rgba(0, 210, 255, 0.12) !important;
+  border-color: rgba(0, 242, 254, 0.45) !important;
+  color: #7df9ff !important;
+  transition: all 0.2s ease !important;
+}
+
+.dna-test-btn:hover {
+  background: rgba(0, 210, 255, 0.25) !important;
+  border-color: #00f2fe !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(0, 242, 254, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.dna-test-dialog-surface {
+  width: 96vw;
+  max-width: 1400px;
+  height: 90vh;
+  max-height: 920px;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  background: #020818;
+  border: 1px solid rgba(0, 210, 255, 0.35);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 102, 255, 0.2);
+}
+
+.dna-test-model-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(3, 11, 28, 0.85);
+  border: 1px solid rgba(0, 210, 255, 0.25);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.model-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.model-tab-btn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.model-tab-btn.active {
+  background: rgba(0, 210, 255, 0.18);
+  border-color: rgba(0, 242, 254, 0.5);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(0, 210, 255, 0.2);
+}
+
+.tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-atomico {
+  background: #38bdf8;
+  box-shadow: 0 0 8px #38bdf8;
+}
+
+.dot-foto {
+  background: #818cf8;
+  box-shadow: 0 0 8px #818cf8;
+}
+
+.tab-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.dna-test-dialog-body {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 70px);
+  position: relative;
+  overflow: hidden;
+  background: #020612;
+}
+
+.dna-model-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.dna-dual-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  gap: 2px;
+  background: rgba(0, 210, 255, 0.15);
+}
+
+.dual-pane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #020612;
+}
+
+.dual-pane-header {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.dual-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atomico-badge {
+  background: rgba(56, 189, 248, 0.22);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+}
+
+.foto-badge {
+  background: rgba(129, 140, 248, 0.22);
+  color: #c7d2fe;
+  border: 1px solid rgba(129, 140, 248, 0.45);
+}
+
+.dual-info {
+  font-size: 11px;
+  color: #94a3b8;
+  background: rgba(2, 6, 18, 0.75);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+}
+
+.dual-pane-canvas {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.dna-test-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(0, 102, 255, 0.4));
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7df9ff;
 }
 </style>

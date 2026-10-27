@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     ).strip()
 
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
     class Config:
         case_sensitive = True
 
