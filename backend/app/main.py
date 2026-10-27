@@ -10,6 +10,7 @@ import app.models # Garantizar que todos los modelos se importen
 from app.api.v1.dna import router as dna_router
 from app.api.v1.cells import router as cells_router
 from app.api.v1.experiments import router as experiments_router
+from app.api.v1.simulation import router as simulation_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +44,7 @@ app.add_middleware(
 app.include_router(dna_router, prefix=settings.API_V1_STR)
 app.include_router(cells_router, prefix=settings.API_V1_STR)
 app.include_router(experiments_router, prefix=settings.API_V1_STR)
+app.include_router(simulation_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 def health():

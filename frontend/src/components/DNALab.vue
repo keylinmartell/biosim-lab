@@ -26,10 +26,6 @@
           <Icon name="menu_book" size="18" />
           <span>Manual del Lab</span>
         </button>
-        <button class="md3-button-outlined dna-test-btn" @click="showDnaTestDialog = true" title="Abrir modelos 3D reales de ADN Prueba (Atómico y Fotorrealista)">
-          <Icon name="dna" size="18" />
-          <span>ADN Prueba</span>
-        </button>
       </div>
     </div>
 
@@ -2145,72 +2141,12 @@
             </div>
           </div>
 
-          <!-- Switcher de Modelos -->
-          <div class="dna-test-model-switcher">
-            <button 
-              class="model-tab-btn" 
-              :class="{ active: dnaTestActiveModel === 'atomico' }"
-              @click="dnaTestActiveModel = 'atomico'"
-              title="Ver Modelo Atómico Fiel con 855 átomos y 985 enlaces"
-            >
-              <span class="tab-dot dot-atomico"></span>
-              <span>Modelo Atómico</span>
-              <span class="tab-badge">855 Átomos</span>
-            </button>
-            <button 
-              class="model-tab-btn" 
-              :class="{ active: dnaTestActiveModel === 'fotorealista' }"
-              @click="dnaTestActiveModel = 'fotorealista'"
-              title="Ver Vista Fotorrealista con tubos brillantes y clearcoat"
-            >
-              <span class="tab-dot dot-foto"></span>
-              <span>Fotorrealista</span>
-              <span class="tab-badge">Tubos PBR</span>
-            </button>
-            <button 
-              class="model-tab-btn" 
-              :class="{ active: dnaTestActiveModel === 'dual' }"
-              @click="dnaTestActiveModel = 'dual'"
-              title="Comparar ambos modelos lado a lado"
-            >
-              <span>⚡ Comparativa Dual</span>
-            </button>
-          </div>
-
           <button class="dialog-close-btn" @click="showDnaTestDialog = false" title="Cerrar ADN Prueba">✕</button>
         </div>
 
-        <div class="dna-test-dialog-body" :class="{ 'is-dual-view': dnaTestActiveModel === 'dual' }">
-          <!-- Vista Atómica -->
-          <div v-if="dnaTestActiveModel === 'atomico'" class="dna-model-wrapper">
+        <div class="dna-test-dialog-body">
+          <div class="dna-model-wrapper">
             <ADNAtomico />
-          </div>
-
-          <!-- Vista Fotorrealista -->
-          <div v-else-if="dnaTestActiveModel === 'fotorealista'" class="dna-model-wrapper">
-            <ADNFotorrealista />
-          </div>
-
-          <!-- Vista Dual Lado a Lado -->
-          <div v-else-if="dnaTestActiveModel === 'dual'" class="dna-dual-container">
-            <div class="dual-pane">
-              <div class="dual-pane-header">
-                <span class="dual-badge atomico-badge">Modelo Atómico Fiel</span>
-                <span class="dual-info">855 átomos · 985 enlaces</span>
-              </div>
-              <div class="dual-pane-canvas">
-                <ADNAtomico />
-              </div>
-            </div>
-            <div class="dual-pane">
-              <div class="dual-pane-header">
-                <span class="dual-badge foto-badge">Vista Fotorrealista PBR</span>
-                <span class="dual-info">Esqueleto de fósforos · Tubos PBR</span>
-              </div>
-              <div class="dual-pane-canvas">
-                <ADNFotorrealista />
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -2224,7 +2160,6 @@ import { api } from '../api/client';
 import Icon from './Icon.vue';
 import DNAHelix3D from './DNAHelix3D.vue';
 import ADNAtomico from './ADNAtomico.vue';
-import ADNFotorrealista from './ADNFotorrealista.vue';
 
 const sequenceInput = ref('');
 const initialMoldSequence = ref('');
@@ -3822,16 +3757,16 @@ onMounted(() => {
   border-radius: 50%;
 }
 
-.n-badge.a { background: rgba(239, 68, 68, 0.15); color: var(--bio-base-a); }
+.n-badge.a { background: rgba(140, 204, 255, 0.18); color: var(--bio-base-a); }
 .n-badge.a .pip { background: var(--bio-base-a); }
 
-.n-badge.t { background: rgba(16, 185, 129, 0.15); color: var(--bio-base-t); }
+.n-badge.t { background: rgba(64, 128, 242, 0.18); color: var(--bio-base-t); }
 .n-badge.t .pip { background: var(--bio-base-t); }
 
-.n-badge.c { background: rgba(6, 182, 212, 0.15); color: var(--bio-base-c); }
+.n-badge.c { background: rgba(38, 89, 217, 0.18); color: var(--bio-base-c); }
 .n-badge.c .pip { background: var(--bio-base-c); }
 
-.n-badge.g { background: rgba(245, 158, 11, 0.15); color: var(--bio-base-g); }
+.n-badge.g { background: rgba(191, 224, 255, 0.18); color: var(--bio-base-g); }
 .n-badge.g .pip { background: var(--bio-base-g); }
 
 .status-chip {
@@ -4167,28 +4102,49 @@ onMounted(() => {
 }
 
 .base-column.a .primary-strand { 
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.25) 100%); 
+  background: linear-gradient(135deg, rgba(140, 204, 255, 0.22) 0%, rgba(140, 204, 255, 0.35) 100%); 
   color: var(--bio-base-a); 
   border: 1px solid var(--bio-base-a); 
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 10px rgba(140, 204, 255, 0.3);
 }
 .base-column.t .primary-strand { 
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(4, 120, 87, 0.25) 100%); 
+  background: linear-gradient(135deg, rgba(64, 128, 242, 0.22) 0%, rgba(64, 128, 242, 0.35) 100%); 
   color: var(--bio-base-t); 
   border: 1px solid var(--bio-base-t); 
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 10px rgba(64, 128, 242, 0.3);
 }
 .base-column.c .primary-strand { 
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(14, 116, 144, 0.25) 100%); 
+  background: linear-gradient(135deg, rgba(38, 89, 217, 0.22) 0%, rgba(38, 89, 217, 0.35) 100%); 
   color: var(--bio-base-c); 
   border: 1px solid var(--bio-base-c); 
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+  box-shadow: 0 0 10px rgba(38, 89, 217, 0.3);
 }
 .base-column.g .primary-strand { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(180, 83, 9, 0.25) 100%); 
+  background: linear-gradient(135deg, rgba(191, 224, 255, 0.22) 0%, rgba(191, 224, 255, 0.35) 100%); 
   color: var(--bio-base-g); 
   border: 1px solid var(--bio-base-g); 
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 10px rgba(191, 224, 255, 0.3);
+}
+
+.base-column.a .comp-strand { 
+  color: var(--bio-base-t); 
+  border-color: rgba(64, 128, 242, 0.45); 
+  background: rgba(64, 128, 242, 0.15); 
+}
+.base-column.t .comp-strand { 
+  color: var(--bio-base-a); 
+  border-color: rgba(140, 204, 255, 0.45); 
+  background: rgba(140, 204, 255, 0.15); 
+}
+.base-column.c .comp-strand { 
+  color: var(--bio-base-g); 
+  border-color: rgba(191, 224, 255, 0.45); 
+  background: rgba(191, 224, 255, 0.15); 
+}
+.base-column.g .comp-strand { 
+  color: var(--bio-base-c); 
+  border-color: rgba(38, 89, 217, 0.45); 
+  background: rgba(38, 89, 217, 0.15); 
 }
 
 .base-column:hover .base-capsule {
@@ -4209,13 +4165,13 @@ onMounted(() => {
   width: 2px;
   height: 2px;
   border-radius: 50%;
-  background-color: #38bdf8;
-  box-shadow: 0 0 4px rgba(56, 189, 248, 0.6);
+  background-color: #8fb4e0;
+  box-shadow: 0 0 4px rgba(143, 180, 224, 0.7);
 }
 
 .comp-strand {
   background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(56, 189, 248, 0.18);
+  border: 1px solid rgba(125, 180, 255, 0.25);
   color: #94a3b8;
 }
 
@@ -6415,8 +6371,8 @@ onMounted(() => {
   color: #fbbf24;
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
-.bb-dot.s-dot { width: 6px; height: 6px; border-radius: 50%; background: #38bdf8; }
-.bb-dot.p-dot { width: 6px; height: 6px; border-radius: 50%; background: #fbbf24; }
+.bb-dot.s-dot { width: 6px; height: 6px; border-radius: 50%; background: #738cbf; }
+.bb-dot.p-dot { width: 6px; height: 6px; border-radius: 50%; background: #3373e6; }
 
 /* 2D Track con Esqueleto Azúcar-Fosfato */
 .track-polarity-col {
@@ -6436,14 +6392,14 @@ onMounted(() => {
   white-space: nowrap;
 }
 .polarity-tag.p5 {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(51, 115, 230, 0.22);
+  color: #93c5fd;
+  border: 1px solid rgba(51, 115, 230, 0.45);
 }
 .polarity-tag.p3 {
-  background: rgba(56, 189, 248, 0.2);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(115, 140, 191, 0.22);
+  color: #dbeafe;
+  border: 1px solid rgba(115, 140, 191, 0.45);
 }
 .polarity-v-link {
   width: 1px;
@@ -6477,15 +6433,15 @@ onMounted(() => {
   justify-content: center;
 }
 .bb-dot.phosphate {
-  background: #f59e0b;
-  color: #000;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+  background: #3373e6;
+  color: #ffffff;
+  box-shadow: 0 0 6px rgba(51, 115, 230, 0.6);
 }
 .bb-dot.sugar {
-  background: #94a3b8;
-  color: #0f172a;
+  background: #738cbf;
+  color: #ffffff;
   border-radius: 3px;
-  box-shadow: 0 0 6px rgba(148, 163, 184, 0.5);
+  box-shadow: 0 0 6px rgba(115, 140, 191, 0.6);
 }
 .bb-hyphen {
   font-size: 0.65rem;
@@ -6546,8 +6502,8 @@ onMounted(() => {
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
 }
-.sym-badge.p { background: #f59e0b; color: #000; }
-.sym-badge.d { background: #94a3b8; color: #0f172a; }
+.sym-badge.p { background: #3373e6; color: #ffffff; }
+.sym-badge.d { background: #738cbf; color: #ffffff; }
 .sym-badge.b { background: rgba(255, 255, 255, 0.1); color: var(--md-sys-color-on-surface); }
 .eq-op {
   font-weight: 700;

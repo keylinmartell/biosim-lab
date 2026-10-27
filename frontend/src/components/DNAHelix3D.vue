@@ -7,22 +7,14 @@
           <Icon name="dna" size="22" />
         </div>
         <div class="header-titles">
-          <h3 class="title-text">Modelo Macromolecular Tridimensional (B-DNA)</h3>
-          <span class="subhead-text">Visualización modular paramétrica de alta fidelidad: esqueleto alternante, grupos 2x2 y puentes de H</span>
+          <h3 class="title-text">Modelo Atómico Tridimensional (B-DNA)</h3>
+          <span class="subhead-text">
+            Modelo Atómico Real reactivo · {{ atomicStats.totalAtoms }} átomos, enlaces covalentes y puentes H Watson-Crick
+          </span>
         </div>
       </div>
 
       <div class="header-chips">
-        <!-- Selector de Modo de Curvatura (Cinemático In Vivo vs Lineal Analítico) -->
-        <button 
-          class="md3-chip interactive-chip" 
-          @click="toggleTrajectoryMode"
-          :title="trajectoryMode === 'curved' ? 'Cambiar a modo lineal estricto' : 'Cambiar a modo cinemático in vivo'"
-        >
-          <Icon name="dna" size="14" class="chip-lead" />
-          <span class="font-mono">Modo: {{ trajectoryMode === 'curved' ? 'Curva In Vivo' : 'Eje Lineal' }}</span>
-        </button>
-
         <!-- Selector de Vista: Gen Completo vs Ventana Activa si la secuencia es larga -->
         <button 
           class="md3-chip interactive-chip" 
@@ -35,8 +27,8 @@
         </button>
 
         <div class="md3-chip">
-          <Icon name="tag" size="14" class="chip-lead" />
-          <span class="font-mono">{{ displayedSequence.length }} bp en 3D</span>
+          <Icon name="biotech" size="14" class="chip-lead" />
+          <span class="font-mono">{{ displayedSequence.length }} bp · {{ atomicStats.totalAtoms }} átomos</span>
         </div>
 
         <button 
@@ -52,24 +44,31 @@
 
     <!-- Contenedor del Canvas WebGL 3D -->
     <div class="canvas-wrapper" ref="canvasContainer">
-      <!-- HUD Superior Izquierdo: Leyenda Biofísica Macromolecular -->
+      <!-- Capa Modelo Atómico Real -->
+      <div 
+        ref="atomicCanvasHolder" 
+        class="atomic-canvas-box"
+      ></div>
+
+      <!-- HUD Atómico Superior Izquierdo: Leyenda Biofísica Atómica Original -->
       <div class="hud-card hud-top-left">
         <div class="hud-card-header">
-          <span class="hud-label">Estructura Macromolecular Modular</span>
+          <span class="hud-label">Modelo Atómico Real (ADN-B)</span>
         </div>
         <div class="spectral-legend-grid">
-          <span class="spectral-pill a"><span class="swatch"></span>A · Adenina (Verde)</span>
-          <span class="spectral-pill t"><span class="swatch"></span>T · Timina (Rojo)</span>
-          <span class="spectral-pill c"><span class="swatch"></span>C · Citosina (Azul)</span>
-          <span class="spectral-pill g"><span class="swatch"></span>G · Guanina (Amarillo)</span>
-          <span class="spectral-pill phosphate"><span class="swatch"></span>Fosfato (Naranja)</span>
-          <span class="spectral-pill sugar"><span class="swatch"></span>Desoxirribosa (Gris)</span>
-          <span class="spectral-pill bond"><span class="swatch rod"></span>Enlace Esqueleto</span>
-          <span class="spectral-pill hbond"><span class="swatch pin"></span>Puentes H (Punteado)</span>
+          <span class="spectral-pill a"><span class="swatch" style="background:#8cccff"></span>A · Adenina</span>
+          <span class="spectral-pill t"><span class="swatch" style="background:#4080f2"></span>T · Timina</span>
+          <span class="spectral-pill g"><span class="swatch" style="background:#bfe0ff"></span>G · Guanina</span>
+          <span class="spectral-pill c"><span class="swatch" style="background:#2659d9"></span>C · Citosina</span>
+          <span class="spectral-pill caz"><span class="swatch" style="background:#738cbf"></span>Azúcar (Caz)</span>
+          <span class="spectral-pill o"><span class="swatch" style="background:#a6d9ff"></span>Oxígeno (O)</span>
+          <span class="spectral-pill p"><span class="swatch" style="background:#3373e6"></span>Fósforo (P)</span>
+          <span class="spectral-pill bond"><span class="swatch rod" style="background:#4a6390"></span>Enlace Covalente</span>
+          <span class="spectral-pill hbond"><span class="swatch pin" style="background:#8fb4e0"></span>Puente H</span>
         </div>
       </div>
 
-      <!-- HUD Superior Derecho: Detalle del Par y Esqueleto Azúcar-Fosfato -->
+      <!-- HUD Atómico Superior Derecho: Detalle del Par -->
       <div class="hud-card hud-top-right" v-if="selectedBaseData">
         <div class="hud-card-header">
           <span class="hud-label">Nucleótido Dúplex (Posición {{ selectedPosition }})</span>
@@ -96,11 +95,11 @@
         <div class="hud-backbone-detail">
           <div class="hud-bb-line">
             <span class="hud-bb-tag">5' Hebra:</span>
-            <span>Desoxirribosa (Gris) ↔ Fosfato (Naranja)</span>
+            <span>Desoxirribosa (Caz) ↔ Fosfato (PO₄)</span>
           </div>
           <div class="hud-bb-line">
-            <span class="hud-bb-tag">3' Antiparalela:</span>
-            <span>Desoxirribosa (Gris) ↔ Fosfato (Naranja)</span>
+            <span class="hud-bb-tag">3' Hebra:</span>
+            <span>Antiparalela (Caz ↔ PO₄)</span>
           </div>
         </div>
       </div>
@@ -120,11 +119,8 @@
         <button class="md3-icon-btn" @click="zoomOut" title="Alejar zoom">
           <Icon name="zoom_in" size="18" style="transform: rotate(180deg);" />
         </button>
-        <button class="md3-icon-btn" @click="resetCamera" title="Restablecer perspectiva cenital">
+        <button class="md3-icon-btn" @click="resetCamera" title="Restablecer vista inicial">
           <Icon name="refresh" size="18" />
-        </button>
-        <button class="md3-icon-btn" @click="toggleTrajectoryMode" :title="trajectoryMode === 'curved' ? 'Modo lineal' : 'Modo curva in vivo'">
-          <Icon name="dna" size="18" />
         </button>
       </div>
 
@@ -132,7 +128,7 @@
       <div class="hud-bottom-dock">
         <div class="dock-content">
           <Icon name="info" size="16" class="dock-icon" />
-          <span>Rotación 360° · Zoom orbital · Clic en cualquier bloque o azúcar para inspeccionar su par y puentes de hidrógeno</span>
+          <span>Modelo Atómico Real: Arrastra para orbitar · Rueda para zoom · Clic en cualquier átomo para seleccionar par</span>
         </div>
       </div>
     </div>
@@ -144,6 +140,12 @@ import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Icon from './Icon.vue';
+import { 
+  generateAtomicDNA, 
+  ATOMIC_PALETTE, 
+  ATOMIC_RADII, 
+  COMPLEMENT_MAP 
+} from '../sim/atomicDnaGenerator.js';
 
 const props = defineProps({
   sequence: {
@@ -160,8 +162,8 @@ const props = defineProps({
 const emit = defineEmits(['selectBase']);
 
 const canvasContainer = ref(null);
+const atomicCanvasHolder = ref(null);
 const isExpanded = ref(false);
-const trajectoryMode = ref('linear'); // 'linear' (eje vertical estricto) o 'curved' (curva in vivo)
 const isAutoRotating = ref(true);
 
 let renderer = null;
@@ -170,14 +172,22 @@ let camera = null;
 let controls = null;
 let mainHelixGroup = null;
 let animId = null;
+const clickableObjects = [];
 
-const complementMap = { A: 'T', T: 'A', C: 'G', G: 'C' };
+const camPos0 = new THREE.Vector3();
+const target0 = new THREE.Vector3();
+
+const atomicStats = ref({
+  totalAtoms: 0,
+  totalBonds: 0,
+  pairsCount: 0
+});
 
 const cleanFullSequence = computed(() => {
   return props.sequence.toUpperCase().replace(/[^ATCG]/g, '') || 'ATCGATCGATCG';
 });
 
-// Modo de visualización: 'full' (todo el gen en 3D mediante GPU Instancing) o 'window' (ventana 64 bp para inspección cercana)
+// Modo de visualización: 'full' (todo el gen en 3D) o 'window' (ventana 64 bp para secuencias muy largas)
 const viewMode3D = ref('full');
 
 function toggleViewMode3D() {
@@ -187,12 +197,12 @@ function toggleViewMode3D() {
 // Secuencia procesada para el renderizador 3D
 const displayedSequence = computed(() => {
   const clean = cleanFullSequence.value;
-  if (clean.length < 16) {
+  if (clean.length < 8) {
     let extended = clean;
-    while (extended.length < 16) {
+    while (extended.length < 8) {
       extended += clean;
     }
-    return extended.slice(0, 16);
+    return extended.slice(0, 8);
   }
   if (viewMode3D.value === 'window' && clean.length > 64) {
     const sel = (props.selectedPosition !== null && props.selectedPosition !== undefined && props.selectedPosition >= 0) ? props.selectedPosition : 0;
@@ -202,504 +212,241 @@ const displayedSequence = computed(() => {
   return clean;
 });
 
+// Desplazamiento inicial si estamos en modo ventana
+const windowStartOffset = computed(() => {
+  if (viewMode3D.value === 'window' && cleanFullSequence.value.length > 64) {
+    const sel = (props.selectedPosition !== null && props.selectedPosition !== undefined && props.selectedPosition >= 0) ? props.selectedPosition : 0;
+    return Math.max(0, Math.min(sel - 32, cleanFullSequence.value.length - 64));
+  }
+  return 0;
+});
+
 const selectedBaseData = computed(() => {
   const clean = props.sequence.toUpperCase().replace(/[^ATCG]/g, '');
   const pos = props.selectedPosition;
   if (!clean || pos === null || pos === undefined || pos < 0 || pos >= clean.length) return null;
   const s1 = clean[pos];
-  const s2 = complementMap[s1] || 'T';
-  const bonds = (s1 === 'C' || s1 === 'G') ? 3 : 2;
-  return { strand1: s1, strand2: s2, bonds };
+  const s2 = COMPLEMENT_MAP[s1] || 'T';
+
+  const bonds = (s1 === 'A' || s1 === 'T') ? 2 : 3;
+  return {
+    pos,
+    strand1: s1,
+    strand2: s2,
+    bonds
+  };
 });
 
-// ==========================================
 // ========================================================
-// PARÁMETROS GEOMÉTRICOS — DOBLE HÉLICE B-DNA (MODELO MOLECULAR)
+// GENERADOR Y RENDERIZADOR ATÓMICO 100% FIEL A ADN PRUEBA
 // ========================================================
-const HELIX_RADIUS = 13.2;              // Radio exterior del esqueleto (fosfatos)
-const VERTICAL_STEP = 5.0;             // Separación vertical entre pares de bases
-const ANGLE_STEP = (Math.PI * 2) / 10; // 36° por par de bases (B-DNA)
+function buildDNAHelix(reframe = false) {
+  if (!mainHelixGroup || !scene) return;
 
-// Offsets del modelo molecular
-const SUGAR_INWARD = 2.4;     // Desplazamiento del azúcar hacia adentro (más agrupado con fosfatos)
-
-// Tamaños de esferas
-const R_BACKBONE = 0.95;   // Fosfato (naranja) y Desoxirribosa (gris)
-const R_BASE = 0.78;       // Esferas de bases nitrogenadas (un tin más pequeñas que el esqueleto)
-const R_HBOND = 0.15;      // Micro-esferas blancas de puentes y enlaces punteados
-const R_BACKBONE_ROD = 0.20; // Varillas cilíndricas del esqueleto entre esferas
-const dOffset = R_BASE * 1.35; // Offset del rombo con apertura central
-
-const clickableObjects = [];
-
-// ==========================================
-// CACHÉ DE GEOMETRÍAS Y MATERIALES PBR
-// ==========================================
-let geomBackbone = null;
-let geomBase = null;
-let geomHBond = null;
-
-function getGeometries() {
-  // Siempre crear geometrías frescas con los radios actuales (sin caché de radio obsoleto)
-  if (!geomBackbone) geomBackbone = new THREE.SphereGeometry(R_BACKBONE, 26, 20);
-  if (!geomBase) geomBase = new THREE.SphereGeometry(R_BASE, 20, 16);
-  if (!geomHBond) geomHBond = new THREE.SphereGeometry(R_HBOND, 12, 10);
-  return { geomBackbone, geomBase, geomHBond };
-}
-
-function resetGeometryCache() {
-  if (geomBackbone) { geomBackbone.dispose(); geomBackbone = null; }
-  if (geomBase) { geomBase.dispose(); geomBase = null; }
-  if (geomHBond) { geomHBond.dispose(); geomHBond = null; }
-}
-
-let pbrMaterials = null;
-function initPBRMaterials() {
-  if (pbrMaterials) return pbrMaterials;
-
-  // 5. Material plástico mate satinado (roughness: 0.35, metalness: 0.05)
-  const PBR_OPTS = { roughness: 0.35, metalness: 0.05 };
-
-  // Esqueleto exterior
-  const phosphateMat = new THREE.MeshStandardMaterial({
-    color: 0xff7700, // Naranja brillante
-    ...PBR_OPTS
-  });
-
-  const sugarMat = new THREE.MeshStandardMaterial({
-    color: 0xd1d5db, // Gris claro neutro
-    ...PBR_OPTS
-  });
-
-  const bondRodMat = new THREE.MeshStandardMaterial({
-    color: 0x94a3b8, // Cilindro liso gris
-    ...PBR_OPTS
-  });
-
-  // Bases Nitrogenadas:
-  // Verde = Adenina (A), Rojo = Timina (T), Amarillo = Guanina (G), Azul = Citosina (C)
-  const baseMats = {
-    A: new THREE.MeshStandardMaterial({ color: 0x22c55e, ...PBR_OPTS }), // Verde
-    T: new THREE.MeshStandardMaterial({ color: 0xef4444, ...PBR_OPTS }), // Rojo
-    G: new THREE.MeshStandardMaterial({ color: 0xfacc15, ...PBR_OPTS }), // Amarillo
-    C: new THREE.MeshStandardMaterial({ color: 0x2563eb, ...PBR_OPTS })  // Azul
-  };
-
-  // Puentes de hidrógeno: Micro-esferas blancas (puntos punteados del peldaño)
-  const hBondMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.28,
-    metalness: 0.05
-  });
-
-  // Resaltado para par activo seleccionado
-  const selectedSugarMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0x38bdf8,
-    emissiveIntensity: 0.60,
-    roughness: 0.25,
-    metalness: 0.05
-  });
-
-  const selectedHBondMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0x70d6ff,
-    emissiveIntensity: 0.90,
-    roughness: 0.20,
-    metalness: 0.05
-  });
-
-  const selectedBaseMats = {
-    A: new THREE.MeshStandardMaterial({ color: 0x4ade80, emissive: 0x22c55e, emissiveIntensity: 0.60, ...PBR_OPTS }),
-    T: new THREE.MeshStandardMaterial({ color: 0xf87171, emissive: 0xef4444, emissiveIntensity: 0.60, ...PBR_OPTS }),
-    G: new THREE.MeshStandardMaterial({ color: 0xfde047, emissive: 0xeab308, emissiveIntensity: 0.60, ...PBR_OPTS }),
-    C: new THREE.MeshStandardMaterial({ color: 0x60a5fa, emissive: 0x2563eb, emissiveIntensity: 0.60, ...PBR_OPTS })
-  };
-
-  pbrMaterials = {
-    phosphateMat,
-    sugarMat,
-    selectedSugarMat,
-    bondRodMat,
-    hBondMat,
-    selectedHBondMat,
-    baseMats,
-    selectedBaseMats
-  };
-  return pbrMaterials;
-}
-
-// Auxiliar: agrega una esfera a la escena
-function addSphereMesh(group, geom, mat, pos, userData = null) {
-  const mesh = new THREE.Mesh(geom, mat);
-  mesh.position.copy(pos);
-  if (userData) {
-    mesh.userData = userData;
-    clickableObjects.push(mesh);
-  }
-  group.add(mesh);
-  return mesh;
-}
-
-// Auxiliar: conecta exactamente dos esferas de la misma hebra con un cilindro liso gris
-function addCylinderBetween(group, pA, pB, radius, material) {
-  const dir = new THREE.Vector3().subVectors(pB, pA);
-  const len = dir.length();
-  if (len < 0.01) return null;
-  const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
-  const geo = new THREE.CylinderGeometry(radius, radius, len, 16);
-  const mesh = new THREE.Mesh(geo, material);
-  mesh.position.copy(mid);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-  group.add(mesh);
-  return mesh;
-}
-
-// ========================================================
-// ========================================================
-// ========================================================
-// GENERADOR GEOMÉTRICO — DOBLE HÉLICE B-DNA (GPU INSTANCED MESH)
-// Renderiza secuencias completas (ej: 1.182 bp de TP53) a 60 FPS
-// usando InstancedMesh para comprimir miles de esferas y varillas
-// en sólo 8 órdenes de dibujo (Draw Calls) directas a la GPU.
-// ========================================================
-function buildDNAHelix() {
-  if (!mainHelixGroup) return;
-
+  // Limpiar grupo previo
   while (mainHelixGroup.children.length > 0) {
     const obj = mainHelixGroup.children[0];
     mainHelixGroup.remove(obj);
     if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+      else obj.material.dispose();
+    }
   }
   clickableObjects.length = 0;
-  resetGeometryCache();
 
   const seq = displayedSequence.value;
-  const N = seq.length;
-  if (!N) return;
+  if (!seq || !seq.length) return;
 
-  const mats = initPBRMaterials();
-  const geoms = getGeometries();
+  // 1. Generar la estructura molecular mediante el generador canónico centrado en Z=0
+  const atomicData = generateAtomicDNA(seq, true);
+  const atoms = atomicData.atoms;
+  const bonds = atomicData.bonds;
 
-  const yOfLevel = (t) => (t - (N - 1) / 2) * VERTICAL_STEP;
-
-  // Punto helicoidal
-  const helixPt = (t, strandPhase, radius) => {
-    const angle = t * ANGLE_STEP + strandPhase;
-    return new THREE.Vector3(
-      radius * Math.cos(angle),
-      yOfLevel(t),
-      radius * Math.sin(angle)
-    );
+  atomicStats.value = {
+    totalAtoms: atomicData.totalAtoms,
+    totalBonds: atomicData.totalBonds,
+    pairsCount: atomicData.pairs.length
   };
 
-  const R_SUGAR = HELIX_RADIUS - SUGAR_INWARD;
-  const R_PHOSPHATE = HELIX_RADIUS;
+  const selGlobal = props.selectedPosition;
+  const offset = windowStartOffset.value;
+  const selLocal = (selGlobal !== null && selGlobal !== undefined) ? (selGlobal - offset) : -1;
 
-  const strand1Sugars = [];
-  const strand2Sugars = [];
-
-  const sugarTransforms = [];
-  const phosphateTransforms = [];
-  const rodTransforms = [];
-
-  const addRod = (pA, pB) => {
-    const dir = new THREE.Vector3().subVectors(pB, pA);
-    const len = dir.length();
-    if (len < 0.01) return;
-    const mid = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
-    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-    rodTransforms.push({ pos: mid, quat: q, scale: new THREE.Vector3(1, len, 1) });
-  };
-
-  // Construcción del esqueleto de ambas hebras
-  const buildStrandData = (strandPhase, strandIndex, outSugars) => {
-    const units = [];
-    for (let i = -1; i <= N; i++) {
-      const isActualBase = (i >= 0 && i < N);
-      const s1Pos = helixPt(i, strandPhase, R_SUGAR);
-      if (isActualBase) {
-        outSugars[i] = s1Pos;
-      }
-      const p1Pos = helixPt(i + 0.16, strandPhase, R_PHOSPHATE);
-      const s2Pos = helixPt(i + 0.32, strandPhase, R_SUGAR);
-      const p2Pos = helixPt(i + 0.48, strandPhase, R_PHOSPHATE);
-
-      sugarTransforms.push(s1Pos);
-      phosphateTransforms.push(p1Pos);
-      sugarTransforms.push(s2Pos);
-      phosphateTransforms.push(p2Pos);
-
-      units.push({ s1Pos, p1Pos, s2Pos, p2Pos });
-    }
-
-    for (let u = 0; u < units.length; u++) {
-      const unit = units[u];
-      addRod(unit.s1Pos, unit.s2Pos);
-      addRod(unit.p1Pos, unit.p2Pos);
-      addRod(unit.s1Pos, unit.p1Pos);
-      addRod(unit.p1Pos, unit.s2Pos);
-      addRod(unit.s2Pos, unit.p2Pos);
-      if (u < units.length - 1) {
-        addRod(unit.p2Pos, units[u + 1].s1Pos);
-      }
-    }
-  };
-
-  buildStrandData(0, 1, strand1Sugars);
-  buildStrandData(Math.PI, 2, strand2Sugars);
-
-  // Bases y peldaños centrales
-  const baseTransforms = { A: [], T: [], C: [], G: [] };
-  const hBondTransforms = [];
-  const baseHitMap = { A: [], T: [], C: [], G: [] };
-
-  const up = new THREE.Vector3(0, 1, 0);
-
-  // Offset real para calcular el mapeo de clic si estamos en ventana
-  let baseOffset = 0;
-  if (viewMode3D.value === 'window' && cleanFullSequence.value.length > 64) {
-    const sel = (props.selectedPosition !== null && props.selectedPosition !== undefined && props.selectedPosition >= 0) ? props.selectedPosition : 0;
-    baseOffset = Math.max(0, Math.min(sel - 32, cleanFullSequence.value.length - 64));
-  }
-
-  for (let i = 0; i < N; i++) {
-    const realIndex = i + baseOffset;
-    const isSelected = props.selectedPosition !== null && realIndex === props.selectedPosition;
-    const b1 = seq[i];
-    const b2 = complementMap[b1] || 'T';
-
-    const posS1 = strand1Sugars[i];
-    const posS2 = strand2Sugars[i];
-    if (!posS1 || !posS2) continue;
-
-    const toS2 = new THREE.Vector3().subVectors(posS2, posS1);
-    toS2.y = 0;
-    const rungDir = toS2.clone().normalize();
-    const rungMid = new THREE.Vector3((posS1.x + posS2.x) / 2, yOfLevel(i), (posS1.z + posS2.z) / 2);
-
-    const distFromSugarToBase = 5.0;
-    const center1 = posS1.clone().addScaledVector(rungDir, distFromSugarToBase);
-    center1.y = yOfLevel(i);
-    const center2 = posS2.clone().addScaledVector(rungDir, -distFromSugarToBase);
-    center2.y = yOfLevel(i);
-
-    // Puntas exteriores e interiores de los rombos de bases
-    const tip1_out = center1.clone().addScaledVector(rungDir, -(dOffset + R_BASE));
-    const tip1_in = center1.clone().addScaledVector(rungDir, (dOffset + R_BASE));
-    const tip2_out = center2.clone().addScaledVector(rungDir, (dOffset + R_BASE));
-    const tip2_in = center2.clone().addScaledVector(rungDir, -(dOffset + R_BASE));
-
-    const sugar1_surf = posS1.clone().addScaledVector(rungDir, R_BACKBONE);
-    const sugar2_surf = posS2.clone().addScaledVector(rungDir, -R_BACKBONE);
-
-    // Enlaces de micro-puntos Azúcar ↔ Base (5 puntos blancos)
-    for (let d = 1; d <= 5; d++) {
-      const t = d / 6;
-      const pt1 = new THREE.Vector3().lerpVectors(sugar1_surf, tip1_out, t);
-      pt1.y = yOfLevel(i);
-      hBondTransforms.push(pt1);
-
-      const pt2 = new THREE.Vector3().lerpVectors(sugar2_surf, tip2_out, t);
-      pt2.y = yOfLevel(i);
-      hBondTransforms.push(pt2);
-    }
-
-    // Cluster molecular en ROMBO de 4 esferas por cada nucleótido (Izquierda, Derecha, Arriba, Abajo)
-    const addCluster = (center, bLetter, strandNum) => {
-      [[-dOffset, 0], [dOffset, 0], [0, dOffset], [0, -dOffset]].forEach(([du, dv]) => {
-        const p = center.clone().addScaledVector(rungDir, du).addScaledVector(up, dv);
-        baseTransforms[bLetter].push(p);
-        baseHitMap[bLetter].push({ index: realIndex, base: bLetter, strand: strandNum });
-      });
-    };
-    addCluster(center1, b1, 1);
-    addCluster(center2, b2, 2);
-
-    // Puentes de hidrógeno centrales entre los dos rombos (8 puntos blancos)
-    for (let d = 1; d <= 8; d++) {
-      const t = d / 9;
-      const pt = new THREE.Vector3().lerpVectors(tip1_in, tip2_in, t);
-      pt.y = yOfLevel(i);
-      hBondTransforms.push(pt);
-    }
-
-    // Aura bioluminiscente de selección
-    if (isSelected) {
-      const sl = new THREE.PointLight(0x38bdf8, 3.5, 24.0);
-      sl.position.copy(rungMid);
-      mainHelixGroup.add(sl);
-
-      const haloGeo = new THREE.RingGeometry(HELIX_RADIUS * 0.8, HELIX_RADIUS * 1.1, 32);
-      const haloMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.75 });
-      const halo = new THREE.Mesh(haloGeo, haloMat);
-      halo.position.copy(rungMid);
-      halo.rotation.x = Math.PI / 2;
-      mainHelixGroup.add(halo);
-    }
-  }
-
-  // ==========================================
-  // DISPATCH A LA GPU MEDIANTE INSTANCED MESH
-  // ==========================================
+  // 2. Malla instanciada de ÁTOMOS (Esferas idénticas a ADN Prueba)
+  const geoEsfera = new THREE.SphereGeometry(1, 24, 18);
+  const matEsfera = new THREE.MeshStandardMaterial({ 
+    roughness: 0.32, 
+    metalness: 0.08 
+  });
+  const mallaAtomos = new THREE.InstancedMesh(geoEsfera, matEsfera, atoms.length);
   const dummy = new THREE.Object3D();
+  const color = new THREE.Color();
+  const atomPairMap = [];
 
-  // 1. Fosfatos (InstancedMesh)
-  if (phosphateTransforms.length > 0) {
-    const meshP = new THREE.InstancedMesh(geoms.geomBackbone, mats.phosphateMat, phosphateTransforms.length);
-    for (let j = 0; j < phosphateTransforms.length; j++) {
-      dummy.position.copy(phosphateTransforms[j]);
-      dummy.quaternion.identity();
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      meshP.setMatrixAt(j, dummy.matrix);
-    }
-    meshP.instanceMatrix.needsUpdate = true;
-    mainHelixGroup.add(meshP);
-  }
+  atoms.forEach((a, i) => {
+    dummy.position.set(a[0], a[1], a[2]);
+    const r = (ATOMIC_RADII[a[3]] || 0.7) * 1.15;
+    dummy.scale.setScalar(r);
+    dummy.updateMatrix();
+    mallaAtomos.setMatrixAt(i, dummy.matrix);
 
-  // 2. Azúcares (InstancedMesh)
-  if (sugarTransforms.length > 0) {
-    const meshS = new THREE.InstancedMesh(geoms.geomBackbone, mats.sugarMat, sugarTransforms.length);
-    for (let j = 0; j < sugarTransforms.length; j++) {
-      dummy.position.copy(sugarTransforms[j]);
-      dummy.quaternion.identity();
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      meshS.setMatrixAt(j, dummy.matrix);
-    }
-    meshS.instanceMatrix.needsUpdate = true;
-    mainHelixGroup.add(meshS);
-  }
+    // Detección de par seleccionado para realce luminoso
+    const pairIdx = a[5];
+    const isSelected = (pairIdx === selLocal);
 
-  // 3. Varillas del esqueleto y puentes (Cilindro unitario instanciado)
-  if (rodTransforms.length > 0) {
-    const unitCylGeo = new THREE.CylinderGeometry(R_BACKBONE_ROD, R_BACKBONE_ROD, 1.0, 8);
-    const meshR = new THREE.InstancedMesh(unitCylGeo, mats.bondRodMat, rodTransforms.length);
-    for (let j = 0; j < rodTransforms.length; j++) {
-      const { pos, quat, scale } = rodTransforms[j];
-      dummy.position.copy(pos);
-      dummy.quaternion.copy(quat);
-      dummy.scale.copy(scale);
-      dummy.updateMatrix();
-      meshR.setMatrixAt(j, dummy.matrix);
+    if (isSelected) {
+      color.setHex(0xffffff);
+    } else {
+      color.setHex(ATOMIC_PALETTE[a[4]] ?? 0x94a3b8);
     }
-    meshR.instanceMatrix.needsUpdate = true;
-    mainHelixGroup.add(meshR);
-  }
+    mallaAtomos.setColorAt(i, color);
 
-  // 4. Bases A, T, C, G (InstancedMesh por base con mapa de clic interactivo)
-  ['A', 'T', 'C', 'G'].forEach((baseLetter) => {
-    const transforms = baseTransforms[baseLetter];
-    if (transforms && transforms.length > 0) {
-      const meshB = new THREE.InstancedMesh(geoms.geomBase, mats.baseMats[baseLetter], transforms.length);
-      for (let j = 0; j < transforms.length; j++) {
-        dummy.position.copy(transforms[j]);
-        dummy.quaternion.identity();
-        dummy.scale.set(1, 1, 1);
-        dummy.updateMatrix();
-        meshB.setMatrixAt(j, dummy.matrix);
-      }
-      meshB.instanceMatrix.needsUpdate = true;
-      meshB.userData = { instanceMap: baseHitMap[baseLetter] };
-      clickableObjects.push(meshB);
-      mainHelixGroup.add(meshB);
-    }
+    atomPairMap.push(pairIdx + offset);
   });
 
-  // 5. Puntos de enlace y Puentes de Hidrógeno
-  if (hBondTransforms.length > 0) {
-    const meshH = new THREE.InstancedMesh(geoms.geomHBond, mats.hBondMat, hBondTransforms.length);
-    for (let j = 0; j < hBondTransforms.length; j++) {
-      dummy.position.copy(hBondTransforms[j]);
-      dummy.quaternion.identity();
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      meshH.setMatrixAt(j, dummy.matrix);
+  mallaAtomos.instanceMatrix.needsUpdate = true;
+  if (mallaAtomos.instanceColor) mallaAtomos.instanceColor.needsUpdate = true;
+  mallaAtomos.userData = { atomPairMap };
+  clickableObjects.push(mallaAtomos);
+  mainHelixGroup.add(mallaAtomos);
+
+  // 3. Malla instanciada de ENLACES (Cilindros de enlaces covalentes y puentes H)
+  const geoCil = new THREE.CylinderGeometry(1, 1, 1, 10);
+  const matCil = new THREE.MeshStandardMaterial({ 
+    roughness: 0.5, 
+    metalness: 0.05 
+  });
+  const mallaEnlaces = new THREE.InstancedMesh(geoCil, matCil, bonds.length);
+  const up = new THREE.Vector3(0, 1, 0);
+  const p1 = new THREE.Vector3();
+  const p2 = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+  const med = new THREE.Vector3();
+
+  bonds.forEach((e, i) => {
+    const a1 = atoms[e[0]];
+    const a2 = atoms[e[1]];
+    if (!a1 || !a2) return;
+
+    p1.set(a1[0], a1[1], a1[2]);
+    p2.set(a2[0], a2[1], a2[2]);
+    dir.subVectors(p2, p1);
+    const len = dir.length();
+    med.addVectors(p1, p2).multiplyScalar(0.5);
+
+    dummy.position.copy(med);
+    dummy.quaternion.setFromUnitVectors(up, dir.normalize());
+    const isH = (e[2] === 'h');
+    const radius = isH ? 0.09 : 0.17;
+    dummy.scale.set(radius, len, radius);
+    dummy.updateMatrix();
+    mallaEnlaces.setMatrixAt(i, dummy.matrix);
+
+    // Color del enlace según tipo y selección
+    const isSelected = (e[3] === selLocal);
+    if (isSelected) {
+      color.setHex(isH ? 0xa5f3fc : 0x7dd3fc);
+    } else {
+      color.setHex(isH ? 0x8fb4e0 : 0x4a6390);
     }
-    meshH.instanceMatrix.needsUpdate = true;
-    mainHelixGroup.add(meshH);
+    mallaEnlaces.setColorAt(i, color);
+  });
+
+  mallaEnlaces.instanceMatrix.needsUpdate = true;
+  if (mallaEnlaces.instanceColor) mallaEnlaces.instanceColor.needsUpdate = true;
+  mainHelixGroup.add(mallaEnlaces);
+
+  // 4. Anillo horizontal de selección en el par activo (Fiel a la Referencia)
+  if (selLocal >= 0 && selLocal < atomicData.pairs.length) {
+    const activePair = atomicData.pairs[selLocal];
+    const ringGeo = new THREE.RingGeometry(12.5, 14.2, 48);
+    const ringMat = new THREE.MeshBasicMaterial({ 
+      color: 0x38bdf8, 
+      side: THREE.DoubleSide, 
+      transparent: true, 
+      opacity: 0.75 
+    });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.set(0, 0, activePair.centerZ);
+    mainHelixGroup.add(ringMesh);
+
+    const sl = new THREE.PointLight(0x38bdf8, 2.5, 30.0);
+    sl.position.set(0, 0, activePair.centerZ);
+    mainHelixGroup.add(sl);
   }
 
-  fitCameraToHelix(N);
+  if (reframe) {
+    encuadrar(atoms.map(a => [a[0], a[1], a[2]]));
+  }
 }
 
-// CÁMARA: encuadre frontal dinámico según longitud N (soporta 12 a 2.000+ bp)
-function fitCameraToHelix(N) {
-  if (!camera || !controls || !mainHelixGroup) return;
+// Encuadre de cámara vertical natural
+function encuadrar(puntos) {
+  if (!camera || !controls || !puntos.length) return;
 
-  const count = Math.max(1, N || 12);
-  const totalHeight = count * VERTICAL_STEP; // altura vertical total
-  const fovRad = (camera.fov * Math.PI) / 360; // 19°
-  const idealDistance = Math.max(72.0, ((totalHeight / 2) / Math.tan(fovRad)) * 1.15);
+  const caja = new THREE.Box3();
+  // Los puntos locales [x, y, z] se mapean a espacio de mundo vertical [x, z, -y] con rotation.x = -PI/2
+  puntos.forEach(p => caja.expandByPoint(new THREE.Vector3(p[0], p[2], -p[1])));
+  const centro = caja.getCenter(new THREE.Vector3());
+  const tam = caja.getSize(new THREE.Vector3());
+  const dist = Math.max(tam.x, tam.y, tam.z) * 1.55;
 
-  camera.near = 1.0;
-  camera.far = Math.max(4000.0, idealDistance * 5.0);
-  camera.position.set(0, 0, idealDistance);
-  camera.updateProjectionMatrix();
-
-  controls.target.set(0, 0, 0);
-  controls.minDistance = 6.0;
-  controls.maxDistance = Math.max(2500.0, idealDistance * 3.5);
+  camera.position.set(0, centro.y, dist);
+  controls.target.set(0, centro.y, 0);
+  camPos0.copy(camera.position);
+  target0.copy(controls.target);
   controls.update();
-
-  const midIndex = Math.floor(count / 2);
-  const midAngle = midIndex * ANGLE_STEP;
-  mainHelixGroup.rotation.set(0.05, midAngle + Math.PI / 2, -0.05);
 }
 
 function initScene() {
-  const container = canvasContainer.value;
+  const container = atomicCanvasHolder.value || canvasContainer.value;
   if (!container) return;
 
   const width = container.clientWidth || 600;
   const height = container.clientHeight || 580;
 
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020612);
+  scene.fog = new THREE.Fog(0x020612, 180, 520);
 
-  camera = new THREE.PerspectiveCamera(38, width / height, 1.0, 3500);
-  camera.position.set(0, 0, 75.0);
+  camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 3000);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.15;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
+
+  // Iluminación fiel a ADN Prueba
+  scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x0a1230, 0.85));
+
+  const clave = new THREE.DirectionalLight(0xffffff, 1.9);
+  clave.position.set(60, 90, 50);
+  scene.add(clave);
+
+  const borde = new THREE.DirectionalLight(0x60a5fa, 1.4);
+  borde.position.set(-70, -30, -60);
+  scene.add(borde);
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = 0.06;
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.9;
   controls.minDistance = 6.0;
-  controls.maxDistance = 2000.0;
-  controls.target.set(0, 0, 0);
+  controls.maxDistance = 2500.0;
 
-  // Iluminación PBR equilibrada de estudio
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
-  scene.add(ambientLight);
-
-  // Luz principal clave (Key Light)
-  const keyLight = new THREE.DirectionalLight(0xfff8ee, 2.0);
-  keyLight.position.set(35, 45, 40);
-  scene.add(keyLight);
-
-  // Luz de relleno suave (Fill Light)
-  const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.90);
-  fillLight.position.set(-40, -15, 30);
-  scene.add(fillLight);
-
-  // Luz trasera de silueta (Rim Light)
-  const rimLight = new THREE.DirectionalLight(0xffffff, 0.80);
-  rimLight.position.set(0, -30, -40);
-  scene.add(rimLight);
-
-  // Grupo principal de la hélice
   mainHelixGroup = new THREE.Group();
+  // Rota -PI/2 en X para que el eje Z del generador atómico sea el eje vertical Y
+  mainHelixGroup.rotation.x = -Math.PI / 2;
   scene.add(mainHelixGroup);
 
-  buildDNAHelix();
+  buildDNAHelix(true);
 
-  // Raycaster para selección interactiva
+  // Raycaster para selección interactiva precisa al hacer clic en cualquier átomo
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   let clickStartPos = { x: 0, y: 0 };
@@ -720,13 +467,11 @@ function initScene() {
       if (intersects.length > 0) {
         const hit = intersects[0];
         const obj = hit.object;
-        if (obj.isInstancedMesh && obj.userData?.instanceMap) {
-          const data = obj.userData.instanceMap[hit.instanceId];
-          if (data && data.index !== undefined) {
-            emit('selectBase', data.index);
+        if (obj.userData?.atomPairMap && hit.instanceId !== undefined) {
+          const globalPairIdx = obj.userData.atomPairMap[hit.instanceId];
+          if (globalPairIdx !== undefined) {
+            emit('selectBase', globalPairIdx);
           }
-        } else if (obj.userData && obj.userData.index !== undefined) {
-          emit('selectBase', obj.userData.index);
         }
       }
     }
@@ -737,12 +482,6 @@ function initScene() {
 
 function animate() {
   animId = requestAnimationFrame(animate);
-
-  // Rotación continua suave del modelo
-  if (mainHelixGroup && isAutoRotating.value) {
-    mainHelixGroup.rotation.y += 0.0035;
-  }
-
   controls?.update();
   if (renderer && scene && camera) {
     renderer.render(scene, camera);
@@ -752,23 +491,19 @@ function animate() {
 let resizeObserver = null;
 
 function onWindowResize() {
-  if (!renderer || !camera || !canvasContainer.value) return;
-  const width = canvasContainer.value.clientWidth;
-  const height = canvasContainer.value.clientHeight;
+  const container = atomicCanvasHolder.value || canvasContainer.value;
+  if (!renderer || !camera || !container) return;
+  const width = container.clientWidth;
+  const height = container.clientHeight;
   if (width <= 0 || height <= 0) return;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
-  fitCameraToHelix(displayedSequence.value.length);
 }
 
 function toggleAutoRotate() {
   isAutoRotating.value = !isAutoRotating.value;
-}
-
-function toggleTrajectoryMode() {
-  trajectoryMode.value = (trajectoryMode.value === 'curved') ? 'linear' : 'curved';
-  buildDNAHelix();
+  if (controls) controls.autoRotate = isAutoRotating.value;
 }
 
 function toggleExpand() {
@@ -791,18 +526,18 @@ function zoomOut() {
 }
 
 function resetCamera() {
-  if (!camera || !controls || !mainHelixGroup) return;
-  fitCameraToHelix(displayedSequence.value.length);
-  controls.target.set(0, 0, 0);
+  if (!camera || !controls) return;
+  camera.position.copy(camPos0);
+  controls.target.copy(target0);
   controls.update();
-  const N = displayedSequence.value.length;
-  const midIndex = Math.floor(N / 2);
-  const midAngle = midIndex * ANGLE_STEP;
-  mainHelixGroup.rotation.set(0.06, midAngle + Math.PI / 2, -0.06);
 }
 
-watch(() => [props.sequence, props.selectedPosition, trajectoryMode.value, viewMode3D.value], () => {
-  buildDNAHelix();
+watch(() => props.sequence, () => {
+  buildDNAHelix(true);
+});
+
+watch(() => [props.selectedPosition, viewMode3D.value], () => {
+  buildDNAHelix(false);
 });
 
 onMounted(() => {
@@ -814,6 +549,8 @@ onMounted(() => {
     });
     resizeObserver.observe(canvasContainer.value);
   }
+  setTimeout(onWindowResize, 60);
+  setTimeout(onWindowResize, 250);
 });
 
 onUnmounted(() => {
@@ -823,41 +560,44 @@ onUnmounted(() => {
     resizeObserver.disconnect();
     resizeObserver = null;
   }
-  if (renderer && renderer.domElement && renderer.domElement.parentNode) {
-    renderer.domElement.parentNode.removeChild(renderer.domElement);
-  }
+  if (controls) controls.dispose();
   if (renderer) renderer.dispose();
 });
 </script>
 
 <style scoped>
+/* Contenedor Principal de la Tarjeta */
 .dna-3d-card {
+  position: relative;
+  background-color: var(--md-sys-color-surface-container-low, #0b1329);
+  border-radius: var(--md-sys-shape-corner-medium, 16px);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  background-color: var(--md-sys-color-surface-container);
-  border-radius: var(--md-sys-shape-corner-medium);
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  transition: all var(--md-sys-motion-duration-medium) ease;
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .dna-3d-card.cinema-expanded {
-  grid-column: 1 / -1;
-  position: relative;
-  z-index: 20;
+  position: fixed;
+  inset: 12px;
+  z-index: 1000;
+  height: calc(100vh - 24px) !important;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.3);
+  border: 1px solid #38bdf8;
 }
 
-/* Header */
+/* Header de la tarjeta */
 .card-header {
+  padding: 0.85rem 1.25rem;
+  background-color: var(--md-sys-color-surface-container, #0f172a);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.9rem 1.4rem;
-  background-color: var(--md-sys-color-surface-container-high);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
   flex-wrap: wrap;
-  gap: 0.8rem;
+  gap: 0.75rem;
 }
 
 .header-main {
@@ -869,7 +609,7 @@ onUnmounted(() => {
 .header-avatar {
   width: 42px;
   height: 42px;
-  border-radius: var(--md-sys-shape-corner-small);
+  border-radius: var(--md-sys-shape-corner-small, 8px);
   background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 132, 199, 0.35) 100%);
   border: 1px solid rgba(56, 189, 248, 0.3);
   color: #38bdf8;
@@ -885,14 +625,15 @@ onUnmounted(() => {
 }
 
 .title-text {
-  font: var(--md-sys-typescale-title-medium);
+  font-size: 1.05rem;
   color: #f1f5f9;
   font-weight: 700;
   letter-spacing: -0.2px;
+  margin: 0;
 }
 
 .subhead-text {
-  font: var(--md-sys-typescale-body-small);
+  font-size: 0.78rem;
   color: #94a3b8;
 }
 
@@ -903,20 +644,26 @@ onUnmounted(() => {
 }
 
 .chip-lead {
-  color: var(--md-sys-color-primary);
+  color: #38bdf8;
 }
 
 .interactive-chip {
   cursor: pointer;
-  background-color: var(--md-sys-color-surface-container);
+  background-color: var(--md-sys-color-surface-container, #1e293b);
   border: 1px solid rgba(56, 189, 248, 0.3);
   transition: all 0.2s ease;
 }
 
 .interactive-chip:hover {
-  background-color: var(--md-sys-color-surface-container-highest);
+  background-color: #334155;
   border-color: #38bdf8;
   transform: translateY(-1px);
+}
+
+.atomic-canvas-box {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
 }
 
 /* Canvas Area */
@@ -930,127 +677,127 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: grab;
-  background: radial-gradient(ellipse at 50% 50%, #0d1117 0%, #06080c 55%, #010204 100%);
+  background: #020612;
 }
 
 .dna-3d-card.cinema-expanded .canvas-wrapper {
-  height: 720px;
+  height: calc(100vh - 120px);
 }
 
 .canvas-wrapper:active {
   cursor: grabbing;
 }
 
-/* HUD Cards */
+/* Floating HUDs */
 .hud-card {
   position: absolute;
-  background: rgba(11, 19, 32, 0.88);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: var(--md-sys-shape-corner-small);
-  padding: 0.65rem 0.9rem;
+  background: rgba(11, 19, 41, 0.85);
   backdrop-filter: blur(12px);
-  pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  z-index: 5;
-}
-
-.hud-card-header {
-  margin-bottom: 0.4rem;
-}
-
-.hud-label {
-  font: var(--md-sys-typescale-label-small);
-  color: #7dd3fc;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: var(--md-sys-shape-corner-medium, 12px);
+  padding: 0.85rem 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+  pointer-events: auto;
 }
 
 .hud-top-left {
-  top: 1.1rem;
-  left: 1.2rem;
+  top: 1rem;
+  left: 1rem;
+  max-width: 320px;
 }
 
+.hud-top-right {
+  top: 1rem;
+  right: 1rem;
+  min-width: 260px;
+}
+
+.hud-card-header {
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.25rem;
+}
+
+.hud-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #38bdf8;
+}
+
+/* Leyenda Atómica */
 .spectral-legend-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem 0.65rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem 0.5rem;
 }
 
 .spectral-pill {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: var(--md-ref-typeface-mono);
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  font-family: monospace;
 }
 
-.spectral-pill .swatch {
-  width: 8px;
-  height: 8px;
+.swatch {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  box-shadow: 0 0 6px currentColor;
+  display: inline-block;
 }
 
-.spectral-pill.a { color: #22c55e; }
-.spectral-pill.t { color: #ef4444; }
-.spectral-pill.c { color: #2563eb; }
-.spectral-pill.g { color: #eab308; }
-.spectral-pill.phosphate { color: #f59e0b; }
-.spectral-pill.sugar { color: #94a3b8; }
-.spectral-pill.bond { color: #64748b; }
-.spectral-pill.hbond { color: #f8fafc; }
-
-.spectral-pill .swatch.rod {
-  width: 10px;
-  height: 4px;
+.swatch.rod {
   border-radius: 2px;
-  background-color: #334155;
-  box-shadow: 0 0 4px #334155;
+  width: 12px;
+  height: 4px;
 }
-.spectral-pill .swatch.pin {
-  width: 10px;
-  height: 3px;
+
+.swatch.pin {
   border-radius: 1px;
-  background-color: #f8fafc;
-  box-shadow: 0 0 6px #ffffff;
+  width: 12px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #8fb4e0 0, #8fb4e0 2px, transparent 2px, transparent 4px) !important;
 }
 
-.hud-top-right {
-  top: 1.1rem;
-  right: 1.2rem;
-}
-
+/* Nucleótido Dúplex Activo */
 .pair-display-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
 }
 
 .base-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.25rem 0.55rem;
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  border: 1px solid transparent;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--md-sys-shape-corner-small, 6px);
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.base-badge .strand-id {
-  font-size: 0.58rem;
-  opacity: 0.75;
+.base-badge.a { border-color: #8cccff; color: #8cccff; }
+.base-badge.t { border-color: #4080f2; color: #4080f2; }
+.base-badge.g { border-color: #bfe0ff; color: #bfe0ff; }
+.base-badge.c { border-color: #2659d9; color: #60a5fa; }
+
+.base-letter {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.base-badge .base-letter {
-  font-size: 1.05rem;
-  font-weight: 800;
+.strand-id {
+  font-size: 0.6rem;
+  opacity: 0.7;
 }
-
-.base-badge.a { background: rgba(34, 197, 94, 0.2); color: #22c55e; border-color: #22c55e; }
-.base-badge.t { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; }
-.base-badge.c { background: rgba(37, 99, 235, 0.2); color: #2563eb; border-color: #2563eb; }
-.base-badge.g { background: rgba(234, 179, 8, 0.2); color: #eab308; border-color: #eab308; }
 
 .h-bond-indicator {
   display: flex;
@@ -1065,190 +812,94 @@ onUnmounted(() => {
 }
 
 .bond-dots .dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
+  background-color: #8fb4e0;
   border-radius: 50%;
-  background-color: #f8fafc;
-  box-shadow: 0 0 6px #ffffff;
+  box-shadow: 0 0 6px #8fb4e0;
 }
 
 .bond-caption {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   color: #94a3b8;
 }
 
-/* Toolbar Flotante */
-.hud-toolbar {
-  position: absolute;
-  right: 1.2rem;
-  top: 50%;
-  transform: translateY(-50%);
+.hud-backbone-detail {
+  font-size: 0.7rem;
+  color: #94a3b8;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  background: rgba(11, 19, 32, 0.88);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: var(--md-sys-shape-corner-small);
-  padding: 0.4rem;
-  backdrop-filter: blur(12px);
-  z-index: 5;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  gap: 0.15rem;
+}
+
+.hud-bb-tag {
+  color: #38bdf8;
+  font-family: monospace;
+  margin-right: 0.25rem;
+}
+
+/* Floating Toolbar */
+.hud-toolbar {
+  position: absolute;
+  bottom: 3.5rem;
+  right: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  z-index: 10;
 }
 
 .md3-icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: transparent;
-  border: 1px solid transparent;
-  color: #94a3b8;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .md3-icon-btn:hover {
-  background: rgba(56, 189, 248, 0.15);
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
   color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.35);
 }
 
 .md3-icon-btn.active {
-  background: rgba(14, 165, 233, 0.25);
-  color: #70d6ff;
+  background: rgba(56, 189, 248, 0.3);
   border-color: #38bdf8;
+  color: #38bdf8;
 }
 
-/* Bottom Dock */
+/* Bottom Navigation Dock */
 .hud-bottom-dock {
   position: absolute;
-  bottom: 1.1rem;
+  bottom: 0.75rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(11, 19, 32, 0.88);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: var(--md-sys-shape-corner-full);
-  padding: 0.4rem 1.1rem;
-  backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  padding: 0.35rem 1rem;
+  z-index: 10;
   pointer-events: none;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-  z-index: 5;
 }
 
 .dock-content {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.7rem;
+  gap: 0.4rem;
+  font-size: 0.72rem;
   color: #94a3b8;
 }
 
 .dock-icon {
   color: #38bdf8;
-}
-
-.hud-backbone-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.45rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.65rem;
-  color: #cbd5e1;
-}
-
-.hud-bb-line {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.hud-bb-tag {
-  font-family: var(--md-ref-typeface-mono);
-  font-weight: 700;
-  color: #38bdf8;
-  font-size: 0.62rem;
-}
-
-@media (max-width: 768px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.85rem 1rem;
-  }
-
-  .header-chips {
-    width: 100%;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 0.2rem;
-  }
-
-  .canvas-wrapper {
-    height: 460px;
-    min-height: 400px;
-  }
-
-  .dna-3d-card.cinema-expanded .canvas-wrapper {
-    height: 520px;
-  }
-
-  .hud-top-left {
-    top: 0.65rem;
-    left: 0.65rem;
-    padding: 0.45rem 0.65rem;
-  }
-
-  .spectral-legend-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.2rem 0.45rem;
-  }
-
-  .spectral-pill {
-    font-size: 0.64rem;
-  }
-
-  .hud-top-right {
-    top: auto;
-    bottom: 3.2rem;
-    right: 0.65rem;
-    padding: 0.45rem 0.65rem;
-    max-width: 220px;
-  }
-
-  .hud-backbone-detail {
-    display: none;
-  }
-
-  .hud-toolbar {
-    right: 0.5rem;
-    top: 40%;
-    padding: 0.25rem;
-    gap: 0.3rem;
-  }
-
-  .md3-icon-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .hud-bottom-dock {
-    width: calc(100% - 1.2rem);
-    left: 0.6rem;
-    transform: none;
-    padding: 0.3rem 0.65rem;
-    bottom: 0.6rem;
-  }
-
-  .dock-content {
-    font-size: 0.62rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }
 </style>

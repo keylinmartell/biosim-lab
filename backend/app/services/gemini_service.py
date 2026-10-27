@@ -18,7 +18,7 @@ def get_gemini_client() -> genai.Client:
         _client = genai.Client(api_key=api_key)
     return _client
 
-def generate_text(prompt: str, model: str = "gemini-2.5-flash") -> str:
+def generate_text(prompt: str, model: str = "gemini-3.8-flash") -> str:
     """
     Genera contenido de texto utilizando la API oficial de Google GenAI.
     """

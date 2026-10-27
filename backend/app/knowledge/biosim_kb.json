@@ -1,0 +1,1002 @@
+{
+  "version": "kb-0.2.0",
+  "model_version": "biosim-fase2-pluri-0.1",
+  "evidence_types": {
+    "literatura": "Valor o mecanismo publicado (fuente indicada)",
+    "supuesto": "DecisiÃ³n temporal del modelo, no mediciÃ³n",
+    "didactico": "Regla simplificada con fines educativos",
+    "simulado": "Resultado producido por el programa"
+  },
+  "sources": {
+    "ALB_BGM": "Alberts et al. Molecular Biology of the Cell - Basic Genetic Mechanisms. NCBI NBK21054",
+    "ALB_DNA_RNA": "Alberts et al. MBoC - From DNA to RNA. NCBI NBK21057",
+    "ALB_CGE": "Alberts et al. MBoC - Control of Gene Expression. NCBI NBK26887",
+    "ALB7": "Alberts et al. MBoC 7a ed. 2022",
+    "LEVINE09": "Levine & Oren, Nat Rev Cancer 2009",
+    "JACKSON09": "Jackson & Bartek, Nature 2009",
+    "SCHW11": "Schwanhausser et al., Nature 2011 (vida media global ARNm/proteina, celulas de raton)",
+    "TAKA06": "Takahashi & Yamanaka, Cell 2006 (OCT4/SOX2/KLF4/MYC)",
+    "BOYER05": "Boyer et al., Cell 2005 (red OCT4-SOX2-NANOG en hESC)",
+    "COLAB": "Documentos internos de la colaboradora (Fase 1, Cierre Fase 1, Fase 2)"
+  },
+  "time": {
+    "base_unit": "s",
+    "default_dt_s": 1,
+    "default_speed_sim_s_per_real_s": 600,
+    "note": "El motor integra con paso fijo dt en segundos simulados; la velocidad solo cambia cuantos pasos se ejecutan por frame."
+  },
+  "central_dogma_rates": {
+    "rnap_elongation_nt_s": {
+      "value": 30,
+      "range": [
+        15,
+        60
+      ],
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    "ribosome_elongation_aa_s": {
+      "value": 4,
+      "range": [
+        2,
+        6
+      ],
+      "evidence": "literatura",
+      "source": "ALB_BGM"
+    },
+    "splicing_delay_s": {
+      "value": 300,
+      "range": [
+        30,
+        1800
+      ],
+      "evidence": "supuesto",
+      "source": "ALB_DNA_RNA"
+    },
+    "nuclear_export_delay_s": {
+      "value": 600,
+      "range": [
+        120,
+        1800
+      ],
+      "evidence": "supuesto",
+      "source": "ALB_CGE"
+    },
+    "mrna_half_life_s_default": {
+      "value": 32400,
+      "range": [
+        1800,
+        86400
+      ],
+      "evidence": "literatura",
+      "source": "SCHW11"
+    },
+    "protein_half_life_s_default": {
+      "value": 165600,
+      "range": [
+        3600,
+        604800
+      ],
+      "evidence": "literatura",
+      "source": "SCHW11"
+    }
+  },
+  "genetic_code": {
+    "start": [
+      "AUG"
+    ],
+    "stop": [
+      "UAA",
+      "UAG",
+      "UGA"
+    ],
+    "table": "standard",
+    "source": "ALB_BGM"
+  },
+  "genes": {
+    "TP53": {
+      "product": "p53",
+      "class": "housekeeping",
+      "role": "factor de transcripcion supresor; sensor de dano",
+      "protein_half_life_s": 1200,
+      "mrna_half_life_s": 14400,
+      "basal_tx": 0.6,
+      "source": "COLAB"
+    },
+    "MDM2": {
+      "product": "MDM2",
+      "class": "housekeeping",
+      "role": "E3 ubiquitina ligasa, degrada p53; diana de p53 (bucle negativo)",
+      "protein_half_life_s": 1500,
+      "mrna_half_life_s": 7200,
+      "basal_tx": 0.2,
+      "targets_of": [
+        "p53:alta_afinidad"
+      ],
+      "source": "LEVINE09"
+    },
+    "CDKN1A": {
+      "product": "p21",
+      "class": "housekeeping",
+      "role": "inhibidor CDK2/CDK4/6 -> parada G1",
+      "protein_half_life_s": 3600,
+      "mrna_half_life_s": 7200,
+      "basal_tx": 0.05,
+      "targets_of": [
+        "p53:alta_afinidad"
+      ],
+      "source": "COLAB"
+    },
+    "GADD45A": {
+      "product": "GADD45",
+      "class": "housekeeping",
+      "role": "apoyo a reparacion",
+      "protein_half_life_s": 3600,
+      "mrna_half_life_s": 3600,
+      "basal_tx": 0.05,
+      "targets_of": [
+        "p53:alta_afinidad"
+      ],
+      "source": "COLAB"
+    },
+    "BBC3": {
+      "product": "PUMA",
+      "class": "housekeeping",
+      "role": "pro-apoptotico BH3",
+      "protein_half_life_s": 7200,
+      "mrna_half_life_s": 3600,
+      "basal_tx": 0.01,
+      "targets_of": [
+        "p53:baja_afinidad"
+      ],
+      "source": "COLAB"
+    },
+    "BAX": {
+      "product": "BAX",
+      "class": "housekeeping",
+      "role": "poro mitocondrial -> citocromo c",
+      "protein_half_life_s": 36000,
+      "mrna_half_life_s": 14400,
+      "basal_tx": 0.05,
+      "targets_of": [
+        "p53:baja_afinidad"
+      ],
+      "source": "COLAB"
+    },
+    "CCND1": {
+      "product": "ciclinaD",
+      "class": "housekeeping",
+      "role": "con CDK4/6 fosforila Rb",
+      "protein_half_life_s": 1800,
+      "mrna_half_life_s": 3600,
+      "basal_tx": 0.1,
+      "targets_of": [
+        "mitogeno:ERK"
+      ],
+      "source": "COLAB"
+    },
+    "CCNE1": {
+      "product": "ciclinaE",
+      "class": "housekeeping",
+      "role": "con CDK2 hiperfosforila Rb (bucle punto R)",
+      "protein_half_life_s": 1800,
+      "mrna_half_life_s": 3600,
+      "basal_tx": 0.05,
+      "targets_of": [
+        "E2F"
+      ],
+      "source": "COLAB"
+    },
+    "POU5F1": {
+      "product": "OCT4",
+      "class": "pluripotencia",
+      "role": "nucleo de pluripotencia; autoactivacion con SOX2",
+      "protein_half_life_s": 21600,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 1.0,
+      "source": "BOYER05"
+    },
+    "SOX2": {
+      "product": "SOX2",
+      "class": "pluripotencia",
+      "role": "heterodimero con OCT4; tambien neuroectodermo",
+      "protein_half_life_s": 21600,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 1.0,
+      "source": "BOYER05"
+    },
+    "NANOG": {
+      "product": "NANOG",
+      "class": "pluripotencia",
+      "role": "estabiliza estado naive; fluctua",
+      "protein_half_life_s": 7200,
+      "mrna_half_life_s": 10800,
+      "basal_tx": 1.0,
+      "source": "BOYER05"
+    },
+    "PAX6": {
+      "product": "PAX6",
+      "class": "linaje_ectodermo",
+      "role": "marcador neuroectodermo",
+      "protein_half_life_s": 36000,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 0.0,
+      "source": "ALB_CGE"
+    },
+    "T": {
+      "product": "BRACHYURY",
+      "class": "linaje_mesodermo",
+      "role": "marcador mesodermo",
+      "protein_half_life_s": 36000,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 0.0,
+      "source": "ALB_CGE"
+    },
+    "SOX17": {
+      "product": "SOX17",
+      "class": "linaje_endodermo",
+      "role": "marcador endodermo definitivo",
+      "protein_half_life_s": 36000,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 0.0,
+      "source": "ALB_CGE"
+    },
+    "CDX2": {
+      "product": "CDX2",
+      "class": "linaje_trofectodermo",
+      "role": "trofectodermo; antagonista de OCT4",
+      "protein_half_life_s": 36000,
+      "mrna_half_life_s": 28800,
+      "basal_tx": 0.0,
+      "source": "ALB_CGE"
+    },
+    "GFP": {
+      "product": "GFP",
+      "class": "reportero",
+      "role": "reportero; fluorescencia requiere maduracion",
+      "protein_half_life_s": 93600,
+      "maturation_s": 3600,
+      "mrna_half_life_s": 14400,
+      "basal_tx": 0.0,
+      "source": "COLAB"
+    }
+  },
+  "initial_cell": {
+    "type": "celula_madre_pluripotente",
+    "cell_cycle_phase": "G1",
+    "cycle_note": "Las PSC tienen G1 corto (~2-3 h) y ciclo total ~16 h",
+    "state": {
+      "OCT4": 1.0,
+      "SOX2": 1.0,
+      "NANOG": 0.8,
+      "PAX6": 0,
+      "BRACHYURY": 0,
+      "SOX17": 0,
+      "CDX2": 0,
+      "p53": 0.05,
+      "MDM2": 0.3,
+      "p21": 0.02,
+      "PUMA": 0.01,
+      "BAX": 0.1,
+      "caspasa": 0,
+      "ciclinaD": 0.3,
+      "ciclinaE": 0.1,
+      "RbP": 0.2,
+      "E2F": 0.2,
+      "dsb": 0,
+      "lesiones_oxidativas": 0,
+      "ATM": 0,
+      "GFP": 0,
+      "GFP_fluor": 0
+    },
+    "evidence": "supuesto",
+    "source": "BOYER05"
+  },
+  "conditions_schema": {
+    "medio": {
+      "type": "enum",
+      "values": [
+        "mantenimiento_pluripotencia",
+        "diferenciacion_espontanea"
+      ],
+      "default": "mantenimiento_pluripotencia"
+    },
+    "LIF_o_FGF2": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 1,
+      "effect": "mantiene OCT4/SOX2/NANOG"
+    },
+    "BMP4": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 0,
+      "effect": "con FGF bajo -> mesodermo/trofectodermo"
+    },
+    "ActivinaA_WNT": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 0,
+      "effect": "alto -> endodermo; medio -> mesodermo"
+    },
+    "acido_retinoico": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 0,
+      "effect": "reprime pluripotencia; favorece neuroectodermo"
+    },
+    "mitogenos": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 0.8,
+      "effect": "ERK -> ciclina D"
+    },
+    "ROS": {
+      "type": "number",
+      "unit": "relativo 0-1",
+      "range": [
+        0,
+        1
+      ],
+      "default": 0.05,
+      "effect": "lesiones oxidativas (BER)"
+    },
+    "radiacion_ionizante_Gy": {
+      "type": "number",
+      "unit": "Gy",
+      "range": [
+        0,
+        10
+      ],
+      "default": 0,
+      "effect": "~35 DSB por Gy por celula",
+      "source": "JACKSON09"
+    },
+    "UV_J_m2": {
+      "type": "number",
+      "unit": "J/m2",
+      "range": [
+        0,
+        50
+      ],
+      "default": 0,
+      "effect": "dimeros de pirimidina (NER)"
+    },
+    "oxigeno_pct": {
+      "type": "number",
+      "unit": "%",
+      "range": [
+        1,
+        21
+      ],
+      "default": 5
+    },
+    "eficiencia_reparacion": {
+      "type": "number",
+      "unit": "fraccion",
+      "range": [
+        0.5,
+        0.98
+      ],
+      "default": 0.9,
+      "source": "COLAB"
+    },
+    "TP53_funcional": {
+      "type": "boolean",
+      "default": true
+    },
+    "reportero_GFP_bajo": {
+      "type": "enum",
+      "values": [
+        "ninguno",
+        "OCT4",
+        "p53",
+        "E2F",
+        "PAX6",
+        "SOX17",
+        "BRACHYURY"
+      ],
+      "default": "ninguno"
+    }
+  },
+  "interventions_schema": {
+    "CRISPR_corte": {
+      "params": {
+        "gen": "string",
+        "reparacion": "NHEJ|HDR"
+      },
+      "effect": "1 DSB dirigido; HDR requiere molde y fase S/G2",
+      "note": "herramienta externa, no estimulo natural"
+    },
+    "pulso_radiacion": {
+      "params": {
+        "Gy": "number"
+      }
+    },
+    "anadir_factor": {
+      "params": {
+        "factor": "string",
+        "nivel": "number"
+      }
+    },
+    "retirar_factor": {
+      "params": {
+        "factor": "string"
+      }
+    }
+  },
+  "rules": [
+    {
+      "id": "R01",
+      "if": "dsb > 0",
+      "then": "MRN detecta y activa ATM",
+      "evidence": "literatura",
+      "source": "JACKSON09"
+    },
+    {
+      "id": "R02",
+      "if": "ATM activo",
+      "then": "fosforila p53 Ser15/Ser20 -> MDM2 deja de degradarlo -> p53 se acumula",
+      "evidence": "literatura",
+      "source": "LEVINE09"
+    },
+    {
+      "id": "R03",
+      "if": "p53 bajo/transitorio",
+      "then": "promotores de alta afinidad: p21, MDM2, GADD45 -> parada y reparacion",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R04",
+      "if": "p53 alto y sostenido (> umbral durante > t_sostenido)",
+      "then": "promotores de baja afinidad: PUMA, BAX -> apoptosis",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R05",
+      "if": "p21 alto",
+      "then": "inhibe CDK2/CDK4/6 -> Rb hipofosforilado -> E2F apagado -> no cruza punto R",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R06",
+      "if": "mitogenos",
+      "then": "ERK -> ciclina D -> CDK4/6 fosforila Rb -> E2F libre -> ciclina E -> bucle positivo (biestable)",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R07",
+      "if": "RbP > 0.7 sostenido",
+      "then": "punto R cruzado: entra a fase S aunque se retiren mitogenos",
+      "evidence": "didactico",
+      "source": "COLAB"
+    },
+    {
+      "id": "R08",
+      "if": "OCT4 y SOX2 altos",
+      "then": "autoactivacion de OCT4, SOX2 y NANOG",
+      "evidence": "literatura",
+      "source": "BOYER05"
+    },
+    {
+      "id": "R09",
+      "if": "acido retinoico o LIF/FGF2 bajo",
+      "then": "baja OCT4/NANOG; si SOX2 se mantiene -> PAX6 (ectodermo)",
+      "evidence": "literatura",
+      "source": "ALB_CGE"
+    },
+    {
+      "id": "R10",
+      "if": "BMP4 + WNT medio, FGF bajo",
+      "then": "BRACHYURY (mesodermo)",
+      "evidence": "literatura",
+      "source": "ALB_CGE"
+    },
+    {
+      "id": "R11",
+      "if": "ActivinaA/WNT alto",
+      "then": "SOX17 (endodermo)",
+      "evidence": "literatura",
+      "source": "ALB_CGE"
+    },
+    {
+      "id": "R12",
+      "if": "OCT4 muy bajo + BMP4",
+      "then": "CDX2 (trofectodermo)",
+      "evidence": "literatura",
+      "source": "ALB_CGE"
+    },
+    {
+      "id": "R13",
+      "if": "lesion oxidativa",
+      "then": "BER con probabilidad = eficiencia_reparacion por intento; puede saturarse",
+      "evidence": "didactico",
+      "source": "COLAB"
+    },
+    {
+      "id": "R14",
+      "if": "TP53_funcional = false",
+      "then": "no hay parada por dano; celula danada cruza R; tasa de mutacion aumenta",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R15",
+      "if": "transcripcion",
+      "then": "ARN 5'->3' sobre hebra molde 3'->5'; U por T; no reemplazo ciego T->U",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R16",
+      "if": "traduccion",
+      "then": "inicio AUG; codon STOP no anade aminoacido",
+      "evidence": "literatura",
+      "source": "ALB_BGM"
+    },
+    {
+      "id": "R17",
+      "if": "PSC con dano",
+      "then": "las celulas pluripotentes son muy sensibles: umbral de apoptosis menor que en somaticas",
+      "evidence": "literatura",
+      "source": "ALB7"
+    },
+    {
+      "id": "R18",
+      "if": "ficha de gen",
+      "then": "promotor, region transcrita, exones/intrones y CDS son entidades distintas; no toda secuencia se transcribe",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R19",
+      "if": "transcripcion",
+      "then": "se identifica primero la hebra molde segun la orientacion del gen (+/-); ARN 5'->3' complementario a la molde",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R20",
+      "if": "secuencia con simbolos no ACGT o incompleta",
+      "then": "se marca invalida/no resuelta; nunca se corrige en silencio",
+      "evidence": "didactico",
+      "source": "COLAB"
+    },
+    {
+      "id": "R21",
+      "if": "pre-ARNm",
+      "then": "se anade caperuza 5' (presente/ausente, sin quimica)",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R22",
+      "if": "intron con senales GU...AG",
+      "then": "splicing: se retira el intron y se unen exones; se guardan pre-ARNm, intrones retirados y ARNm maduro (patron fijo)",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R23",
+      "if": "senal AAUAAA en 3'",
+      "then": "corte y poliadenilacion (cola poli-A como propiedad)",
+      "evidence": "literatura",
+      "source": "ALB_DNA_RNA"
+    },
+    {
+      "id": "R24",
+      "if": "ARNm maduro",
+      "then": "traduccion desde el primer AUG en marco hasta el primer STOP; detecta longitud no multiplo de 3 y ausencia de STOP",
+      "evidence": "literatura",
+      "source": "ALB_BGM"
+    },
+    {
+      "id": "R25",
+      "if": "variante sinonima",
+      "then": "cambia codon, mismo aminoacido; no se declara neutra automaticamente",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R26",
+      "if": "variante missense",
+      "then": "se registra posicion y aa ref/var; sin declarar patogenicidad",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R27",
+      "if": "variante nonsense",
+      "then": "proteina truncada potencial; NMD no simulado",
+      "evidence": "literatura",
+      "source": "COLAB"
+    },
+    {
+      "id": "R28",
+      "if": "p53 activo y elemento de respuesta en promotor (CDKN1A)",
+      "then": "p53 tetramero se une por el surco mayor y activa la transcripcion (alta afinidad)",
+      "evidence": "literatura",
+      "source": "LEVINE09"
+    },
+    {
+      "id": "R29",
+      "if": "gen silenciado / expresion < 0.1",
+      "then": "cromatina compacta en nucleosomas (147 pb, 1,65 vueltas); sin transcripcion",
+      "evidence": "literatura",
+      "source": "ALB_CGE"
+    },
+    {
+      "id": "R30",
+      "if": "DSB dentro del locus",
+      "then": "la ARN polimerasa no atraviesa la rotura; transcripcion del locus bloqueada hasta reparar",
+      "evidence": "literatura",
+      "source": "JACKSON09"
+    }
+  ],
+  "thresholds": {
+    "p53_apoptosis": {
+      "value": 0.7,
+      "evidence": "supuesto"
+    },
+    "p53_sustained_s": {
+      "value": 14400,
+      "evidence": "supuesto"
+    },
+    "psc_apoptosis_factor": {
+      "value": 0.7,
+      "evidence": "supuesto",
+      "note": "multiplica el umbral en PSC (R17)"
+    },
+    "rb_point_r": {
+      "value": 0.7,
+      "evidence": "didactico"
+    },
+    "dsb_per_Gy": {
+      "value": 35,
+      "evidence": "literatura",
+      "source": "JACKSON09"
+    },
+    "lineage_commit": {
+      "value": 0.45,
+      "evidence": "supuesto"
+    }
+  },
+  "not_modeled": [
+    "Plegamiento 3D y estructura proteica",
+    "Prediccion clinica de patogenicidad",
+    "Redes reguladoras humanas completas",
+    "Mecanica detallada de ribosomas/chaperonas/proteasoma",
+    "NMD (vigilancia de ARNm) salvo que se implemente"
+  ],
+  "genome": {
+    "description": "Loci modelo de la celula pluripotente. Cada gen es una ficha (Fase 2, Modulo A) en orientacion codificante 5'->3'; si strand='-' el motor lo coloca invertido-complementado en la hebra directa del segmento.",
+    "lineage_gene": {
+      "pluripotente": "POU5F1",
+      "ectodermo": "PAX6",
+      "endodermo": "SOX17",
+      "mesodermo": "TBXT",
+      "trofectodermo": "CDX2",
+      "dano": "CDKN1A",
+      "basal": "TP53"
+    },
+    "loci": {
+      "TP53": {
+        "id": "TP53",
+        "product": "p53",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "P04637",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "supresor tumoral; factor de transcripcion",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "GCGCTATAAAAGGCCGCTGC"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGGAGGAGCCG"
+          },
+          {
+            "type": "intron",
+            "seq": "GTAAGTACTTATCTTTGCAG"
+          },
+          {
+            "type": "exon",
+            "seq": "CAGTCAGATCCTTGA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "CDKN1A": {
+        "id": "CDKN1A",
+        "product": "p21",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "-",
+        "uniprot": "P38936",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "inhibidor CDK; diana de p53",
+        "promoter_kind": "p53_RE",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "GAACATGTCCCAACATGTTG"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGTCAGAACCG"
+          },
+          {
+            "type": "intron",
+            "seq": "GTGAGTCCTTTCCTCCACAG"
+          },
+          {
+            "type": "exon",
+            "seq": "GCTGGGTAA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "POU5F1": {
+        "id": "POU5F1",
+        "product": "OCT4",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "Q01860",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "nucleo de pluripotencia",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "CCCTATAAATCCCTTTGGAC"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGGCGGGACAC"
+          },
+          {
+            "type": "intron",
+            "seq": "GTAAGGCTCTCTTCCCACAG"
+          },
+          {
+            "type": "exon",
+            "seq": "CTGGCTTCAGATTTTTGA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "PAX6": {
+        "id": "PAX6",
+        "product": "PAX6",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "P26367",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "neuroectodermo",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "GGATATAAAGCCTCTCCGCA"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGCAGAACAGT"
+          },
+          {
+            "type": "intron",
+            "seq": "GTAAGAGCTTGTTTCTTCAG"
+          },
+          {
+            "type": "exon",
+            "seq": "CACAGCGGAGTGTAA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "SOX17": {
+        "id": "SOX17",
+        "product": "SOX17",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "Q9H6I2",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "endodermo definitivo",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "CTGTATAAAAGGGCTCCAGC"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGAGCAGCCCG"
+          },
+          {
+            "type": "intron",
+            "seq": "GTGAGCTTCCTTCTCCCTAG"
+          },
+          {
+            "type": "exon",
+            "seq": "GATGCGGGATACTAG"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "TBXT": {
+        "id": "TBXT",
+        "product": "BRACHYURY",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "O15178",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "mesodermo",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "AGCTATAAATGCGCGTCCGA"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGAGCTCCCCT"
+          },
+          {
+            "type": "intron",
+            "seq": "GTAAGTTTCTCTCCTTGCAG"
+          },
+          {
+            "type": "exon",
+            "seq": "GGCACCGAGTGA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      },
+      "CDX2": {
+        "id": "CDX2",
+        "product": "CDX2",
+        "organism": "Homo sapiens (referencia)",
+        "cell_type_reference": "celula madre pluripotente (modelo)",
+        "strand": "+",
+        "uniprot": "Q99626",
+        "evidence": "didactico",
+        "source_note": "Aminoacidos N-terminales segun UniProt; codones, intron y promotor son DIDACTICOS (no es la secuencia genomica real). Sustituir por RefSeq versionado antes de comparar con datos reales.",
+        "role": "trofectodermo",
+        "promoter_kind": "TATA",
+        "parts": [
+          {
+            "type": "promoter",
+            "seq": "TCCTATAAAGGCCTCGCTGG"
+          },
+          {
+            "type": "utr5",
+            "seq": "ACGC"
+          },
+          {
+            "type": "exon",
+            "seq": "ATGTACGTGAGC"
+          },
+          {
+            "type": "intron",
+            "seq": "GTGAGACCCTCTTTTCTCAG"
+          },
+          {
+            "type": "exon",
+            "seq": "TACCTCCTGTAA"
+          },
+          {
+            "type": "utr3",
+            "seq": "AATAAA"
+          }
+        ]
+      }
+    },
+    "dna_geometry": {
+      "form": "ADN-B",
+      "rise_A": 3.4,
+      "bp_per_turn": 10.5,
+      "diameter_nm": 2.0,
+      "phosphate_radius_A": 8.9,
+      "c1_radius_A": 5.9,
+      "colors": {
+        "fosfato": "#f59e0b",
+        "desoxirribosa": "#d1d5db",
+        "A": "#22c55e",
+        "T": "#ef4444",
+        "G": "#eab308",
+        "C": "#2563eb",
+        "U": "#ec4899"
+      },
+      "h_bonds": {
+        "AT": 2,
+        "GC": 3
+      },
+      "nucleosome": {
+        "bp": 147,
+        "turns": 1.65,
+        "octamer": "2x(H2A,H2B,H3,H4)"
+      },
+      "source": "COLAB"
+    }
+  }
+}

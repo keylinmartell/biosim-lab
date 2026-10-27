@@ -42,6 +42,17 @@
           <span class="tab-label">Cepas en PostgreSQL</span>
           <div class="active-indicator"></div>
         </button>
+
+        <!-- 
+        <button 
+          :class="['md3-tab-item', { active: currentTab === 'experimental' }]" 
+          @click="currentTab = 'experimental'"
+        >
+          <Icon name="science" size="20" class="tab-icon" />
+          <span class="tab-label">Modelo Experimental</span>
+          <div class="active-indicator"></div>
+        </button> 
+        -->
       </nav>
 
       <!-- Instrumentation & Telemetry Status -->
@@ -87,6 +98,9 @@
         <div v-else-if="currentTab === 'db'" key="db" class="view-wrapper">
           <CellManager @selectCell="handleCellSelected" />
         </div>
+        <div v-else-if="currentTab === 'experimental'" key="experimental" class="view-wrapper">
+          <ExperimentalLab />
+        </div>
       </transition>
     </main>
 
@@ -113,6 +127,7 @@ import Icon from './components/Icon.vue';
 import CellViewer3D from './components/CellViewer3D.vue';
 import DNALab from './components/DNALab.vue';
 import CellManager from './components/CellManager.vue';
+import ExperimentalLab from './components/ExperimentalLab.vue';
 
 const currentTab = ref('3d');
 const selectedCellState = ref('G1');
@@ -122,6 +137,7 @@ const moduleName = computed(() => {
     case '3d': return 'MICROSCOPÍA CONFOCAL 3D (FLUORESCENCIA DAPI/CIAN)';
     case 'dna': return 'SECUENCIADOR, COMPLEMENTARIEDAD & MUTAGÉNESIS IN SILICO';
     case 'db': return 'BIOBANCO Y REGISTRO RELACIONAL DE CÉLULAS VIRTUALES (POSTGRESQL)';
+    case 'experimental': return 'MODELO EXPERIMENTAL DINÁMICO & CÉLULA PLURIPOTENCIAL (GEMINI + ENGINE)';
     default: return 'LABORATORIO BIO-COMPUTACIONAL';
   }
 });

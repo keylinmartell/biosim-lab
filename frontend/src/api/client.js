@@ -111,4 +111,15 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+
+  // Modelo Experimental y Simulación (Base de Conocimiento + Gemini)
+  getSimulationKB: () => request('/simulation/kb'),
+  planExperiment: (prompt) => request('/simulation/plan', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  }),
+  validateExperimentPlan: (plan) => request('/simulation/validate', {
+    method: 'POST',
+    body: JSON.stringify(plan),
+  }),
 };

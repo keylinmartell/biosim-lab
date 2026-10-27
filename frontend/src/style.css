@@ -42,11 +42,13 @@
   --md-sys-color-inverse-on-surface: #0b0f17;
   --md-sys-color-inverse-primary: #0284c7;
 
-  /* Nucleotide Spectral Colors (Verde=A, Rojo=T, Azul=C, Amarillo=G) */
-  --bio-base-a: #22c55e;       /* Adenina - Verde (Purina, 2 anillos) */
-  --bio-base-t: #ef4444;       /* Timina - Rojo (Pirimidina, 1 anillo) */
-  --bio-base-c: #2563eb;       /* Citosina - Azul (Pirimidina, 1 anillo) */
-  --bio-base-g: #eab308;       /* Guanina - Amarillo (Purina, 2 anillos) */
+  /* Nucleotide Spectral Colors (Atómico ADN Prueba: A=#8cccff, T=#4080f2, C=#2659d9, G=#bfe0ff) */
+  --bio-base-a: #8cccff;       /* Adenina - Celeste suave (ADN Prueba) */
+  --bio-base-t: #4080f2;       /* Timina - Azul eléctrico (ADN Prueba) */
+  --bio-base-c: #2659d9;       /* Citosina - Azul profundo (ADN Prueba) */
+  --bio-base-g: #bfe0ff;       /* Guanina - Cian claro (ADN Prueba) */
+  --bio-sugar: #738cbf;        /* Desoxirribosa Caz (ADN Prueba) */
+  --bio-phosphate: #3373e6;    /* Fosfato P (ADN Prueba) */
   --bio-fluo-dapi: #3b82f6;    /* Núcleo DAPI */
   --bio-fluo-foci: #a3e635;    /* Horquillas / Centrosomas */
 
