@@ -83,6 +83,33 @@
       <line x1="8" y1="11" x2="14" y2="11" />
     </g>
 
+    <!-- Zoom Out -->
+    <g v-else-if="name === 'zoom_out'">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      <line x1="8" y1="11" x2="14" y2="11" />
+    </g>
+
+    <!-- Desplazar / Pan / Mano -->
+    <g v-else-if="name === 'pan_tool' || name === 'drag' || name === 'pan'">
+      <polyline points="5 9 2 12 5 15" />
+      <polyline points="9 5 12 2 15 5" />
+      <polyline points="15 19 12 22 9 19" />
+      <polyline points="19 9 22 12 19 15" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <line x1="12" y1="2" x2="12" y2="22" />
+    </g>
+
+    <!-- Flechas Arriba y Abajo -->
+    <g v-else-if="name === 'arrow_upward' || name === 'arrow_up'">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </g>
+    <g v-else-if="name === 'arrow_downward' || name === 'arrow_down'">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="19 12 12 19 5 12" />
+    </g>
+
     <!-- Flechas Navegación -->
     <g v-else-if="name === 'chevron_left'">
       <polyline points="15 18 9 12 15 6" />

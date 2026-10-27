@@ -303,6 +303,7 @@ function crearBase() {
   controls.dampingFactor = 0.06;
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.9;
+  controls.screenSpacePanning = true;
 }
 
 function encuadrar(puntos) {

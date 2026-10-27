@@ -43,7 +43,7 @@
     </div>
 
     <!-- Contenedor del Canvas WebGL 3D -->
-    <div class="canvas-wrapper" ref="canvasContainer">
+    <div class="canvas-wrapper" :class="{ 'pan-mode': dragMode === 'pan' }" ref="canvasContainer">
       <!-- Capa Modelo Atómico Real -->
       <div 
         ref="atomicCanvasHolder" 
@@ -106,20 +106,54 @@
 
       <!-- Barra de Herramientas Flotante MD3 -->
       <div class="hud-toolbar">
+        <!-- Selector de Modo de Arrastre: Girar vs Mover (Subir/Bajar) -->
+        <div class="toolbar-mode-group">
+          <button 
+            :class="['md3-icon-btn', { active: dragMode === 'rotate' }]" 
+            @click="setDragMode('rotate')" 
+            title="Modo Girar: Clic arrastra para orbitar la hélice en 3D"
+          >
+            <Icon name="rotate" size="18" />
+          </button>
+          <button 
+            :class="['md3-icon-btn', { active: dragMode === 'pan' }]" 
+            @click="setDragMode('pan')" 
+            title="Modo Mover: Clic arrastra para subir, bajar y mover la hélice"
+          >
+            <Icon name="pan_tool" size="18" />
+          </button>
+        </div>
+
+        <div class="toolbar-sep"></div>
+
+        <!-- Botones de Navegación Vertical (Subir y Bajar la hélice) -->
+        <button class="md3-icon-btn" @click="panUp" title="Subir a lo largo de la hélice">
+          <Icon name="arrow_upward" size="18" />
+        </button>
+        <button class="md3-icon-btn" @click="panDown" title="Bajar a lo largo de la hélice">
+          <Icon name="arrow_downward" size="18" />
+        </button>
+
+        <div class="toolbar-sep"></div>
+
+        <!-- Botones de Zoom Diferenciados: Acercar (+) y Alejar (-) -->
+        <button class="md3-icon-btn" @click="zoomIn" title="Acercar (Ampliar zoom)">
+          <Icon name="zoom_in" size="18" />
+        </button>
+        <button class="md3-icon-btn" @click="zoomOut" title="Alejar (Reducir zoom)">
+          <Icon name="zoom_out" size="18" />
+        </button>
+
+        <div class="toolbar-sep"></div>
+
         <button 
           :class="['md3-icon-btn', { active: isAutoRotating }]" 
           @click="toggleAutoRotate" 
           :title="isAutoRotating ? 'Pausar rotación automática' : 'Reanudar rotación automática'"
         >
-          <Icon name="rotate" size="18" />
+          <Icon name="3d_rotation" size="18" />
         </button>
-        <button class="md3-icon-btn" @click="zoomIn" title="Acercar zoom">
-          <Icon name="zoom" size="18" />
-        </button>
-        <button class="md3-icon-btn" @click="zoomOut" title="Alejar zoom">
-          <Icon name="zoom_in" size="18" style="transform: rotate(180deg);" />
-        </button>
-        <button class="md3-icon-btn" @click="resetCamera" title="Restablecer vista inicial">
+        <button class="md3-icon-btn" @click="resetCamera" title="Restablecer vista inicial completa">
           <Icon name="refresh" size="18" />
         </button>
       </div>
@@ -128,7 +162,8 @@
       <div class="hud-bottom-dock">
         <div class="dock-content">
           <Icon name="info" size="16" class="dock-icon" />
-          <span>Modelo Atómico Real: Arrastra para orbitar · Rueda para zoom · Clic en cualquier átomo para seleccionar par</span>
+          <span v-if="dragMode === 'rotate'">Rueda: Zoom al punto del cursor · Clic arrastra: Girar · Clic derecho o Modo Mover: Subir/Bajar hélice</span>
+          <span v-else>Modo Mover activo: Clic arrastra para subir y bajar la hélice · Rueda: Zoom al cursor</span>
         </div>
       </div>
     </div>
@@ -165,6 +200,7 @@ const canvasContainer = ref(null);
 const atomicCanvasHolder = ref(null);
 const isExpanded = ref(false);
 const isAutoRotating = ref(true);
+const dragMode = ref('rotate'); // 'rotate' | 'pan'
 
 let renderer = null;
 let scene = null;
@@ -434,10 +470,19 @@ function initScene() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.autoRotate = true;
+  controls.autoRotate = isAutoRotating.value;
   controls.autoRotateSpeed = 0.9;
   controls.minDistance = 6.0;
   controls.maxDistance = 2500.0;
+  controls.screenSpacePanning = true; // Permite subir y bajar en el plano vertical de la pantalla
+  controls.enableZoom = false; // Desactivado para implementar zoom inteligente hacia el cursor
+
+  // Configurar botones del ratón: En modo Pan el clic izquierdo desplaza; en modo Rotate rota
+  controls.mouseButtons = {
+    LEFT: dragMode.value === 'pan' ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN
+  };
 
   mainHelixGroup = new THREE.Group();
   // Rota -PI/2 en X para que el eje Z del generador atómico sea el eje vertical Y
@@ -445,6 +490,9 @@ function initScene() {
   scene.add(mainHelixGroup);
 
   buildDNAHelix(true);
+
+  // Zoom inteligente al punto exacto bajo el cursor (evita que los extremos se oculten)
+  container.addEventListener('wheel', handleCanvasWheel, { passive: false });
 
   // Raycaster para selección interactiva precisa al hacer clic en cualquier átomo
   const raycaster = new THREE.Raycaster();
@@ -501,6 +549,18 @@ function onWindowResize() {
   renderer.setSize(width, height);
 }
 
+function setDragMode(mode) {
+  dragMode.value = mode;
+  if (!controls) return;
+  if (mode === 'pan') {
+    controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+    controls.autoRotate = false;
+  } else {
+    controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+    controls.autoRotate = isAutoRotating.value;
+  }
+}
+
 function toggleAutoRotate() {
   isAutoRotating.value = !isAutoRotating.value;
   if (controls) controls.autoRotate = isAutoRotating.value;
@@ -513,16 +573,118 @@ function toggleExpand() {
   });
 }
 
+// Subir y Bajar la hélice a lo largo de la pantalla
+function panUp() {
+  if (!camera || !controls) return;
+  const offset = new THREE.Vector3(0, 10, 0);
+  camera.position.add(offset);
+  controls.target.add(offset);
+  controls.update();
+}
+
+function panDown() {
+  if (!camera || !controls) return;
+  const offset = new THREE.Vector3(0, -10, 0);
+  camera.position.add(offset);
+  controls.target.add(offset);
+  controls.update();
+}
+
+// Zoom centrado a lo largo de la línea de mira hacia el target actual
 function zoomIn() {
-  if (!camera) return;
-  camera.position.multiplyScalar(0.85);
-  controls?.update();
+  if (!camera || !controls) return;
+  const offset = camera.position.clone().sub(controls.target);
+  const dist = offset.length();
+  const newDist = Math.max(controls.minDistance, dist * 0.82);
+  offset.setLength(newDist);
+  camera.position.copy(controls.target).add(offset);
+  controls.update();
 }
 
 function zoomOut() {
-  if (!camera) return;
-  camera.position.multiplyScalar(1.18);
-  controls?.update();
+  if (!camera || !controls) return;
+  const offset = camera.position.clone().sub(controls.target);
+  const dist = offset.length();
+  const newDist = Math.min(controls.maxDistance, dist * 1.22);
+  offset.setLength(newDist);
+  camera.position.copy(controls.target).add(offset);
+  controls.update();
+}
+
+// Zoom inteligente exactamente en la posición del cursor (sin desplazar los extremos)
+function handleCanvasWheel(e) {
+  e.preventDefault();
+  if (!camera || !controls || !scene) return;
+
+  const container = atomicCanvasHolder.value || canvasContainer.value;
+  if (!container) return;
+
+  // Shift + Rueda: Desplazamiento vertical rápido para subir o bajar la hélice
+  if (e.shiftKey) {
+    const panOffset = new THREE.Vector3(0, -e.deltaY * 0.12, 0);
+    camera.position.add(panOffset);
+    controls.target.add(panOffset);
+    controls.update();
+    return;
+  }
+
+  const rect = container.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1
+  );
+
+  const zoomFactor = e.deltaY < 0 ? 0.88 : 1.14;
+
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  let focusPoint = new THREE.Vector3();
+  const hits = raycaster.intersectObjects(clickableObjects, false);
+
+  if (hits.length > 0) {
+    // Si el cursor apunta a un átomo o enlace, hacer zoom directamente a ese punto
+    focusPoint.copy(hits[0].point);
+  } else {
+    // Intersecar con plano perpendicular a la cámara que pasa por controls.target
+    const camDir = new THREE.Vector3();
+    camera.getWorldDirection(camDir);
+    const plane = new THREE.Plane();
+    plane.setFromNormalAndCoplanarPoint(camDir.clone().negate(), controls.target);
+    const hit = raycaster.ray.intersectPlane(plane, focusPoint);
+    if (!hit) {
+      focusPoint.copy(controls.target);
+    }
+  }
+
+  const camToFocus = camera.position.clone().sub(focusPoint);
+  const targetToFocus = controls.target.clone().sub(focusPoint);
+
+  const currentDist = camera.position.distanceTo(controls.target);
+  const nextDist = currentDist * zoomFactor;
+
+  if (nextDist >= controls.minDistance && nextDist <= controls.maxDistance) {
+    camera.position.copy(focusPoint).add(camToFocus.multiplyScalar(zoomFactor));
+    controls.target.copy(focusPoint).add(targetToFocus.multiplyScalar(zoomFactor));
+    controls.update();
+  }
+}
+
+// Enfoca verticalmente un par de bases específico
+function focusOnBaseIndex(posIndex) {
+  if (!camera || !controls) return;
+  const clean = cleanFullSequence.value;
+  if (!clean || posIndex === null || posIndex === undefined || posIndex < 0 || posIndex >= clean.length) return;
+
+  const N = clean.length;
+  const VERTICAL_STEP = 3.4;
+  const zCenter = ((N - 1) * VERTICAL_STEP) / 2;
+  const targetY = posIndex * VERTICAL_STEP - zCenter;
+
+  const deltaY = targetY - controls.target.y;
+  controls.target.y = targetY;
+  camera.position.y += deltaY;
+  controls.update();
 }
 
 function resetCamera() {
@@ -536,7 +698,12 @@ watch(() => props.sequence, () => {
   buildDNAHelix(true);
 });
 
-watch(() => [props.selectedPosition, viewMode3D.value], () => {
+watch(() => props.selectedPosition, (newPos) => {
+  buildDNAHelix(false);
+  focusOnBaseIndex(newPos);
+});
+
+watch(() => viewMode3D.value, () => {
   buildDNAHelix(false);
 });
 
@@ -556,6 +723,10 @@ onMounted(() => {
 onUnmounted(() => {
   if (animId) cancelAnimationFrame(animId);
   window.removeEventListener('resize', onWindowResize);
+  const container = atomicCanvasHolder.value || canvasContainer.value;
+  if (container) {
+    container.removeEventListener('wheel', handleCanvasWheel);
+  }
   if (resizeObserver) {
     resizeObserver.disconnect();
     resizeObserver = null;
@@ -685,6 +856,14 @@ onUnmounted(() => {
 }
 
 .canvas-wrapper:active {
+  cursor: grabbing;
+}
+
+.canvas-wrapper.pan-mode {
+  cursor: move;
+}
+
+.canvas-wrapper.pan-mode:active {
   cursor: grabbing;
 }
 
@@ -845,8 +1024,26 @@ onUnmounted(() => {
   right: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
   z-index: 10;
+  align-items: center;
+}
+
+.toolbar-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 20px;
+  padding: 3px;
+}
+
+.toolbar-sep {
+  width: 20px;
+  height: 1px;
+  background: rgba(56, 189, 248, 0.25);
+  margin: 0.1rem auto;
 }
 
 .md3-icon-btn {
