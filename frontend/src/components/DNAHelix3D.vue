@@ -327,15 +327,11 @@ function buildDNAHelix(reframe = false) {
     dummy.updateMatrix();
     mallaAtomos.setMatrixAt(i, dummy.matrix);
 
-    // Detección de par seleccionado para realce luminoso
+    // Detección de par para mapeo de selección
     const pairIdx = a[5];
-    const isSelected = (pairIdx === selLocal);
 
-    if (isSelected) {
-      color.setHex(0xffffff);
-    } else {
-      color.setHex(ATOMIC_PALETTE[a[4]] ?? 0x94a3b8);
-    }
+    // Mantener color atómico original (sin cambiar a blanco) para visualizar mutaciones y bases
+    color.setHex(ATOMIC_PALETTE[a[4]] ?? 0x94a3b8);
     mallaAtomos.setColorAt(i, color);
 
     atomPairMap.push(pairIdx + offset);
@@ -379,13 +375,8 @@ function buildDNAHelix(reframe = false) {
     dummy.updateMatrix();
     mallaEnlaces.setMatrixAt(i, dummy.matrix);
 
-    // Color del enlace según tipo y selección
-    const isSelected = (e[3] === selLocal);
-    if (isSelected) {
-      color.setHex(isH ? 0xa5f3fc : 0x7dd3fc);
-    } else {
-      color.setHex(isH ? 0x8fb4e0 : 0x4a6390);
-    }
+    // Color del enlace según tipo natural (sin alterar al seleccionar)
+    color.setHex(isH ? 0x8fb4e0 : 0x4a6390);
     mallaEnlaces.setColorAt(i, color);
   });
 
@@ -393,23 +384,19 @@ function buildDNAHelix(reframe = false) {
   if (mallaEnlaces.instanceColor) mallaEnlaces.instanceColor.needsUpdate = true;
   mainHelixGroup.add(mallaEnlaces);
 
-  // 4. Anillo horizontal de selección en el par activo (Fiel a la Referencia)
+  // 4. Anillo horizontal de selección en el par activo (únicamente el círculo indicador sin alterar colores)
   if (selLocal >= 0 && selLocal < atomicData.pairs.length) {
     const activePair = atomicData.pairs[selLocal];
-    const ringGeo = new THREE.RingGeometry(12.5, 14.2, 48);
+    const ringGeo = new THREE.RingGeometry(12.5, 14.0, 64);
     const ringMat = new THREE.MeshBasicMaterial({ 
       color: 0x38bdf8, 
       side: THREE.DoubleSide, 
       transparent: true, 
-      opacity: 0.75 
+      opacity: 0.85 
     });
     const ringMesh = new THREE.Mesh(ringGeo, ringMat);
     ringMesh.position.set(0, 0, activePair.centerZ);
     mainHelixGroup.add(ringMesh);
-
-    const sl = new THREE.PointLight(0x38bdf8, 2.5, 30.0);
-    sl.position.set(0, 0, activePair.centerZ);
-    mainHelixGroup.add(sl);
   }
 
   if (reframe) {
@@ -443,8 +430,8 @@ function initScene() {
   const height = container.clientHeight || 580;
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x020612);
-  scene.fog = new THREE.Fog(0x020612, 180, 520);
+  scene.background = new THREE.Color(0x06111e);
+  scene.fog = new THREE.Fog(0x06111e, 220, 650);
 
   camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 3000);
 
@@ -452,20 +439,39 @@ function initScene() {
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.25;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.appendChild(renderer.domElement);
 
-  // Iluminación fiel a ADN Prueba
-  scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x0a1230, 0.85));
+  // Iluminación biológica confocal coordinada con Microscopía 3D
+  scene.add(new THREE.AmbientLight(0x0c4a6e, 1.3));
+  scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x06111e, 0.9));
 
-  const clave = new THREE.DirectionalLight(0xffffff, 1.9);
+  const clave = new THREE.DirectionalLight(0xe0f2fe, 2.4);
   clave.position.set(60, 90, 50);
   scene.add(clave);
 
-  const borde = new THREE.DirectionalLight(0x60a5fa, 1.4);
+  const borde = new THREE.DirectionalLight(0x38bdf8, 1.8);
   borde.position.set(-70, -30, -60);
   scene.add(borde);
+
+  // Nube de micro-partículas de fondo microscópico confocal (estilo idéntico a la Célula)
+  const bgGeo = new THREE.BufferGeometry();
+  const bgPos = new Float32Array(250 * 3);
+  for (let i = 0; i < 250 * 3; i += 3) {
+    bgPos[i] = (Math.random() - 0.5) * 240;
+    bgPos[i + 1] = (Math.random() - 0.5) * 240;
+    bgPos[i + 2] = (Math.random() - 0.5) * 160;
+  }
+  bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+  const bgMat = new THREE.PointsMaterial({
+    color: 0x0284c7,
+    size: 0.8,
+    transparent: true,
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending
+  });
+  scene.add(new THREE.Points(bgGeo, bgMat));
 
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -670,23 +676,6 @@ function handleCanvasWheel(e) {
   }
 }
 
-// Enfoca verticalmente un par de bases específico
-function focusOnBaseIndex(posIndex) {
-  if (!camera || !controls) return;
-  const clean = cleanFullSequence.value;
-  if (!clean || posIndex === null || posIndex === undefined || posIndex < 0 || posIndex >= clean.length) return;
-
-  const N = clean.length;
-  const VERTICAL_STEP = 3.4;
-  const zCenter = ((N - 1) * VERTICAL_STEP) / 2;
-  const targetY = posIndex * VERTICAL_STEP - zCenter;
-
-  const deltaY = targetY - controls.target.y;
-  controls.target.y = targetY;
-  camera.position.y += deltaY;
-  controls.update();
-}
-
 function resetCamera() {
   if (!camera || !controls) return;
   camera.position.copy(camPos0);
@@ -698,9 +687,8 @@ watch(() => props.sequence, () => {
   buildDNAHelix(true);
 });
 
-watch(() => props.selectedPosition, (newPos) => {
+watch(() => props.selectedPosition, () => {
   buildDNAHelix(false);
-  focusOnBaseIndex(newPos);
 });
 
 watch(() => viewMode3D.value, () => {
@@ -848,7 +836,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: grab;
-  background: #020612;
+  background: radial-gradient(ellipse at 50% 50%, #0c1a2e 0%, #06111e 65%, #040812 100%);
 }
 
 .dna-3d-card.cinema-expanded .canvas-wrapper {

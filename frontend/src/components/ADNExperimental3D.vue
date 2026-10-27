@@ -282,8 +282,8 @@ function crearBase() {
   holder.value.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x020612);
-  scene.fog = new THREE.Fog(0x020612, 200, 520);
+  scene.background = new THREE.Color(0x06111e);
+  scene.fog = new THREE.Fog(0x06111e, 200, 520);
 
   camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 3000);
 
