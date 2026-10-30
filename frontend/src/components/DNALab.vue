@@ -425,7 +425,12 @@
       <DNAHelix3D 
         :sequence="cleanSequence" 
         :selectedPosition="selectedPosition" 
+        :lesions="currentActiveLesions"
+        :activeAgent="activeAgentForP53"
+        :isSevereDamage="checkpointStatus?.state === 'arrested_severe'"
         @selectBase="handleHelixBaseSelect"
+        @openDamageDialog="showDamageDialog = true"
+        @p53Repaired="handleP53Repaired"
       />
     </div>
 
@@ -512,131 +517,11 @@
 
       <!-- Grid de G1: [Módulo 1.1 Daño en el Molde] a la IZQUIERDA, y [Módulo 1.3 Reparación Pre-Replicativa] a la DERECHA -->
       <div class="g1-actions-grid">
-        <!-- MÓDULO 1.1: INDUCCIÓN DE DAÑO EN EL MOLDE PARENTAL -->
-        <div class="op-panel g1-damage-card">
-          <div class="op-panel-header">
-            <div class="header-icon-mini">
-              <Icon name="bolt" size="18" />
-            </div>
-            <div>
-              <h4>Módulo 1.1: Inducción de Daño en el Molde</h4>
-              <span class="op-sub">Comprueba cómo las lesiones físicas/químicas o aductos alteran el molde antes de la replicación</span>
-            </div>
-          </div>
-
-          <!-- Selector de Modo de Daño: Ambiental vs Herramienta Exógena CRISPR -->
-          <div class="sub-mode-toggle-row">
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: g1DamageMode === 'environmental' }]" 
-              @click="g1DamageMode = 'environmental'"
-            >
-              <Icon name="wb_sunny" size="15" />
-              <span>Daño Ambiental Estocástico</span>
-            </button>
-            <button 
-              type="button" 
-              :class="['sub-toggle-btn', { active: g1DamageMode === 'crispr' }]" 
-              @click="g1DamageMode = 'crispr'"
-            >
-              <Icon name="content_cut" size="15" />
-              <span>Herramienta Exógena (CRISPR-Cas9)</span>
-            </button>
-          </div>
-
-          <!-- MODO A: DAÑO AMBIENTAL ESTOCÁSTICO (Luz UV, Estrés Oxidativo, Desaminación) -->
-          <div v-if="g1DamageMode === 'environmental'" class="damage-subpanel">
-            <div class="md3-textfield">
-              <label>Agente Genotóxico / Lesivo Ambiental (Alberts cap. 5):</label>
-              <select v-model="envAgent">
-                <option value="uv_radiation">Radiación Ultravioleta (Luz UV · Dímeros T-T)</option>
-                <option value="oxidative_ros">Estrés Oxidativo (Radicales Libres ROS · 8-oxo-G)</option>
-                <option value="deamination">Desaminación Espontánea (Hidrólisis C → U/T)</option>
-              </select>
-            </div>
-
-            <div class="slider-module">
-              <div class="slider-telemetry">
-                <span class="slider-title">Intensidad / Probabilidad de Lesión:</span>
-                <span class="slider-rate font-mono">{{ Math.round(envIntensity * 100) }}%</span>
-              </div>
-              <input 
-                type="range" 
-                v-model.number="envIntensity" 
-                min="0.10" 
-                max="0.80" 
-                step="0.05" 
-                class="md3-range-slider"
-              />
-              <div class="slider-marks">
-                <span>10% (Baja exposición)</span>
-                <span>40% (Estrés moderado)</span>
-                <span>80% (Sobrecarga de lesiones)</span>
-              </div>
-            </div>
-
-            <button class="md3-button-filled" @click="applyEnvironmentalDamage" :disabled="loading">
-              <Icon name="bolt" size="18" />
-              <span>Inducir Lesiones Ambientales en el Molde</span>
-            </button>
-
-            <!-- Feedback de lesiones ambientales -->
-            <div class="env-damage-feedback" v-if="envDamageResult">
-              <span class="env-tag">{{ envDamageResult.agent_name }}</span>
-              <p class="env-mechanism">{{ envDamageResult.mechanism_description }}</p>
-              <div class="lesions-list font-mono" v-if="envDamageResult.lesions?.length">
-                <span v-for="(les, i) in envDamageResult.lesions" :key="i" class="lesion-chip">
-                  Pos. {{ les.position }}: {{ les.original_base }} → {{ les.damaged_base }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- MODO B: EDICIÓN QUIRÚRGICA CRISPR -->
-          <div v-else class="damage-subpanel">
-            <div class="op-form-grid">
-              <div class="md3-textfield">
-                <label>Posición Cero-Indexada:</label>
-                <input type="number" v-model.number="controlledForm.position" :min="0" :max="cleanSequence.length" class="font-mono" />
-              </div>
-
-              <div class="md3-textfield">
-                <label>Tipo de Alteración / Lesión:</label>
-                <select v-model="controlledForm.type">
-                  <option value="substitution">Lesión Puntual / Aducto Químico (Sustitución)</option>
-                  <option value="insertion">Lesión por Inserción (+1 Base)</option>
-                  <option value="deletion">Lesión por Deleción (-1 Base)</option>
-                </select>
-              </div>
-
-              <div class="md3-textfield full-span" v-if="controlledForm.type !== 'deletion'">
-                <label>Base a Incorporar:</label>
-                <div class="base-segmented-selector">
-                  <button 
-                    v-for="b in ['A', 'T', 'C', 'G']" 
-                    :key="b"
-                    :class="['seg-btn', b.toLowerCase(), { active: controlledForm.newBase === b }]"
-                    @click="controlledForm.newBase = b"
-                    type="button"
-                  >
-                    {{ b }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button class="md3-button-filled" @click="applyControlledMutation" :disabled="loading">
-              <Icon name="content_cut" size="18" />
-              <span>Inducir Lesión Dirigida (CRISPR-Cas9)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- MÓDULO 1.2: DETECCIÓN DE APAREAMIENTOS INCORRECTOS (junto al 1.1) -->
+        <!-- DETECCIÓN DE APAREAMIENTOS INCORRECTOS (junto al 1.1) -->
         <div class="duplex-card s-mmr-card">
           <div class="card-subtitle">
             <Icon name="science" size="18" />
-            <span>Módulo 1.2: Detección de Apareamientos Incorrectos</span>
+            <span>Detección de Apareamientos Incorrectos</span>
           </div>
           <p class="desc-text">
             Compara la hebra alterada con la complementaria del molde original e identifica los pares no canónicos.
@@ -709,7 +594,7 @@
         <div class="duplex-card g1-repair-card">
           <div class="card-subtitle">
             <Icon name="shield" size="18" />
-            <span>Módulo 1.3: Reparación del Molde (BER / NER / Homología)</span>
+            <span>Reparación del Molde (BER / NER / Homología)</span>
           </div>
           <p class="desc-text">
             Corrige lesiones físicas/químicas o aductos en la hebra molde parental utilizando la plantilla de referencia homóloga.
@@ -796,7 +681,7 @@
           <div class="diff-title-row">
             <Icon name="compare_arrows" size="24" class="diff-icon" />
             <div>
-              <h3>Módulo 2: Reporte Diferencial (Original vs Modificada)</h3>
+              <h3>Reporte Diferencial (Original vs Modificada)</h3>
               <span class="diff-meta">Posiciones y cambios detectados entre ambas secuencias</span>
             </div>
           </div>
@@ -842,7 +727,7 @@
         <div class="section-title-group">
           <Icon name="history" size="22" class="section-icon" />
           <div>
-            <h3>Módulo 3: Registro de Experimentos & Trazabilidad de Operaciones</h3>
+            <h3>Registro de Experimentos & Trazabilidad de Operaciones</h3>
             <span class="subtext">Auditoría inmutable de secuencias, mutaciones, métodos y resoluciones</span>
           </div>
         </div>
@@ -943,7 +828,7 @@
             <div class="module-a-avatar">A</div>
             <div>
               <div class="module-a-title-row">
-                <h3>Módulo A: Inspección y Arquitectura del Gen Modelo</h3>
+                <h3>Inspección y Arquitectura del Gen Modelo</h3>
                 <span class="gene-active-pill">{{ selectedGene.name }}</span>
               </div>
               <span class="subtext">Ficha biofísica detallada, organización exón/intrón y marco de lectura para la expresión génica</span>
@@ -1058,7 +943,7 @@
             <div class="module-b-avatar">B</div>
             <div>
               <div class="module-b-title-row">
-                <h3>Módulo B: Transcripción in Silico (ADN → Pre-ARNm)</h3>
+                <h3>Transcripción in Silico (ADN → Pre-ARNm)</h3>
                 <span :class="['module-b-pill', { 'synthesized': !!transcriptionResult }]">
                   {{ transcriptionResult ? 'Transcrito Primario Activo' : 'ARN Polimerasa II en Espera' }}
                 </span>
@@ -1416,6 +1301,132 @@
       </div>
 
     </div><!-- /phase-content-wrapper Phase 2 -->
+
+    
+    <!-- Diálogo Modal: Inducción de Daño en el Molde (Ambiental / CRISPR-Cas9) -->
+    <div class="md3-dialog-backdrop" v-if="showDamageDialog" @click.self="showDamageDialog = false">
+      <div class="md3-dialog-surface md3-card-outlined damage-dialog-surface">
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <Icon name="bolt" size="24" class="dialog-icon highlight" style="color: #fbbf24;" />
+            <div>
+              <h3>Inducción de Daño en el Molde</h3>
+              <span class="dialog-sub">Lesiones físicas/químicas o aductos en el molde parental antes de la replicación</span>
+            </div>
+          </div>
+          <button class="dialog-close-btn" @click="showDamageDialog = false" title="Cerrar">✕</button>
+        </div>
+
+        <div class="dialog-body damage-dialog-body">
+          <!-- Selector de Modo de Daño: Ambiental vs Herramienta Exógena CRISPR -->
+          <div class="sub-mode-toggle-row">
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: g1DamageMode === 'environmental' }]" 
+              @click="g1DamageMode = 'environmental'"
+            >
+              <Icon name="wb_sunny" size="15" />
+              <span>Daño Ambiental Estocástico</span>
+            </button>
+            <button 
+              type="button" 
+              :class="['sub-toggle-btn', { active: g1DamageMode === 'crispr' }]" 
+              @click="g1DamageMode = 'crispr'"
+            >
+              <Icon name="content_cut" size="15" />
+              <span>Herramienta Exógena (CRISPR-Cas9)</span>
+            </button>
+          </div>
+
+          <!-- MODO A: DAÑO AMBIENTAL ESTOCÁSTICO (Luz UV, Estrés Oxidativo, Desaminación) -->
+          <div v-if="g1DamageMode === 'environmental'" class="damage-subpanel">
+            <div class="md3-textfield">
+              <label>Agente Genotóxico / Lesivo Ambiental (Alberts cap. 5):</label>
+              <select v-model="envAgent">
+                <option value="uv_radiation">Radiación Ultravioleta (Luz UV · Dímeros T-T)</option>
+                <option value="oxidative_ros">Estrés Oxidativo (Radicales Libres ROS · 8-oxo-G)</option>
+                <option value="deamination">Desaminación Espontánea (Hidrólisis C → U/T)</option>
+              </select>
+            </div>
+
+            <div class="slider-module">
+              <div class="slider-telemetry">
+                <span class="slider-title">Intensidad / Probabilidad de Lesión:</span>
+                <span class="slider-rate font-mono">{{ Math.round(envIntensity * 100) }}%</span>
+              </div>
+              <input 
+                type="range" 
+                v-model.number="envIntensity" 
+                min="0.10" 
+                max="0.80" 
+                step="0.05" 
+                class="md3-range-slider"
+              />
+              <div class="slider-marks">
+                <span>10% (Baja exposición)</span>
+                <span>40% (Estrés moderado)</span>
+                <span>80% (Sobrecarga de lesiones)</span>
+              </div>
+            </div>
+
+            <button class="md3-button-filled" @click="applyEnvironmentalDamage" :disabled="loading">
+              <Icon name="bolt" size="18" />
+              <span>Inducir Lesiones Ambientales en el Molde</span>
+            </button>
+
+            <!-- Feedback de lesiones ambientales -->
+            <div class="env-damage-feedback" v-if="envDamageResult">
+              <span class="env-tag">{{ envDamageResult.agent_name }}</span>
+              <p class="env-mechanism">{{ envDamageResult.mechanism_description }}</p>
+              <div class="lesions-list font-mono" v-if="envDamageResult.lesions?.length">
+                <span v-for="(les, i) in envDamageResult.lesions" :key="i" class="lesion-chip">
+                  Pos. {{ les.position }}: {{ les.original_base }} → {{ les.damaged_base }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODO B: EDICIÓN QUIRÚRGICA CRISPR -->
+          <div v-else class="damage-subpanel">
+            <div class="op-form-grid">
+              <div class="md3-textfield">
+                <label>Posición Cero-Indexada:</label>
+                <input type="number" v-model.number="controlledForm.position" :min="0" :max="cleanSequence.length" class="font-mono" />
+              </div>
+
+              <div class="md3-textfield">
+                <label>Tipo de Alteración / Lesión:</label>
+                <select v-model="controlledForm.type">
+                  <option value="substitution">Lesión Puntual / Aducto Químico (Sustitución)</option>
+                  <option value="insertion">Lesión por Inserción (+1 Base)</option>
+                  <option value="deletion">Lesión por Deleción (-1 Base)</option>
+                </select>
+              </div>
+
+              <div class="md3-textfield full-span" v-if="controlledForm.type !== 'deletion'">
+                <label>Base a Incorporar:</label>
+                <div class="base-segmented-selector">
+                  <button 
+                    v-for="b in ['A', 'T', 'C', 'G']" 
+                    :key="b"
+                    :class="['seg-btn', b.toLowerCase(), { active: controlledForm.newBase === b }]"
+                    @click="controlledForm.newBase = b"
+                    type="button"
+                  >
+                    {{ b }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button class="md3-button-filled" @click="applyControlledMutation" :disabled="loading">
+              <Icon name="content_cut" size="18" />
+              <span>Inducir Lesión Dirigida (CRISPR-Cas9)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Diálogo Modal: Guardar Experimento con Nombre Personalizado -->
     <div class="md3-dialog-backdrop" v-if="showSaveDialog" @click.self="showSaveDialog = false">
@@ -1865,7 +1876,7 @@
                   <p>Alterna entre la complementaria exacta o inyectar deliberadamente una base no apareada en el Módulo 1.2 para probar la detección.</p>
                 </div>
                 <div class="btn-entry">
-                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos (Módulo 1.2)</span>
+                  <span class="btn-name filled"><Icon name="analytics" size="14" /> Escanear Apareamientos</span>
                   <p>Compara la cadena con la complementaria del molde y marca pares canónicos Watson-Crick (verdes) y no canónicos (rojos).</p>
                 </div>
                 <div class="btn-entry">
@@ -1890,7 +1901,7 @@
               <div class="button-guide-card">
                 <div class="card-tag">6. Módulo 2 · Reporte Diferencial</div>
                 <div class="btn-entry">
-                  <span class="btn-name chip">Diff Inspector (Módulo 2)</span>
+                  <span class="btn-name chip">Diff Inspector</span>
                   <p>Muestra el contraste base a base entre el molde original y la secuencia modificada, con posición y tipo de cambio (sustitución, inserción, deleción).</p>
                 </div>
               </div>
@@ -2161,6 +2172,35 @@ import Icon from './Icon.vue';
 import DNAHelix3D from './DNAHelix3D.vue';
 import ADNAtomico from './ADNAtomico.vue';
 
+const showDamageDialog = ref(false);
+
+const currentActiveLesions = computed(() => {
+  if (envDamageResult.value?.lesions?.length) {
+    return envDamageResult.value.lesions;
+  }
+  if (lastMutationApplied.value?.position !== undefined) {
+    return [{
+      position: lastMutationApplied.value.position,
+      original_base: lastMutationApplied.value.original_base,
+      damaged_base: lastMutationApplied.value.newBase
+    }];
+  }
+  return [];
+});
+
+const activeAgentForP53 = computed(() => {
+  return lastMutationApplied.value?.agent || envAgent.value || 'uv_radiation';
+});
+
+async function handleP53Repaired() {
+  if (initialMoldSequence.value) {
+    sequenceInput.value = initialMoldSequence.value;
+  }
+  envDamageResult.value = null;
+  lastMutationApplied.value = null;
+  await validateAndProcess(false);
+  await fetchLogs();
+}
 const sequenceInput = ref('');
 const initialMoldSequence = ref('');
 const cleanSequence = computed(() => {
@@ -3409,6 +3449,7 @@ async function applyEnvironmentalDamage() {
     loading.value = true;
     const res = await api.simulateEnvironmentalDamage(currentWorking, envAgent.value, envIntensity.value);
     envDamageResult.value = res;
+    showDamageDialog.value = false;
     sequenceInput.value = res.damaged_sequence;
     lastMutationApplied.value = {
       type: 'environmental_damage',
@@ -3446,7 +3487,7 @@ async function applyControlledMutation() {
       controlledForm.value.position,
       controlledForm.value.newBase
     );
-
+    showDamageDialog.value = false;
     sequenceInput.value = res.modified_sequence;
     lastMutationApplied.value = res.mutation;
     repairResult.value = null;
@@ -5233,6 +5274,19 @@ onMounted(() => {
 }
 
 /* Modal de Guardar Experimento con Nombre */
+
+.damage-dialog-surface {
+  max-width: 660px !important;
+  width: 92% !important;
+}
+
+.damage-dialog-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 .save-dialog-surface {
   max-width: 560px;
 }
