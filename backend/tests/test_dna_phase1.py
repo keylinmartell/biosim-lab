@@ -190,13 +190,22 @@ class TestDNAPhase1(unittest.TestCase):
         self.assertEqual(res2["status"], "not_correctable_with_available_information")
         self.assertEqual(res2["repaired_sequence"], "ATG")
 
-    def test_17_dano_uv_solo_c_en_dimeros(self):
-        """UV solo produce C->T en citosinas contiguas a pirimidinas; nunca T->A."""
+    def test_17_dano_uv_dimeros_y_transiciones(self):
+        """UV produce fotodímeros en pirimidinas contiguas (Alberts cap. 5); C sufre transición C->T y TT forma dímeros CPD."""
         for _ in range(20):
+            # Dímeros T-T en ATTTA (contiene pirimidinas contiguas TTT)
             res = self.engine.simulate_environmental_damage("ATTTA", "uv_radiation", 1.0)
-            self.assertEqual(res["damaged_sequence"], "ATTTA")  # sin C no hay sitio susceptible
+            self.assertEqual(res["damaged_sequence"], "ATTTA")
+            self.assertTrue(res["is_damaged"])
+            self.assertTrue(len(res["lesions"]) > 0)
+            # Transición C->T por fotodesaminación en ACTGA (C adyacente a T)
             res = self.engine.simulate_environmental_damage("ACTGA", "uv_radiation", 1.0)
             self.assertEqual(res["damaged_sequence"], "ATTGA")
+            self.assertTrue(res["is_damaged"])
+            # Sin pirimidinas contiguas (AGAGA no forma dímeros UV imposibles)
+            res = self.engine.simulate_environmental_damage("AGAGA", "uv_radiation", 1.0)
+            self.assertFalse(res["is_damaged"])
+            self.assertEqual(len(res["lesions"]), 0)
 
 if __name__ == "__main__":
     unittest.main()

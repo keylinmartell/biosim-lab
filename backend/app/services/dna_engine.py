@@ -211,18 +211,34 @@ class DNAEngine:
         for i in range(len(clean)):
             b = clean[i]
             if agent_clean == "uv_radiation":
-                # Dimeros de pirimidina: solo una C contigua a otra pirimidina (C/T) sufre la transicion C->T.
-                neighbours = (clean[i - 1] if i > 0 else "") + (clean[i + 1] if i + 1 < len(clean) else "")
-                if b == "C" and any(n in cls.PYRIMIDINES for n in neighbours) and random.random() < intensity:
-                    new_b = "T"
-                    seq_list[i] = new_b
-                    lesions_log.append({
-                        "position": i,
-                        "original_base": b,
-                        "damaged_base": new_b,
-                        "type": "uv_photodimer_lesion",
-                        "description": f"Dímero/lesión fotoinducida en posición {i}: {b} -> {new_b}"
-                    })
+                # Según Alberts et al. (Molecular Biology of the Cell 7.ª ed. cap. 5):
+                # La luz UV induce fotodímeros de ciclobutano (CPD) entre pirimidinas adyacentes (TT, TC, CT, CC).
+                # Los dímeros Timina-Timina (T-T CPD) representan el 70-80% de todas las fotolesiones naturales.
+                # Las citosinas en fotodímeros sufren desaminación fotoinducida produciendo transiciones C->T.
+                left = clean[i - 1] if i > 0 else ""
+                right = clean[i + 1] if i + 1 < len(clean) else ""
+                has_pyr_neighbor = (left in cls.PYRIMIDINES) or (right in cls.PYRIMIDINES)
+                if b in cls.PYRIMIDINES and has_pyr_neighbor and random.random() < intensity:
+                    if b == "C":
+                        new_b = "T"
+                        seq_list[i] = new_b
+                        lesions_log.append({
+                            "position": i,
+                            "original_base": b,
+                            "damaged_base": new_b,
+                            "type": "uv_photodimer_lesion",
+                            "description": f"Fotodímero de pirimidinas inducido por UV en posición {i}: transición C -> T por desaminación fotoinducida en dímero de ciclobutano (Alberts cap. 5)."
+                        })
+                    else:  # b == "T"
+                        new_b = "T"
+                        seq_list[i] = new_b
+                        lesions_log.append({
+                            "position": i,
+                            "original_base": b,
+                            "damaged_base": "T (Dímero T-T)",
+                            "type": "uv_photodimer_lesion",
+                            "description": f"Fotodímero de ciclobutano Timina-Timina (CPD T-T) inducido por UV en posición {i}: enlace covalente aberrante que distorsiona la doble hélice (Alberts cap. 5)."
+                        })
             elif agent_clean == "oxidative_ros":
                 # Oxida Guanina preferentemente
                 if b == "G" and random.random() < intensity:
@@ -269,7 +285,7 @@ class DNAEngine:
             elif agent_clean == "uv_radiation":
                 target_indices = [
                     idx for idx, ch in enumerate(clean)
-                    if ch == "C" and any(
+                    if ch in cls.PYRIMIDINES and any(
                         n in cls.PYRIMIDINES
                         for n in ((clean[idx - 1] if idx > 0 else "") + (clean[idx + 1] if idx + 1 < len(clean) else ""))
                     )
@@ -281,21 +297,60 @@ class DNAEngine:
             if target_indices:
                 idx = random.choice(target_indices)
                 b = clean[idx]
-                if agent_clean in ("oxidative_ros", "deamination", "uv_radiation"):
+                if agent_clean == "oxidative_ros":
                     new_b = "T"
+                    seq_list[idx] = new_b
+                    lesions_log.append({
+                        "position": idx,
+                        "original_base": b,
+                        "damaged_base": new_b,
+                        "type": "8_oxo_guanine_transversion",
+                        "description": f"Oxidación de Guanina (8-oxo-G) en posición {idx}: G -> T"
+                    })
+                elif agent_clean == "deamination":
+                    new_b = "T"
+                    seq_list[idx] = new_b
+                    lesions_log.append({
+                        "position": idx,
+                        "original_base": b,
+                        "damaged_base": new_b,
+                        "type": "cytosine_deamination",
+                        "description": f"Desaminación espontánea en posición {idx}: C -> Uracilo/T"
+                    })
+                elif agent_clean == "uv_radiation":
+                    if b == "C":
+                        new_b = "T"
+                        seq_list[idx] = new_b
+                        lesions_log.append({
+                            "position": idx,
+                            "original_base": b,
+                            "damaged_base": new_b,
+                            "type": "uv_photodimer_lesion",
+                            "description": f"Fotodímero de pirimidinas inducido por UV en posición {idx}: transición C -> T por desaminación fotoinducida en dímero de ciclobutano (Alberts cap. 5)."
+                        })
+                    else:
+                        new_b = "T"
+                        seq_list[idx] = new_b
+                        lesions_log.append({
+                            "position": idx,
+                            "original_base": b,
+                            "damaged_base": "T (Dímero T-T)",
+                            "type": "uv_photodimer_lesion",
+                            "description": f"Fotodímero de ciclobutano Timina-Timina (CPD T-T) inducido por UV en posición {idx}: enlace covalente aberrante que distorsiona la doble hélice (Alberts cap. 5)."
+                        })
                 else:
                     new_b = random.choice([x for x in sorted(cls.VALID_BASES) if x != b])
-                seq_list[idx] = new_b
-                lesions_log.append({
-                    "position": idx,
-                    "original_base": b,
-                    "damaged_base": new_b,
-                    "type": f"{agent_clean}_induced_lesion",
-                    "description": f"Lesión inducida por {agent_name} en posición {idx}: {b} -> {new_b}"
-                })
+                    seq_list[idx] = new_b
+                    lesions_log.append({
+                        "position": idx,
+                        "original_base": b,
+                        "damaged_base": new_b,
+                        "type": f"{agent_clean}_induced_lesion",
+                        "description": f"Lesión inducida por {agent_name} en posición {idx}: {b} -> {new_b}"
+                    })
 
         damaged_seq = "".join(seq_list)
-        is_damaged = (damaged_seq != clean)
+        is_damaged = len(lesions_log) > 0 or (damaged_seq != clean)
 
         event = cls.log_event(
             operation_type="environmental_damage",
