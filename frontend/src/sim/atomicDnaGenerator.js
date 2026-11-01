@@ -402,63 +402,44 @@ function generateHistoneClusters(nucleosomeCenters) {
       }
     });
 
-    // 2. Histona H1 DIRECTAMENTE EN EL CUELLO DEL ADN (Alberts et al.):
-    // Sellando el cromatosoma entre el punto de entrada y el de salida
+    // 2. Histona H1 UBICADA EN EL EXTERIOR DEL NUCLEOSOMA SOBRE EL ADN (Alberts et al.):
+    // Se acopla como broche globular compacto en el exterior de la entrada/salida del ADN, sin invadir el octámero
     const entryPt = nuc.entryPoint;
     const exitPt = nuc.exitPoint;
 
-    const h1CenterX = (entryPt[0] + exitPt[0]) * 0.5 + 4.0;
-    const h1CenterY = (entryPt[1] + exitPt[1]) * 0.5;
-    const h1CenterZ = (entryPt[2] + exitPt[2]) * 0.5;
-    const h1Center = [h1CenterX, h1CenterY, h1CenterZ];
+    // Vector radial hacia el exterior en la dirección de entrada/salida
+    const vEntry = [entryPt[0] - cx, entryPt[1] - cy];
+    const vExit = [exitPt[0] - cx, exitPt[1] - cy];
+    const outwardX = vEntry[0] + vExit[0];
+    const outwardY = vEntry[1] + vExit[1];
+    const outwardLen = Math.hypot(outwardX, outwardY) || 1;
+    const uX = outwardX / outwardLen;
+    const uY = outwardY / outwardLen;
 
-    // Dominio globular de H1 (esferas rosa/magenta) uniendo físicamente las hebras de ADN
-    for (let k = 0; k < 12; k++) {
-      const phi = Math.acos(1 - 2 * ((k + 0.5) / 12));
-      const theta = Math.PI * (1 + Math.sqrt(5)) * k;
+    // Ubicada en la cara externa del ADN (~27.5 Å del centro, fuera del octámero de ~22 Å)
+    const R_H1 = 27.5;
+    const h1CenterX = cx + uX * R_H1;
+    const h1CenterY = cy + uY * R_H1;
+    const h1CenterZ = (entryPt[2] + exitPt[2]) * 0.5;
+
+    // Dominio globular compacto de H1 (4 subesferas de radio ~1.7 Å, tamaño proporcionado a escala Alberts)
+    const h1Offsets = [
+      [0.0, 0.0, 0.0],
+      [1.3, 0.7, 0.5],
+      [-1.1, -0.6, 0.6],
+      [0.4, -1.0, -0.6]
+    ];
+
+    h1Offsets.forEach(off => {
       histoneSpheres.push([
-        h1CenterX + Math.sin(phi) * Math.cos(theta) * 3.8,
-        h1CenterY + Math.sin(phi) * Math.sin(theta) * 3.8,
-        h1CenterZ + Math.cos(phi) * 3.2,
-        2.8,
+        h1CenterX + off[0],
+        h1CenterY + off[1],
+        h1CenterZ + off[2],
+        1.75, // Tamaño reducido y proporcionado
         HISTONE_PALETTE.H1,
         'H1',
         nIdx
       ]);
-    }
-
-    // Broches moleculares que abrazan y sujetan ambas hebras de ADN
-    h1Rods.push({
-      start: entryPt,
-      end: h1Center,
-      radius: 1.4,
-      color: HISTONE_PALETTE.H1,
-      nucIndex: nIdx
-    });
-    h1Rods.push({
-      start: exitPt,
-      end: h1Center,
-      radius: 1.4,
-      color: HISTONE_PALETTE.H1,
-      nucIndex: nIdx
-    });
-
-    // Tallo C-terminal de H1 (varilla cian luminosa) extendido a lo largo del ADN linker saliente
-    const forwardX = 1.0;
-    const forwardY = (nIdx % 2 === 0 ? 0.35 : -0.35);
-    const forwardZ = 0.05;
-    const fLen = Math.hypot(forwardX, forwardY, forwardZ) || 1;
-
-    h1Rods.push({
-      start: h1Center,
-      end: [
-        h1CenterX + (forwardX / fLen) * 16.0,
-        h1CenterY + (forwardY / fLen) * 16.0,
-        h1CenterZ + (forwardZ / fLen) * 16.0
-      ],
-      radius: 1.5,
-      color: HISTONE_PALETTE.H1_STEM,
-      nucIndex: nIdx
     });
   });
 

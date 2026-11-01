@@ -39,17 +39,6 @@
           <span>Inducir Daño</span>
         </button>
 
-        <!-- Botón Patrullaje y Reparación p53 -->
-        <button 
-          class="md3-chip interactive-chip p53-trigger-chip" 
-          @click="triggerP53Patrol"
-          :class="{ 'p53-active': p53State.active }"
-          :title="p53State.active ? 'p53 patrullando la cadena...' : 'Iniciar patrullaje y reparación por p53'"
-        >
-          <Icon name="psychology" size="14" class="chip-lead text-emerald" />
-          <span>{{ p53State.active ? 'p53 Activo' : 'Patrullaje p53' }}</span>
-        </button>
-
         <div class="md3-chip">
           <Icon name="biotech" size="14" class="chip-lead" />
           <span class="font-mono">
@@ -70,11 +59,7 @@
 
     <!-- Contenedor del Canvas WebGL 3D -->
     <div class="canvas-wrapper" :class="{ 'pan-mode': dragMode === 'pan' }" ref="canvasContainer">
-      <!-- Indicador de Pool Nuclear Libre de p53/Mdm2 (Zona aparte) -->
-      <div v-if="!p53State.active" class="p53-idle-badge">
-        <span class="idle-dot"></span>
-        <span>Reservorio Nuclear: {{ p53State.p53UnitsCount }} Complejos p53/Mdm2</span>
-      </div>
+
 
       <!-- RECUADRO PROMINENTE DE DAÑO Y ENZIMA ACTIVA AL DETENERSE p53 -->
       <div v-if="activeInspectionCard" class="damage-inspection-card">
@@ -139,25 +124,11 @@
           <span class="spectral-pill"><span class="swatch" style="background:#10b981"></span>Histona H2B</span>
           <span class="spectral-pill"><span class="swatch" style="background:#3b82f6"></span>Histona H3</span>
           <span class="spectral-pill"><span class="swatch" style="background:#c084fc"></span>Histona H4</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Ambos lados)</span>
+          <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Broche exterior ADN)</span>
           <span class="spectral-pill hbond"><span class="swatch pin" style="background:#8fb4e0"></span>Puente H</span>
         </div>
 
-        <!-- Resumen de Cálculo Estequiométrico Alberts et al. -->
-        <div class="stoich-box" v-if="packagingMode !== 'linear'">
-          <div class="stoich-line">
-            <span>Regla Alberts (147 pb core + 53 pb linker):</span>
-            <strong>{{ atomicStats.theoreticalNucleosomes }}</strong>
-          </div>
-          <div class="stoich-line">
-            <span>Octámeros activos (1.75 vueltas levógiras):</span>
-            <strong>{{ atomicStats.nucleosomes }} × (2·H2A, 2·H2B, 2·H3, 2·H4) = {{ atomicStats.octamerSubunits }} subunidades</strong>
-          </div>
-          <div class="stoich-line">
-            <span>Histona H1 (Cromatosoma pluripotente):</span>
-            <strong>{{ atomicStats.h1Count }} moléculas H1 (anclaje bilateral)</strong>
-          </div>
-        </div>
+
       </div>
 
       <!-- HUD Atómico Superior Derecho: Detalle del Par -->
@@ -247,13 +218,7 @@
         </button>
       </div>
 
-      <!-- HUD Inferior: Indicador de Conformación Pre-Replicativa -->
-      <div class="hud-bottom-dock">
-        <div class="dock-content">
-          <Icon name="info" size="16" class="dock-icon" />
-          <span>Conformación Pre-Replicativa (Eucromatina Pluripotente) · Rueda: Zoom al cursor · Clic en átomo: Inspeccionar par</span>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -312,6 +277,7 @@ let mdm2Mesh = null;
 let ubiquitinGroup = null;
 let p53UnitsList = [];
 let p53AnimId = null;
+let swarmCenter = [0, 0, 0];
 
 function getDamageInspectionData(agent, pos) {
   if (agent === 'uv_radiation') {
@@ -347,10 +313,12 @@ function triggerP53Patrol() {
   p53State.value.repairLabel = 'Entrando por el extremo del ADN...';
   activeInspectionCard.value = null;
 
-  // Desacoplar Mdm2 morado y ubiquitinas blancas en todas las unidades
+  // Desacoplar MDM2 morado y ubiquitinas blancas hacia la zona nuclear lejana
   p53UnitsList.forEach(u => {
-    if (u.mdm2) u.mdm2.position.set(0, 7.5, 0);
-    if (u.ubi) u.ubi.position.set(0, 11.5, 0);
+    if (u.mdm2Group && u.distantAnchor) {
+      // Impulso inicial hacia zona lejana lejos del ADN y p53
+      u.mdm2Group.position.y += 4.0;
+    }
   });
 
   const totalPairs = lastGeneratedPairs.length;
@@ -409,23 +377,23 @@ function triggerP53Patrol() {
   function stepPatrol() {
     if (!p53State.value.active) return;
 
-    // Desplazar todo el convoy a lo largo de la cadena entrando por bp = 0
-    p53UnitsList.forEach((u, i) => {
-      u.currentBp = leadBp - i * 2;
-
-      if (u.currentBp >= 0 && u.currentBp < totalPairs) {
-        const pair = lastGeneratedPairs[u.currentBp];
-        if (pair && pair.centerPos) {
-          const wobble = Math.sin(Date.now() * 0.008 + i) * 0.8;
-          u.group.position.set(pair.centerPos[0], pair.centerPos[1] + 1.8 + wobble, pair.centerPos[2]);
-        }
-      } else if (u.currentBp < 0) {
-        const firstPair = lastGeneratedPairs[0];
-        if (firstPair) {
-          u.group.position.set(firstPair.centerPos[0] + (u.currentBp * 2.5), firstPair.centerPos[1] + 3.0, firstPair.centerPos[2]);
-        }
+    // El enjambre de p53 se mueve JUNTO (no en fila), centrando el grupo en el par actual leadBp
+    if (leadBp >= 0 && leadBp < totalPairs) {
+      const pair = lastGeneratedPairs[leadBp];
+      if (pair && pair.centerPos) {
+        swarmCenter = [pair.centerPos[0], pair.centerPos[1] + 2.0, pair.centerPos[2]];
       }
-    });
+    } else if (leadBp < 0) {
+      const firstPair = lastGeneratedPairs[0];
+      if (firstPair) {
+        swarmCenter = [firstPair.centerPos[0] + (leadBp * 2.5), firstPair.centerPos[1] + 3.0, firstPair.centerPos[2]];
+      }
+    } else {
+      const lastPair = lastGeneratedPairs[totalPairs - 1];
+      if (lastPair) {
+        swarmCenter = [lastPair.centerPos[0] + 5.0, lastPair.centerPos[1] + 3.0, lastPair.centerPos[2]];
+      }
+    }
 
     p53State.value.currentPos = Math.max(0, Math.min(leadBp, totalPairs - 1));
 
@@ -489,10 +457,10 @@ function triggerP53Patrol() {
       }, 1800);
 
     } else {
-      // Avanzar al siguiente segmento
+      // Avanzar al siguiente segmento (como van juntos, patrullan dinámicamente)
       leadBp++;
-      if (leadBp < totalPairs + (p53UnitsList.length * 2)) {
-        p53AnimId = setTimeout(stepPatrol, 70);
+      if (leadBp < totalPairs + 2) {
+        p53AnimId = setTimeout(stepPatrol, 85);
       } else {
         finishPatrol();
       }
@@ -512,9 +480,10 @@ function triggerP53Patrol() {
         p53UnitsList.forEach(u => {
           if (u.floatingAnchor) {
             u.group.position.set(u.floatingAnchor[0], u.floatingAnchor[1], u.floatingAnchor[2]);
+            if (u.mdm2Group) {
+              u.mdm2Group.position.set(u.floatingAnchor[0], u.floatingAnchor[1] + 2.2, u.floatingAnchor[2]);
+            }
           }
-          if (u.mdm2) u.mdm2.position.set(0, 1.9, 0);
-          if (u.ubi) u.ubi.position.set(0, 0, 0);
         });
       }, 5000);
     } else {
@@ -525,9 +494,10 @@ function triggerP53Patrol() {
         p53UnitsList.forEach(u => {
           if (u.floatingAnchor) {
             u.group.position.set(u.floatingAnchor[0], u.floatingAnchor[1], u.floatingAnchor[2]);
+            if (u.mdm2Group) {
+              u.mdm2Group.position.set(u.floatingAnchor[0], u.floatingAnchor[1] + 2.2, u.floatingAnchor[2]);
+            }
           }
-          if (u.mdm2) u.mdm2.position.set(0, 1.9, 0);
-          if (u.ubi) u.ubi.position.set(0, 0, 0);
         });
         emit('p53Repaired');
       }, 1600);
@@ -538,6 +508,7 @@ function triggerP53Patrol() {
 }
 
 const internalSelectedPos = ref(props.selectedPosition ?? 0);
+const selected3DPairIdx = ref(null);
 const packagingMode = ref('chromatin_adaptive'); // 'chromatin_adaptive' | 'chromatin_alberts' | 'linear'
 
 // Guardamos los pares generados para que zoomIn y el selector apunten a la coordenada 3D exacta
@@ -662,6 +633,17 @@ function buildDNAHelix(reframe = false) {
   };
 
   const selPos = effectiveSelectedPos.value;
+  const maxSeqLen = cleanFullSequence.value.length || 1;
+
+  // Determinar el par 3D activo para el anillo azul y el resaltado
+  let active3DIndex = selected3DPairIdx.value;
+  if (active3DIndex === null || active3DIndex < 0 || active3DIndex >= pairs.length || 
+      (pairs[active3DIndex]?.originalIndex !== selPos && (active3DIndex % maxSeqLen) !== selPos)) {
+    active3DIndex = pairs.findIndex(p => p.originalIndex === selPos);
+    if (active3DIndex === -1) active3DIndex = Math.min(selPos, Math.max(0, pairs.length - 1));
+    selected3DPairIdx.value = active3DIndex;
+  }
+
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
 
@@ -670,7 +652,7 @@ function buildDNAHelix(reframe = false) {
     (props.lesions || []).map(l => (typeof l === 'object' && l.position !== undefined) ? Number(l.position) : Number(l))
   );
 
-  // 1. ÁTOMOS DE LA SECUENCIA REAL (Resalta suavemente el par seleccionado)
+  // 1. ÁTOMOS DE LA SECUENCIA REAL (Resalta suavemente el par 3D exacto seleccionado)
   const geoEsfera = new THREE.SphereGeometry(1, 20, 16);
   const matEsfera = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.08 });
   const mallaAtomos = new THREE.InstancedMesh(geoEsfera, matEsfera, atoms.length);
@@ -678,7 +660,7 @@ function buildDNAHelix(reframe = false) {
 
   atoms.forEach((a, i) => {
     dummy.position.set(a[0], a[1], a[2]);
-    const isSelectedPair = (a[7] === selPos);
+    const isSelectedPair = (a[7] === active3DIndex);
     const isDamagedPair = damagedPositions.has(a[7]);
     const r = (ATOMIC_RADII[a[3]] || 0.45) * (isDamagedPair ? 1.55 : (isSelectedPair ? 1.4 : 1.15));
     dummy.scale.setScalar(r);
@@ -694,7 +676,8 @@ function buildDNAHelix(reframe = false) {
       color.setHex(ATOMIC_PALETTE[a[4]] ?? 0x94a3b8);
     }
     mallaAtomos.setColorAt(i, color);
-    atomPairMap.push(a[5]);
+    // Guardar a[7] (el índice 3D exacto del par) para que el clic identifique ese par preciso
+    atomPairMap.push(a[7]);
   });
 
   mallaAtomos.instanceMatrix.needsUpdate = true;
@@ -801,8 +784,8 @@ function buildDNAHelix(reframe = false) {
   }
 
   // 5. ANILLO INDICADOR 3D ORIENTADO EN EL PAR DE BASES SELECCIONADO (funciona en curva y en línea)
-  if (selPos >= 0 && selPos < pairs.length) {
-    const activePair = pairs[selPos];
+  if (active3DIndex >= 0 && active3DIndex < pairs.length) {
+    const activePair = pairs[active3DIndex];
     const ringGeo = new THREE.RingGeometry(11.2, 12.8, 48);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
@@ -826,31 +809,11 @@ function buildDNAHelix(reframe = false) {
     mainHelixGroup.add(ringMesh);
   }
 
-  // 6. BALIZAS RESPLANDECIENTES DE DAÑO EN CADA PAR 3D LESIONADO
+  // 6. IDENTIFICAR PARES 3D LESIONADOS (Sin círculos ni balizas externas: solo la cadena en rojo refleja el daño)
   damaged3DPairIndices = [];
   pairs.forEach((p, pIdx) => {
     if (damagedPositions.has(pIdx)) {
       damaged3DPairIndices.push(pIdx);
-      if (p.centerPos) {
-        const [dx, dy, dz] = p.centerPos;
-        const damRingGeo = new THREE.TorusGeometry(8.5, 0.95, 12, 32);
-        const damRingMat = new THREE.MeshStandardMaterial({
-          color: 0xff1e00,
-          emissive: 0xff3b30,
-          emissiveIntensity: 0.9,
-          roughness: 0.2
-        });
-        const damMesh = new THREE.Mesh(damRingGeo, damRingMat);
-        damMesh.position.set(dx, dy, dz);
-        if (p.tangent) {
-          damMesh.quaternion.setFromUnitVectors(
-            new THREE.Vector3(0, 0, 1),
-            new THREE.Vector3(p.tangent[0], p.tangent[1], p.tangent[2]).normalize()
-          );
-        }
-        damMesh.name = 'lesion_beacon_' + pIdx;
-        mainHelixGroup.add(damMesh);
-      }
     }
   });
 
@@ -887,50 +850,102 @@ function buildDNAHelix(reframe = false) {
     emissiveIntensity: 0.5 
   });
 
-  // Geometría reducida a escala molecular fina (mucho más chicos)
-  const geoP53 = new THREE.SphereGeometry(1.5, 18, 14);
-  const geoMdm2 = new THREE.SphereGeometry(1.15, 16, 12);
-  const geoUbi = new THREE.SphereGeometry(0.48, 12, 10);
+  // Geometría molecular destacada
+  // p53 y MDM2: Mismo tamaño molecular aumentado y visualmente equilibrado
+  const geoP53Large = new THREE.SphereGeometry(1.35, 18, 16);
+  const geoMdm2 = new THREE.SphereGeometry(1.35, 18, 16);
+  const geoUbi = new THREE.SphereGeometry(0.70, 16, 12);
+
+  // Calcular límites de la molécula para posicionar MDM2 flotando ARRIBA en el espacio libre
+  let minY = Infinity, maxY = -Infinity;
+  let minX = Infinity, maxX = -Infinity;
+  let minZ = Infinity, maxZ = -Infinity;
+  pairs.forEach(p => {
+    if (p.centerPos) {
+      minX = Math.min(minX, p.centerPos[0]);
+      maxX = Math.max(maxX, p.centerPos[0]);
+      minY = Math.min(minY, p.centerPos[1]);
+      maxY = Math.max(maxY, p.centerPos[1]);
+      minZ = Math.min(minZ, p.centerPos[2]);
+      maxZ = Math.max(maxZ, p.centerPos[2]);
+    }
+  });
+
+  const firstP = pairs[0]?.centerPos || [0, 0, 0];
+  const dnaCenterX = isFinite(minX) ? (minX + maxX) / 2 : firstP[0];
+  const dnaMaxY = isFinite(maxY) ? maxY : firstP[1] + 22.0;
+  const dnaCenterZ = isFinite(minZ) ? (minZ + maxZ) / 2 : firstP[2];
 
   p53UnitsList = [];
-  const firstP = pairs[0]?.centerPos || [0, 0, 0];
+  const reservoirCenter = [firstP[0] - 8.0, firstP[1] - 14.0, firstP[2] + 4.0];
 
   for (let u = 0; u < p53Count; u++) {
+    // 1. Grupo p53: 3 bolitas ámbar/naranjas de tamaño aumentado en tríada
     const unitGroup = new THREE.Group();
     unitGroup.name = 'p53_unit_' + u;
 
-    // Bola ámbar central (p53)
-    const p53Mesh = new THREE.Mesh(geoP53, matP53Amber);
-    unitGroup.add(p53Mesh);
+    const p1 = new THREE.Mesh(geoP53Large, matP53Amber);
+    p1.position.set(0, 1.05, 0);
+    unitGroup.add(p1);
 
-    // Mdm2 morado pegado al lateral
+    const p2 = new THREE.Mesh(geoP53Large, matP53Amber);
+    p2.position.set(-0.95, -0.55, 0.38);
+    unitGroup.add(p2);
+
+    const p3 = new THREE.Mesh(geoP53Large, matP53Amber);
+    p3.position.set(0.95, -0.55, -0.38);
+    unitGroup.add(p3);
+
+    // 2. Grupo MDM2 independiente con DOS bolitas de ubiquitina (del tamaño de p53)
+    const mdm2Group = new THREE.Group();
+    mdm2Group.name = 'mdm2_complex_' + u;
+
     const mdm2M = new THREE.Mesh(geoMdm2, matMdm2Purple);
-    mdm2M.position.set(0, 1.9, 0);
     mdm2M.name = 'mdm2_sub_' + u;
-    unitGroup.add(mdm2M);
+    mdm2Group.add(mdm2M);
 
-    // Bolitas blancas de ubiquitina pegadas en la unión Mdm2-p53
+    // Dos bolitas de ubiquitina bien proporcionadas
     const ubiG = new THREE.Group();
     ubiG.name = 'ubi_group_' + u;
-    const u1 = new THREE.Mesh(geoUbi, matUbiWhite); u1.position.set(0.7, 1.7, 0.4); ubiG.add(u1);
-    const u2 = new THREE.Mesh(geoUbi, matUbiWhite); u2.position.set(-0.7, 1.7, 0.4); ubiG.add(u2);
-    const u3 = new THREE.Mesh(geoUbi, matUbiWhite); u3.position.set(0, 2.6, 0.3); ubiG.add(u3);
-    unitGroup.add(ubiG);
+    const u1 = new THREE.Mesh(geoUbi, matUbiWhite);
+    u1.position.set(0.95, 0.95, 0.45);
+    ubiG.add(u1);
+    const u2 = new THREE.Mesh(geoUbi, matUbiWhite);
+    u2.position.set(-0.95, 0.95, -0.45);
+    ubiG.add(u2);
+    mdm2Group.add(ubiG);
 
-    // Posición de reposo: Separado cómodamente del ADN (12 Å debajo de la entrada), sin estar lejos
+    // Posición de reposo: Reservorio nuclear (debajo de la entrada del ADN)
+    const phi = u * 2.39996;
+    const cosTheta = 1 - (2 * (u + 0.5) / Math.max(1, p53Count));
+    const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+    const rSpread = 4.2 + (u % 2) * 1.8;
+
     const anchor = [
-      firstP[0] + (u - p53Count / 2) * 5.0,
-      firstP[1] - 12.0,
-      firstP[2] + 4.0 + (u % 2) * 2.5
+      reservoirCenter[0] + sinTheta * Math.cos(phi) * rSpread,
+      reservoirCenter[1] + cosTheta * rSpread * 0.8,
+      reservoirCenter[2] + sinTheta * Math.sin(phi) * rSpread
     ];
     unitGroup.position.set(anchor[0], anchor[1], anchor[2]);
 
+    // MDM2 acoplado junto a p53 en reposo
+    mdm2Group.position.set(anchor[0], anchor[1] + 2.6, anchor[2]);
+
+    // Posición desacoplada: Flotando MUCHO MÁS ARRIBA en el espacio libre superior (lejos del ADN)
+    const distantAnchor = [
+      dnaCenterX - ((p53Count - 1) * 8.0) + (u * 16.0),
+      dnaMaxY + 28.0 + (u % 2) * 5.0,
+      dnaCenterZ + 6.0 + (u % 2) * 4.0
+    ];
+
     p53MeshGroup.add(unitGroup);
+    p53MeshGroup.add(mdm2Group);
+
     p53UnitsList.push({
       group: unitGroup,
-      mdm2: mdm2M,
-      ubi: ubiG,
+      mdm2Group: mdm2Group,
       floatingAnchor: anchor,
+      distantAnchor: distantAnchor,
       currentBp: 0
     });
   }
@@ -941,6 +956,7 @@ function buildDNAHelix(reframe = false) {
     const allPts = atoms.map(a => [a[0], a[1], a[2]]);
     p53UnitsList.forEach(u => {
       if (u.floatingAnchor) allPts.push(u.floatingAnchor);
+      if (u.distantAnchor) allPts.push(u.distantAnchor);
     });
     encuadrar(allPts);
   }
@@ -962,7 +978,8 @@ function encuadrar(puntos) {
   const centro = caja.getCenter(new THREE.Vector3());
   const tam = caja.getSize(new THREE.Vector3());
   const maxDim = Math.max(tam.x, tam.y, tam.z);
-  const dist = isLinear ? maxDim * 1.55 : maxDim * 1.15;
+  // Mayor distancia para alejar más el ADN y que todo el escenario (ADN + MDM2 arriba) quepa con amplitud
+  const dist = isLinear ? maxDim * 1.95 : maxDim * 1.70;
 
   camera.position.set(centro.x, centro.y, dist);
   controls.target.copy(centro);
@@ -1064,12 +1081,14 @@ function initScene() {
         const hit = intersects[0];
         const obj = hit.object;
         if (obj.userData?.atomPairMap && hit.instanceId !== undefined) {
-          const globalPairIdx = obj.userData.atomPairMap[hit.instanceId];
-          if (globalPairIdx !== undefined) {
-            internalSelectedPos.value = globalPairIdx;
-            emit('selectBase', globalPairIdx);
-            emit('update:selectedPosition', globalPairIdx);
-            buildDNAHelix(false); // Redibuja de inmediato el anillo y el resaltado en el par clicado
+          const clicked3DPairIdx = obj.userData.atomPairMap[hit.instanceId];
+          if (clicked3DPairIdx !== undefined && lastGeneratedPairs[clicked3DPairIdx]) {
+            selected3DPairIdx.value = clicked3DPairIdx;
+            const origSeqIdx = lastGeneratedPairs[clicked3DPairIdx].originalIndex ?? (clicked3DPairIdx % (cleanFullSequence.value.length || 1));
+            internalSelectedPos.value = origSeqIdx;
+            emit('selectBase', origSeqIdx);
+            emit('update:selectedPosition', origSeqIdx);
+            buildDNAHelix(false); // Redibuja de inmediato el anillo en el par 3D exacto clicado
           }
         }
       }
@@ -1083,22 +1102,83 @@ function animate() {
   animId = requestAnimationFrame(animate);
   controls?.update();
 
-  // Animación de p53 en posición inicial: FUERA DEL ADN, flotando y moviéndose orgánicamente
-  if (!p53State.value.active && p53UnitsList.length > 0) {
-    const t = Date.now() * 0.0016;
-    p53UnitsList.forEach((u, i) => {
-      if (u.floatingAnchor && u.group) {
-        const hoverX = Math.cos(t * 1.2 + i * 1.5) * 4.2;
-        const hoverY = Math.sin(t * 1.5 + i * 1.8) * 4.5;
-        const hoverZ = Math.sin(t * 1.0 + i * 1.2) * 3.6;
-        u.group.position.set(
-          u.floatingAnchor[0] + hoverX,
-          u.floatingAnchor[1] + hoverY,
-          u.floatingAnchor[2] + hoverZ
-        );
-        u.group.rotation.y += 0.006;
-      }
-    });
+  // Animación de complejos p53 / Mdm2 / Ubiquitina
+  if (p53UnitsList.length > 0) {
+    const totalUnits = p53UnitsList.length;
+
+    if (!p53State.value.active) {
+      // ESTADO DE REPOSO: Agrupadas en esfera no uniforme, moviéndose y fluctuando orgánicamente ("carritos locos")
+      const t = Date.now() * 0.0022;
+      p53UnitsList.forEach((u, i) => {
+        if (u.floatingAnchor && u.group && u.mdm2Group) {
+          const wobbleX = Math.sin(t * 2.0 + i * 1.8) * 1.6 + Math.cos(t * 1.1 + i * 2.7) * 1.0;
+          const wobbleY = Math.cos(t * 1.8 + i * 2.2) * 1.5 + Math.sin(t * 1.4 + i * 1.3) * 0.9;
+          const wobbleZ = Math.sin(t * 1.6 + i * 1.5) * 1.6 + Math.cos(t * 2.3 + i * 2.5) * 1.0;
+
+          const posX = u.floatingAnchor[0] + wobbleX;
+          const posY = u.floatingAnchor[1] + wobbleY;
+          const posZ = u.floatingAnchor[2] + wobbleZ;
+
+          u.group.position.x += (posX - u.group.position.x) * 0.16;
+          u.group.position.y += (posY - u.group.position.y) * 0.16;
+          u.group.position.z += (posZ - u.group.position.z) * 0.16;
+
+          u.group.rotation.y += 0.016;
+          u.group.rotation.x += 0.009;
+
+          // MDM2 acoplado junto al trímero de p53 en reposo
+          u.mdm2Group.position.x += (posX - u.mdm2Group.position.x) * 0.16;
+          u.mdm2Group.position.y += (posY + 2.5 - u.mdm2Group.position.y) * 0.16;
+          u.mdm2Group.position.z += (posZ - u.mdm2Group.position.z) * 0.16;
+
+          u.mdm2Group.rotation.y += 0.012;
+        }
+      });
+    } else {
+      // ESTADO ACTIVO: p53 patrulla el ADN moviéndose JUNTAS como carritos locos agrupadas en círculo/esfera no uniforme
+      const t = Date.now() * 0.0034;
+      p53UnitsList.forEach((u, i) => {
+        if (u.group) {
+          // Distribución en esfera no uniforme dinámica (como enjambre / carritos locos)
+          const phi = (i * 2.39996) + t * 1.6;
+          const cosTheta = 1 - (2 * (i + 0.5) / Math.max(1, totalUnits));
+          const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
+          const clusterRadius = 3.8 + Math.sin(t * 2.4 + i * 2.1) * 1.3;
+
+          // Fluctuaciones dinámicas caóticas ("carritos locos" esquivándose y revoloteando)
+          const jitterX = Math.sin(t * 3.3 + i * 1.9) * 1.4 + Math.cos(t * 1.7 + i * 3.1) * 1.0;
+          const jitterY = Math.cos(t * 2.9 + i * 2.3) * 1.4 + Math.sin(t * 1.5 + i * 1.7) * 0.9;
+          const jitterZ = Math.sin(t * 2.6 + i * 1.4) * 1.5 + Math.cos(t * 3.7 + i * 2.7) * 1.0;
+
+          const targetX = swarmCenter[0] + (sinTheta * Math.cos(phi) * clusterRadius) + jitterX;
+          const targetY = swarmCenter[1] + (cosTheta * clusterRadius * 0.8) + jitterY;
+          const targetZ = swarmCenter[2] + (sinTheta * Math.sin(phi) * clusterRadius) + jitterZ;
+
+          // Movimiento reactivo a 60 FPS
+          u.group.position.x += (targetX - u.group.position.x) * 0.22;
+          u.group.position.y += (targetY - u.group.position.y) * 0.22;
+          u.group.position.z += (targetZ - u.group.position.z) * 0.22;
+
+          u.group.rotation.x += 0.024 * Math.sin(i + 1);
+          u.group.rotation.y += 0.036 * Math.cos(i + 1);
+          u.group.rotation.z += 0.02;
+        }
+
+        // MDM2 y ubiquitina flotando ARRIBA en el espacio libre del nucleoplasma (lejos del ADN y del tamaño de p53)
+        if (u.mdm2Group && u.distantAnchor) {
+          const floatX = Math.cos(t * 0.8 + i * 1.8) * 3.5;
+          const floatY = Math.sin(t * 1.0 + i * 1.5) * 2.8;
+          const floatZ = Math.sin(t * 0.7 + i * 2.1) * 2.0;
+
+          u.mdm2Group.position.x += (u.distantAnchor[0] + floatX - u.mdm2Group.position.x) * 0.08;
+          u.mdm2Group.position.y += (u.distantAnchor[1] + floatY - u.mdm2Group.position.y) * 0.08;
+          u.mdm2Group.position.z += (u.distantAnchor[2] + floatZ - u.mdm2Group.position.z) * 0.08;
+
+          u.mdm2Group.rotation.y += 0.008;
+          u.mdm2Group.rotation.x += 0.004;
+        }
+      });
+    }
   }
 
   if (renderer && scene && camera) {
