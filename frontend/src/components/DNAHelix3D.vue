@@ -86,7 +86,7 @@
       </div>
 
       <!-- Barra superior de estado de patrullaje p53 -->
-      <div v-if="p53State.active && !activeInspectionCard" class="p53-hud-pill">
+      <div v-if="p53State.active && !activeInspectionCard && !p53State.isApoptosis" class="p53-hud-pill">
         <span class="p53-pulse-dot"></span>
         <span class="p53-pos-tag font-mono">p53 ({{ p53State.p53UnitsCount }} complejos):</span>
         <strong class="p53-label-text">{{ p53State.repairLabel }}</strong>
@@ -1919,14 +1919,25 @@ onUnmounted(() => {
 }
 
 /* Banner Flotante de Apoptosis en Pantalla */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 .apoptosis-overlay-banner {
   position: absolute;
-  bottom: 3.5rem;
+  top: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 30;
+  z-index: 45;
   pointer-events: none;
-  animation: bounceIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: fadeInDown 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .apoptosis-alert-card {
   display: flex;
@@ -2105,16 +2116,19 @@ onUnmounted(() => {
 }
 
 .hud-toolbar {
-  bottom: 5.4rem !important;
+  bottom: 7rem !important;
   right: 1.25rem !important;
+  z-index: 22 !important;
 }
 
 .bottom-nucleotide-dock {
   position: absolute;
   bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: fit-content;
+  left: 16px;
+  right: 16px;
+  margin-left: auto;
+  margin-right: auto;
+  width: max-content;
   max-width: calc(100% - 32px);
   box-sizing: border-box;
   z-index: 20;
@@ -2135,7 +2149,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  height: 96px;
+  height: 84px;
   padding: 1px 0;
   flex-shrink: 0;
   user-select: none;
@@ -2175,10 +2189,14 @@ onUnmounted(() => {
   align-items: center;
   gap: 5px;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-behavior: smooth;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 100%;
   padding: 2px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.6) rgba(8, 15, 28, 0.7);
 }
 
 /* Scrollbar ultra sutil y estilizado */
