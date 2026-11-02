@@ -108,12 +108,19 @@
         class="atomic-canvas-box"
       ></div>
 
-      <!-- HUD Superior Izquierdo: Leyenda Atómica + Octámero de Histonas (Alberts et al.) -->
-      <div class="hud-card hud-top-left">
-        <div class="hud-card-header">
-          <span class="hud-label">ADN-B + Octámero de Histonas y H1</span>
+      <!-- HUD Superior Izquierdo: Leyenda Atómica Colapsable (No tapa el ADN) -->
+      <div class="hud-card hud-top-left" :class="{ collapsed: !showLegend }">
+        <div class="hud-card-header clickable" @click="showLegend = !showLegend" role="button" title="Alternar visibilidad de leyenda atómica">
+          <div class="hud-header-left">
+            <Icon name="palette" size="14" class="text-sky" />
+            <span class="hud-label">Leyenda Atómica</span>
+          </div>
+          <button class="hud-toggle-btn" :title="showLegend ? 'Ocultar leyenda' : 'Mostrar leyenda'">
+            <span class="toggle-text">{{ showLegend ? 'Ocultar' : 'Ver' }}</span>
+            <Icon :name="showLegend ? 'expand_less' : 'expand_more'" size="14" />
+          </button>
         </div>
-        <div class="spectral-legend-grid">
+        <div class="spectral-legend-grid" v-show="showLegend">
           <span class="spectral-pill a"><span class="swatch" style="background:#8cccff"></span>A · Adenina</span>
           <span class="spectral-pill t"><span class="swatch" style="background:#4080f2"></span>T · Timina</span>
           <span class="spectral-pill g"><span class="swatch" style="background:#bfe0ff"></span>G · Guanina</span>
@@ -124,11 +131,9 @@
           <span class="spectral-pill"><span class="swatch" style="background:#10b981"></span>Histona H2B</span>
           <span class="spectral-pill"><span class="swatch" style="background:#3b82f6"></span>Histona H3</span>
           <span class="spectral-pill"><span class="swatch" style="background:#c084fc"></span>Histona H4</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Broche exterior ADN)</span>
+          <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Broche exterior)</span>
           <span class="spectral-pill hbond"><span class="swatch pin" style="background:#8fb4e0"></span>Puente H</span>
         </div>
-
-
       </div>
 
       <!-- HUD Atómico Superior Derecho: Detalle del Par -->
@@ -155,15 +160,9 @@
           </div>
         </div>
 
-        <div class="hud-backbone-detail">
-          <div class="hud-bb-line">
-            <span class="hud-bb-tag">5' Hebra:</span>
-            <span>Desoxirribosa (Caz) ↔ Fosfato (PO₄)</span>
-          </div>
-          <div class="hud-bb-line">
-            <span class="hud-bb-tag">Estado:</span>
-            <span>{{ packagingMode === 'linear' ? 'Doble hélice expuesta' : 'Enrollado en Superhélice Levógira (1.75 vueltas)' }}</span>
-          </div>
+        <div class="hud-backbone-detail compact">
+          <span class="hud-bb-tag">Dúplex Watson-Crick:</span>
+          <span class="font-mono text-dim">{{ packagingMode === 'linear' ? 'B-DNA Lineal' : 'Superhélice en Octámeros (1.75v)' }}</span>
         </div>
       </div>
 
@@ -218,6 +217,73 @@
         </button>
       </div>
 
+      <!-- DOCK COMPACTO DE DOBLE CADENA: ENLACES H, ESQUELETO AZÚCAR-FOSFATO Y POLARIDAD 5' / 3' -->
+      <div class="bottom-nucleotide-dock" v-if="cleanFullSequence">
+        <!-- Extremo Izquierdo: Polaridad 5' (P) / 3' (OH) -->
+        <div class="dock-polarity-col left">
+          <span class="dock-polarity-tag p5" title="Extremo 5' Fosfato libre (PO₄³⁻)">5' (P)</span>
+          <div class="dock-polarity-stem"></div>
+          <span class="dock-polarity-tag p3" title="Extremo 3' Hidroxilo libre (-OH)">3' (OH)</span>
+        </div>
+
+        <!-- Pista Horizontal de Desplazamiento Independiente -->
+        <div class="nucleotide-scroll-track" ref="nucleotideScrollRef">
+          <div 
+            v-for="pair in duplexBasePairs" 
+            :key="pair.idx"
+            :data-idx="pair.idx"
+            :class="['dock-base-column', pair.b1.toLowerCase(), { active: effectiveSelectedPos === pair.idx, damaged: isBaseDamaged(pair.idx) }]"
+            @click="selectPairFromLadder(pair.idx)"
+            :title="`Par ${pair.idx}: ${pair.b1}=${pair.b2} (${pair.bonds} enlaces H)${isBaseDamaged(pair.idx) ? ' [LESIÓN ACTIVA]' : ''}`"
+          >
+            <!-- Coordenada del par -->
+            <span class="dock-pos-idx font-mono">{{ pair.idx }}</span>
+
+            <!-- Esqueleto Superior Azúcar-Fosfato (5'→3') -->
+            <div class="dock-bb-monomer top" title="Monómero 5': Fosfato (P) + Desoxirribosa (D)">
+              <span class="dock-bb-dot phosphate" title="Fosfato (PO₄³⁻)">P</span>
+              <span class="dock-bb-hyphen">—</span>
+              <span class="dock-bb-dot sugar" title="2'-Desoxirribosa">D</span>
+              <div class="dock-bb-stem-down"></div>
+            </div>
+
+            <!-- Base Nitrogenada Sentido 5'→3' -->
+            <div class="dock-base-capsule primary" :title="`Base Hebra Sentido: ${pair.b1}`">
+              <span class="dock-letter font-mono">{{ pair.b1 }}</span>
+            </div>
+
+            <!-- Enlaces de Hidrógeno Watson-Crick (2 líneas para A=T, 3 líneas para C≡G) -->
+            <div class="dock-hydrogen-bonds" :title="`${pair.bonds} puentes de hidrógeno (${pair.b1 === 'A' || pair.b1 === 'T' ? 'A=T' : 'C≡G'})`">
+              <span class="dock-h-line" v-for="n in pair.bonds" :key="n"></span>
+            </div>
+
+            <!-- Base Nitrogenada Antisentido 3'→5' -->
+            <div class="dock-base-capsule comp" :title="`Base Complementaria: ${pair.b2}`">
+              <span class="dock-letter font-mono">{{ pair.b2 }}</span>
+            </div>
+
+            <!-- Esqueleto Inferior Azúcar-Fosfato Antiparalelo (3'→5') -->
+            <div class="dock-bb-monomer bottom" title="Monómero 3': Desoxirribosa (D) + Fosfato (P)">
+              <div class="dock-bb-stem-up"></div>
+              <span class="dock-bb-dot sugar" title="2'-Desoxirribosa">D</span>
+              <span class="dock-bb-hyphen">—</span>
+              <span class="dock-bb-dot phosphate" title="Fosfato (PO₄³⁻)">P</span>
+            </div>
+
+            <!-- Baliza de Lesión / Daño si existe -->
+            <span class="dock-damage-beacon" v-if="isBaseDamaged(pair.idx)" title="Lesión activa en esta base"></span>
+          </div>
+        </div>
+
+        <!-- Extremo Derecho: Polaridad 3' (OH) / 5' (P) -->
+        <div class="dock-polarity-col right">
+          <span class="dock-polarity-tag p3" title="Extremo 3' Hidroxilo libre (-OH)">3' (OH)</span>
+          <div class="dock-polarity-stem"></div>
+          <span class="dock-polarity-tag p5" title="Extremo 5' Fosfato libre (PO₄³⁻)">5' (P)</span>
+        </div>
+      </div>
+
+
 
     </div>
   </div>
@@ -271,6 +337,7 @@ const p53State = ref({
 });
 
 const activeInspectionCard = ref(null);
+const showLegend = ref(false);
 
 let p53MeshGroup = null;
 let mdm2Mesh = null;
@@ -507,6 +574,10 @@ function triggerP53Patrol() {
   stepPatrol();
 }
 
+const cleanFullSequence = computed(() => {
+  return props.sequence.toUpperCase().replace(/[^ATCG]/g, '') || 'GATTACAGGCTATCCGATACG';
+});
+
 const internalSelectedPos = ref(props.selectedPosition ?? 0);
 const selected3DPairIdx = ref(null);
 const packagingMode = ref('chromatin_adaptive'); // 'chromatin_adaptive' | 'chromatin_alberts' | 'linear'
@@ -575,10 +646,6 @@ const atomicStats = ref({
   totalHistones: 0
 });
 
-const cleanFullSequence = computed(() => {
-  return props.sequence.toUpperCase().replace(/[^ATCG]/g, '') || 'GATTACAGGCTATCCGATACG';
-});
-
 const selectedBaseData = computed(() => {
   const clean = cleanFullSequence.value;
   const pos = effectiveSelectedPos.value;
@@ -593,6 +660,51 @@ const selectedBaseData = computed(() => {
     bonds
   };
 });
+
+const nucleotideScrollRef = ref(null);
+
+const duplexBasePairs = computed(() => {
+  const seq = cleanFullSequence.value;
+  if (!seq) return [];
+  const list = [];
+  for (let i = 0; i < seq.length; i++) {
+    const b1 = seq[i];
+    const b2 = COMPLEMENT_MAP[b1] || 'T';
+    const bonds = (b1 === 'A' || b1 === 'T') ? 2 : 3;
+    list.push({ idx: i, b1, b2, bonds });
+  }
+  return list;
+});
+
+function isBaseDamaged(idx) {
+  if (props.lesions && props.lesions.length) {
+    return props.lesions.some(l => (typeof l === 'number' ? l === idx : l.position === idx));
+  }
+  return false;
+}
+
+function selectPairFromLadder(idx) {
+  internalSelectedPos.value = idx;
+  emit('selectBase', idx);
+  emit('update:selectedPosition', idx);
+  buildDNAHelix(false);
+  scrollSelectedIntoView(idx);
+}
+
+function scrollSelectedIntoView(idx) {
+  if (!nucleotideScrollRef.value) return;
+  const col = nucleotideScrollRef.value.querySelector(`[data-idx="${idx}"]`);
+  if (col) {
+    col.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
+watch(effectiveSelectedPos, (newPos) => {
+  if (newPos !== null && newPos !== undefined) {
+    nextTick(() => scrollSelectedIntoView(newPos));
+  }
+});
+
 
 function buildDNAHelix(reframe = false) {
   if (!mainHelixGroup || !scene) return;
@@ -978,11 +1090,13 @@ function encuadrar(puntos) {
   const centro = caja.getCenter(new THREE.Vector3());
   const tam = caja.getSize(new THREE.Vector3());
   const maxDim = Math.max(tam.x, tam.y, tam.z);
-  // Mayor distancia para alejar más el ADN y que todo el escenario (ADN + MDM2 arriba) quepa con amplitud
-  const dist = isLinear ? maxDim * 1.95 : maxDim * 1.70;
+  // Distancia y encuadre equilibrados: el ADN se aprecia en detalle y centrado con espacio natural hacia abajo
+  const dist = isLinear ? maxDim * 1.85 : maxDim * 1.95;
+  // Centro natural de la molécula (baja el ADN desde la parte superior para aprovechar el espacio inferior)
+  const targetY = centro.y;
 
-  camera.position.set(centro.x, centro.y, dist);
-  controls.target.copy(centro);
+  camera.position.set(centro.x, targetY, dist);
+  controls.target.set(centro.x, targetY, centro.z);
   camPos0.copy(camera.position);
   target0.copy(controls.target);
   controls.update();
@@ -1449,8 +1563,8 @@ onUnmounted(() => {
 .canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 600px;
-  min-height: 600px;
+  height: 78vh;
+  min-height: 720px;
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1976,6 +2090,333 @@ onUnmounted(() => {
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+
+/* ═══════════════════════ CADENA DE NUCLEÓTIDOS DOCK COMPACTO EN LA ORILLA INFERIOR ═══════════════════════ */
+.canvas-wrapper {
+  height: 72vh !important;
+  min-height: 660px !important;
+}
+
+.atomic-canvas-box {
+  height: 100% !important;
+  min-height: 660px !important;
+}
+
+.hud-toolbar {
+  bottom: 5.4rem !important;
+  right: 1.25rem !important;
+}
+
+.bottom-nucleotide-dock {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(6, 12, 24, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 12px;
+  padding: 6px 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 16px rgba(56, 189, 248, 0.12);
+}
+
+.dock-polarity-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 96px;
+  padding: 1px 0;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.dock-polarity-tag {
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-family: var(--md-ref-typeface-mono, monospace);
+  border: 1px solid;
+  letter-spacing: 0.5px;
+}
+
+.dock-polarity-tag.p5 {
+  background: rgba(51, 115, 230, 0.25);
+  color: #70d6ff;
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.dock-polarity-tag.p3 {
+  background: rgba(115, 140, 191, 0.25);
+  color: #b0c4de;
+  border-color: rgba(115, 140, 191, 0.45);
+}
+
+.dock-polarity-stem {
+  width: 1px;
+  flex: 1;
+  background: rgba(56, 189, 248, 0.2);
+  margin: 3px 0;
+}
+
+.nucleotide-scroll-track {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  flex: 0 1 auto;
+  max-width: 100%;
+  padding: 2px 4px;
+}
+
+/* Scrollbar ultra sutil y estilizado */
+.nucleotide-scroll-track::-webkit-scrollbar {
+  height: 4px;
+}
+.nucleotide-scroll-track::-webkit-scrollbar-track {
+  background: rgba(8, 15, 28, 0.7);
+  border-radius: 999px;
+}
+.nucleotide-scroll-track::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.4), rgba(14, 165, 233, 0.9));
+  border-radius: 999px;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+}
+
+.dock-base-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 32px;
+  padding: 2px 2px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.dock-base-column:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.35);
+  transform: translateY(-2px);
+}
+
+.dock-base-column.active {
+  background: rgba(0, 77, 105, 0.45);
+  border: 1.5px solid var(--md-sys-color-primary, #70d6ff);
+  box-shadow: 0 0 14px rgba(112, 214, 255, 0.55);
+  transform: translateY(-2px);
+}
+
+.dock-base-column.damaged {
+  border-color: #f43f5e;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.55);
+}
+
+.dock-pos-idx {
+  font-size: 0.58rem;
+  color: #64748b;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.dock-bb-monomer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  position: relative;
+  width: 100%;
+}
+
+.dock-bb-monomer.top {
+  margin-bottom: 3px;
+}
+
+.dock-bb-monomer.bottom {
+  margin-top: 3px;
+}
+
+.dock-bb-dot {
+  font-family: var(--md-ref-typeface-mono, monospace);
+  font-size: 0.52rem;
+  font-weight: 800;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.dock-bb-dot.phosphate {
+  background: #3373e6;
+  color: #ffffff;
+  box-shadow: 0 0 5px rgba(51, 115, 230, 0.6);
+}
+
+.dock-bb-dot.sugar {
+  background: #738cbf;
+  color: #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 0 5px rgba(115, 140, 191, 0.6);
+}
+
+.dock-bb-hyphen {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: rgba(148, 163, 184, 0.5);
+  margin: 0 1px;
+}
+
+.dock-bb-stem-down {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 1px;
+  height: 3px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.dock-bb-stem-up {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 1px;
+  height: 3px;
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.dock-base-capsule {
+  width: 24px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.78rem;
+  transition: transform 0.15s ease;
+}
+
+/* Colores canónicos de bases concordantes con la paleta 3D del proyecto */
+.dock-base-column.a .dock-base-capsule.primary {
+  background: linear-gradient(135deg, rgba(140, 204, 255, 0.22) 0%, rgba(140, 204, 255, 0.35) 100%);
+  color: #8cccff;
+  border: 1px solid rgba(140, 204, 255, 0.6);
+  box-shadow: 0 0 8px rgba(140, 204, 255, 0.3);
+}
+
+.dock-base-column.t .dock-base-capsule.primary {
+  background: linear-gradient(135deg, rgba(64, 128, 242, 0.22) 0%, rgba(64, 128, 242, 0.35) 100%);
+  color: #4080f2;
+  border: 1px solid rgba(64, 128, 242, 0.6);
+  box-shadow: 0 0 8px rgba(64, 128, 242, 0.3);
+}
+
+.dock-base-column.c .dock-base-capsule.primary {
+  background: linear-gradient(135deg, rgba(38, 89, 217, 0.22) 0%, rgba(38, 89, 217, 0.35) 100%);
+  color: #2659d9;
+  border: 1px solid rgba(38, 89, 217, 0.6);
+  box-shadow: 0 0 8px rgba(38, 89, 217, 0.3);
+}
+
+.dock-base-column.g .dock-base-capsule.primary {
+  background: linear-gradient(135deg, rgba(191, 224, 255, 0.22) 0%, rgba(191, 224, 255, 0.35) 100%);
+  color: #bfe0ff;
+  border: 1px solid rgba(191, 224, 255, 0.6);
+  box-shadow: 0 0 8px rgba(191, 224, 255, 0.3);
+}
+
+.dock-base-capsule.comp {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+.dock-base-column:hover .dock-base-capsule {
+  transform: scale(1.08);
+}
+
+.dock-hydrogen-bonds {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 10px;
+  margin: 1px 0;
+}
+
+.dock-h-line {
+  width: 10px;
+  height: 1.5px;
+  border-radius: 1px;
+  background-color: #8fb4e0;
+  box-shadow: 0 0 3px rgba(143, 180, 224, 0.7);
+}
+
+.dock-damage-beacon {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f43f5e;
+  box-shadow: 0 0 6px #f43f5e;
+}
+
+
+.hud-top-left.collapsed {
+  max-width: 170px;
+}
+
+.hud-card-header.clickable {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.hud-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hud-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.65rem;
+  font-family: var(--md-ref-typeface-mono, monospace);
+  cursor: pointer;
+  padding: 0;
+}
+
+.dock-polarity-col {
+  height: 84px;
 }
 
 </style>

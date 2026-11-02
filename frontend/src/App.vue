@@ -66,24 +66,6 @@
       </div>
     </header>
 
-    <!-- Sub-header HUD Bar (Scientific Context & Quick Telemetry) -->
-    <div class="hud-bar">
-      <div class="hud-container">
-        <div class="hud-breadcrumb">
-          <Icon name="terminal" size="14" class="icon" />
-          <span class="path">ESTACIÓN DE TRABAJO &gt;</span>
-          <span class="current-module">{{ moduleName }}</span>
-        </div>
-        <div class="hud-stats">
-          <span class="stat-item"><span class="k">TASA REPLICACIÓN:</span> <span class="v">99.8% FIDELIDAD</span></span>
-          <span class="stat-divider">|</span>
-          <span class="stat-item"><span class="k">MODO GLSL:</span> <span class="v">CONFOCAL PROCEDURAL</span></span>
-          <span class="stat-divider">|</span>
-          <span class="stat-item"><span class="k">SESIÓN:</span> <span class="v">LOCAL DEV (5173)</span></span>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Scientific Workstation Canvas -->
     <main class="md3-main-container">
       <transition name="md3-fade" mode="out-in">
@@ -383,10 +365,10 @@ function handleCellSelected(cell) {
 /* Main Container */
 .md3-main-container {
   flex: 1;
-  max-width: 1360px;
+  max-width: min(98vw, 1860px);
   width: 100%;
   margin: 0 auto;
-  padding: 1.5rem 1.5rem 2rem;
+  padding: 0.65rem 1.25rem 1.5rem;
 }
 
 .view-wrapper {

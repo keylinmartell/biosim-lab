@@ -1,33 +1,72 @@
 <template>
   <div class="dna-lab-layout">
-    <!-- Header Científico del Secuenciador -->
-    <div class="dna-header-card md3-card-outlined">
-      <div class="header-main">
-        <div class="header-icon-box">
-          <Icon name="dna" size="24" />
-        </div>
-        <div class="header-text">
-          <h2>Secuenciador, Complementariedad & Mutagénesis in Silico</h2>
-          <span class="subtext">Motor de recombinación estocástica, edición dirigida y modelado tridimensional reactivo</span>
+    <!-- ═══════════════════════ DOCK LATERAL DE ACCIONES RÁPIDAS (ICONOS AZUL/CIAN CON TOOLTIPS) ═══════════════════════ -->
+    <aside class="lateral-quick-dock" aria-label="Acciones Rápidas del Laboratorio">
+      <!-- Botón 1: Introducir / Seleccionar Genoma y Molde -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          class="dock-icon-btn primary-genome-btn" 
+          @click="showGenomeModal = true"
+          aria-label="Introducir o Seleccionar Genoma y Molde"
+        >
+          <span class="dock-glow-pulse"></span>
+          <Icon name="genetics" size="22" class="dock-btn-icon" />
+          <span class="dock-badge-pill" v-if="cleanSequence">{{ cleanSequence.length }}</span>
+        </button>
+        <div class="dock-tooltip">
+          <strong class="tt-title">Genoma &amp; Molde</strong>
+          <span class="tt-desc">{{ selectedGene ? selectedGene.name : (cleanSequence ? 'Personalizado' : 'Sin Validar') }} · {{ cleanSequence ? cleanSequence.length + ' pb' : 'Configurar' }}</span>
         </div>
       </div>
 
-      <!-- Gestión de Experimentos -->
-      <div class="exp-management-buttons">
-        <button class="md3-button-filled save-exp-btn" @click="openSaveDialog" :disabled="loading" title="Guardar todo el proceso del experimento con nombre y notas">
-          <Icon name="save" size="18" />
-          <span>Guardar Experimento</span>
+      <!-- Botón 2: Guardar Experimento -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          class="dock-icon-btn" 
+          @click="openSaveDialog" 
+          :disabled="loading"
+          aria-label="Guardar Experimento"
+        >
+          <Icon name="save" size="20" class="dock-icon" />
         </button>
-        <button class="md3-button-tonal load-exp-btn" @click="openLoadDialog" :disabled="loading" title="Cargar un experimento guardado para restaurar secuencias y modelo 3D">
-          <Icon name="history" size="18" />
-          <span>Cargar Experimento ({{ savedExperimentsList.length }})</span>
-        </button>
-        <button class="md3-button-outlined manual-exp-btn" @click="showManualDialog = true" title="Abrir Manual de Laboratorio interactivo con la guía paso a paso">
-          <Icon name="menu_book" size="18" />
-          <span>Manual del Lab</span>
-        </button>
+        <div class="dock-tooltip">
+          <strong class="tt-title">Guardar Experimento</strong>
+          <span class="tt-desc">Snapshot del estado actual y notas</span>
+        </div>
       </div>
-    </div>
+
+      <!-- Botón 3: Cargar Experimento -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          class="dock-icon-btn" 
+          @click="openLoadDialog" 
+          :disabled="loading"
+          aria-label="Cargar Experimento"
+        >
+          <Icon name="history" size="20" class="dock-icon" />
+          <span class="dock-count-badge" v-if="savedExperimentsList.length">{{ savedExperimentsList.length }}</span>
+        </button>
+        <div class="dock-tooltip">
+          <strong class="tt-title">Cargar Experimento</strong>
+          <span class="tt-desc">Restaurar experimentos guardados ({{ savedExperimentsList.length }})</span>
+        </div>
+      </div>
+
+      <!-- Botón 4: Manual del Lab -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          class="dock-icon-btn" 
+          @click="showManualDialog = true"
+          aria-label="Manual del Laboratorio"
+        >
+          <Icon name="menu_book" size="20" class="dock-icon" />
+        </button>
+        <div class="dock-tooltip">
+          <strong class="tt-title">Manual del Lab</strong>
+          <span class="tt-desc">Guía metodológica interactiva</span>
+        </div>
+      </div>
+    </aside>
 
     <!-- Banner Toast de Notificación de Experimento Guardado / Cargado -->
     <div class="exp-toast-banner" v-if="experimentNotification">
@@ -60,200 +99,9 @@
       <div class="tab-indicator" :class="activePhaseTab"></div>
     </nav>
 
-    <!-- ═══════════════════════ CABECERA GENERAL COMPARTIDA: SELECTOR DE GENES ═══════════════════════ -->
-    <div class="shared-gene-selector-card md3-card-outlined">
-      <div class="shared-selector-header">
-        <div class="shared-selector-title">
-          <div class="selector-badge-avatar">
-            <Icon name="genetics" size="18" />
-          </div>
-          <div>
-            <span class="selector-title-text">Genoma de Referencia / Catálogo de Genes</span>
-            <span class="selector-subtext">Selecciona un gen modelo para inyectar su secuencia codificante (CDS) en tiempo real en todo el laboratorio:</span>
-          </div>
-        </div>
-
-        <!-- Selector de Gen (Chips) -->
-        <div class="gene-selector-row">
-          <button
-            :class="['gene-chip', 'free-chip', { active: selectedGeneId === null }]"
-            @click="selectGene(null)"
-            title="Modo de entrada libre: introduce cualquier secuencia personalizada en el secuenciador"
-          >
-            <Icon name="edit_note" size="16" />
-            <span class="gene-chip-name">Entrada Libre / Personalizada</span>
-            <span class="chip-bp">Manual</span>
-            <span class="chip-active-dot" v-if="selectedGeneId === null">●</span>
-          </button>
-
-          <button
-            v-for="gene in genesCatalog"
-            :key="gene.id"
-            :class="['gene-chip', { active: selectedGeneId === gene.id, disabled: gene.id === 'tp53_hsapiens' }]"
-            :disabled="gene.id === 'tp53_hsapiens'"
-            @click="gene.id === 'tp53_hsapiens' ? null : selectGene(gene.id)"
-            :title="gene.id === 'tp53_hsapiens' ? 'En desarrollo: próximamente disponible con intrones' : (gene.id === 'didactic_min_control' ? `Cargar secuencia genómica de ${gene.name} (16 bp con intrón GTAG)` : `Cargar secuencia CDS de ${gene.name} (${gene.cds_info?.cds_sequence?.length || 0} bp)`)"
-          >
-            <Icon :name="gene.gene_type === 'protein_coding' ? 'genetics' : 'science'" size="15" />
-            <span class="gene-chip-name">{{ gene.name }}</span>
-            <span class="chip-dev-badge" v-if="gene.id === 'tp53_hsapiens'">En desarrollo</span>
-            <span class="chip-bp" v-else>{{ gene.id === 'didactic_min_control' ? '16 bp (Genómico)' : `${gene.cds_info?.cds_sequence?.length || (gene.end_coord - gene.start_coord)} bp CDS` }}</span>
-            <span class="chip-active-dot" v-if="selectedGeneId === gene.id">●</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- ═══════════════════════ CONTENEDOR FASE 1 ═══════════════════════ -->
     <div class="phase-content-wrapper" v-show="activePhaseTab === 'phase1'">
-
-      <!-- Ficha Compacta del Gen Activo en Fase 1 -->
-      <div class="gene-compact-card md3-card-outlined" v-if="selectedGene">
-        <div class="compact-card-left">
-          <div class="compact-gene-indicator">
-            <Icon name="biotech" size="20" class="compact-icon" />
-            <div class="compact-gene-info">
-              <div class="compact-name-row">
-                <span class="compact-prefix">GEN ACTIVO:</span>
-                <strong class="compact-name">{{ selectedGene.name }}</strong>
-                <span :class="['provenance-pill', selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'curated' : 'didactic']">
-                  <Icon :name="selectedGene.data_source.type === 'secuencia_curada_publicada' ? 'verified' : 'school'" size="12" />
-                  <span>{{ selectedGene.data_source.type === 'secuencia_curada_publicada' ? selectedGene.data_source.database : 'Didáctica' }}</span>
-                </span>
-              </div>
-              <div class="compact-meta-row">
-                <span class="meta-tag"><strong>Organismo:</strong> {{ selectedGene.organism }}</span>
-                <span class="meta-separator">•</span>
-                <span class="meta-tag font-mono"><strong>Coordenadas:</strong> {{ selectedGene.data_source.chromosome || `${selectedGene.start_coord}–${selectedGene.end_coord} bp` }}</span>
-                <span class="meta-separator">•</span>
-                <span class="meta-tag"><strong>Hebra:</strong> {{ selectedGene.strand_orientation === '+' ? '5\'→3\' (+)' : '3\'→5\' (−)' }}</span>
-                <span class="meta-separator">•</span>
-                <span class="meta-tag font-mono"><strong>CDS:</strong> {{ selectedGene.cds_info?.cds_sequence?.length || 0 }} bp</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="compact-card-right">
-          <button class="compact-inspect-btn" @click="activePhaseTab = 'phase2'" title="Inspeccionar estructura exón/intrón y ficha técnica completa en Fase 2">
-            <span>Ficha Completa &amp; Estructura</span>
-            <Icon name="arrow_forward" size="14" />
-          </button>
-        </div>
-      </div>
-
-      <div class="gene-compact-card custom-mode md3-card-outlined" v-else>
-        <div class="compact-card-left">
-          <div class="compact-gene-indicator">
-            <Icon name="edit_note" size="20" class="compact-icon custom" />
-            <div class="compact-gene-info">
-              <div class="compact-name-row">
-                <span class="compact-prefix">MODO:</span>
-                <strong class="compact-name">Secuencia Personalizada / Entrada Libre</strong>
-                <span class="provenance-pill custom">
-                  <Icon name="edit" size="12" />
-                  <span>Manual</span>
-                </span>
-              </div>
-              <div class="compact-meta-row">
-                <span class="meta-tag" v-if="cleanSequence">Secuencia libre de <strong>{{ cleanSequence.length }} bp</strong> activa en el secuenciador.</span>
-                <span class="meta-tag" v-else>Introduce cualquier secuencia canónica (A, T, C, G) o selecciona un gen modelo del catálogo superior.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Panel de Entrada de Cadena y Citometría de Bases -->
-      <div class="dna-input-section md3-card-outlined">
-      <div class="input-primary-row">
-        <div class="md3-textfield flex-grow">
-          <label for="dna-seq-input">Hebra Codificante de Entrada (5' &rarr; 3'):</label>
-          <div class="input-action-bar">
-            <input 
-              id="dna-seq-input"
-              type="text" 
-              v-model="sequenceInput" 
-              placeholder="Introduce bases A, T, C, G (ej: ATCGTAGC)..."
-              class="font-mono sequence-field"
-              @input="handleInput"
-              @keyup.enter="validateAndProcess(true)"
-            />
-            <button class="md3-button-filled" @click="validateAndProcess(true)" :disabled="loading">
-              <Icon name="analytics" size="18" />
-              <span>Validar Molde</span>
-            </button>
-            <button class="md3-button-tonal" @click="handleCopyDNA" :disabled="loading || !validationData?.is_valid" title="Crear Copia de Trabajo sin errores">
-              <Icon name="content_copy" size="18" />
-              <span>Generar Copia de Trabajo</span>
-            </button>
-            <button class="md3-chip" v-if="initialMoldSequence && initialMoldSequence !== sequenceInput" @click="resetToInitialMold" title="Restaurar a la secuencia original intacta">
-              <Icon name="restart_alt" size="14" />
-              <span>Restaurar a Molde</span>
-            </button>
-          </div>
-          <div class="copy-feedback-banner" v-if="copyNotification">
-            <Icon name="check_circle" size="16" class="copy-icon" />
-            <span>{{ copyNotification }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Barra de Parámetros Biofísicos y Validación -->
-      <div class="metrics-grid" v-if="validationData && validationData.is_valid">
-        <div class="metric-tile">
-          <span class="m-k">Longitud Total</span>
-          <span class="m-v font-mono">{{ validationData.length }} <small>pares de bases (bp)</small></span>
-        </div>
-        <div class="metric-tile">
-          <span class="m-k">Contenido GC (%)</span>
-          <div class="gc-progress-wrapper">
-            <span class="m-v font-mono highlight">{{ validationData.gc_content }}%</span>
-            <div class="gc-bar">
-              <div class="gc-fill" :style="{ width: validationData.gc_content + '%' }"></div>
-            </div>
-          </div>
-        </div>
-        <div class="metric-tile">
-          <span class="m-k">Distribución de Nucleótidos</span>
-          <div class="nucleotide-badges">
-            <span class="n-badge a"><span class="pip"></span>A: {{ validationData.base_counts?.A || 0 }}</span>
-            <span class="n-badge t"><span class="pip"></span>T: {{ validationData.base_counts?.T || 0 }}</span>
-            <span class="n-badge c"><span class="pip"></span>C: {{ validationData.base_counts?.C || 0 }}</span>
-            <span class="n-badge g"><span class="pip"></span>G: {{ validationData.base_counts?.G || 0 }}</span>
-          </div>
-        </div>
-        <div class="metric-tile backbone-metric-tile">
-          <span class="m-k">Esqueleto Azúcar-Fosfato</span>
-          <div class="backbone-badges">
-            <span class="bb-chip sugar" title="2'-Desoxirribosa (anillo furanosa)">
-              <span class="bb-dot s-dot"></span>D: {{ validationData.backbone_info?.total_sugars ?? validationData.length }} Azúcares
-            </span>
-            <span class="bb-chip phosphate" title="Grupos Fosfato PO4^3-">
-              <span class="bb-dot p-dot"></span>P: {{ validationData.backbone_info?.total_phosphates ?? validationData.length }} Fosfatos
-            </span>
-          </div>
-        </div>
-        <div class="metric-tile">
-          <span class="m-k">Estado de Calidad</span>
-          <span :class="['status-chip', validationData.is_valid ? 'valid' : 'invalid']">
-            <Icon :name="validationData.is_valid ? 'check_circle' : 'warning'" size="16" />
-            <span>{{ validationData.is_valid ? 'Secuencia Válida' : (validationData.invalid_chars?.length ? `Bases No Válidas (${validationData.invalid_chars.join(', ')})` : 'Secuencia No Válida') }}</span>
-          </span>
-        </div>
-      </div>
-
-      <!-- Banner de Error si la secuencia contiene símbolos no válidos -->
-      <div class="validation-error-alert" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
-        <Icon name="warning" size="20" class="err-icon" />
-        <div class="err-text">
-          <strong>Secuencia no válida para el motor genético:</strong>
-          <span>{{ validationData.error_message || 'Contiene caracteres no canónicos. Solo se aceptan A, T, C, G.' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Aviso si la secuencia actual contiene símbolos no válidos -->
+      <!-- Aviso si la secuencia actual contiene símbolos no válidos -->
     <div class="invalid-sequence-placeholder md3-card-outlined" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
       <div class="placeholder-content">
         <Icon name="warning" size="36" class="placeholder-icon" />
@@ -264,175 +112,36 @@
       </div>
     </div>
 
-    <!-- Guía Inicial: Estación Lista para Entrada Manual -->
-    <div class="manual-input-prompt-card md3-card-outlined" v-if="!sequenceInput.trim() || (!cleanSequence && !validationData?.is_valid)">
-      <div class="prompt-content">
-        <div class="prompt-icon-box">
-          <Icon name="biotech" size="34" />
-        </div>
-        <div class="prompt-text">
-          <h3>Estación Molecular en Espera</h3>
-          <p>Introduce una cadena molde de nucleótidos (bases <strong>A</strong>, <strong>T</strong>, <strong>C</strong>, <strong>G</strong>) en el campo superior y presiona <strong>Validar Molde</strong> o la tecla <strong>Enter</strong> para inicializar el mapa 2D y el modelo macromolecular 3D.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estación Molecular: Alineamiento 2D & Modelo 3D Reactivo de Doble Hélice -->
-    <div class="molecular-workbench-grid" v-if="cleanSequence && validationData?.is_valid">
-      <!-- Columna Izquierda: Track Interactivo de Nucleótidos y Telemetría -->
-      <div class="sequence-track-card md3-card-outlined">
-        <div class="track-header">
-          <div class="track-title-group">
-            <Icon name="dna" size="22" class="title-icon" />
-            <div>
-              <h3>Mapa de Alineamiento de Nucleótidos</h3>
-              <span class="hint">Haz clic en cualquier base para posicionar el inductor de lesión dirigida o aducto</span>
-            </div>
+    <!-- Guía Inicial: Estación Lista para Entrada Manual (Hasta que no de validar no carga nada) -->
+      <div class="manual-input-prompt-card md3-card-outlined" v-if="!cleanSequence || !validationData?.is_valid">
+        <div class="prompt-content">
+          <div class="prompt-icon-box">
+            <Icon name="biotech" size="36" />
           </div>
-
-          <div class="spectral-legend">
-            <span class="leg-item a"><span class="square"></span> A (Adenina)</span>
-            <span class="leg-item t"><span class="square"></span> T (Timina)</span>
-            <span class="leg-item c"><span class="square"></span> C (Citosina)</span>
-            <span class="leg-item g"><span class="square"></span> G (Guanina)</span>
+          <div class="prompt-text">
+            <h3>Estación Molecular en Espera</h3>
+            <p>No hay ninguna secuencia molde activa. Para inicializar el secuenciador y el modelo atómico 3D, abre el panel de genoma, selecciona o ingresa una cadena y presiona <strong>Validar Molde</strong>.</p>
           </div>
-        </div>
-
-        <!-- Navegador de Ventana Activa 2D (cuando la secuencia supera 70 pb) -->
-        <div class="filmstrip-window-navigator" v-if="cleanSequence && cleanSequence.length > 70">
-          <div class="f-nav-info">
-            <Icon name="view_timeline" size="16" />
-            <span class="font-mono">Ventana 2D: pb {{ filmstripStartPos + 1 }} – {{ Math.min(cleanSequence.length, filmstripStartPos + 70) }} <small class="text-dim">de {{ cleanSequence.length }} pb</small></span>
-          </div>
-          <div class="f-nav-controls">
-            <button class="nav-arrow-btn" @click="scrollFilmstrip(-35)" :disabled="filmstripStartPos <= 0" title="Retroceder 35 pb">
-              <Icon name="arrow_back" size="14" />
-            </button>
-            <input 
-              type="range" 
-              class="filmstrip-scrubber"
-              :min="0" 
-              :max="Math.max(0, cleanSequence.length - 70)" 
-              v-model.number="filmstripStartPos" 
-              :title="`Desplazar ventana (pb ${filmstripStartPos + 1})`"
-            />
-            <button class="nav-arrow-btn" @click="scrollFilmstrip(35)" :disabled="filmstripStartPos >= cleanSequence.length - 70" title="Avanzar 35 pb">
-              <Icon name="arrow_forward" size="14" />
-            </button>
-            <button class="md3-chip interactive-chip center-btn" @click="centerFilmstripOnSelected" v-if="selectedPosition !== null" title="Centrar en el nucleótido seleccionado">
-              <Icon name="my_location" size="12" />
-              <span>Centrar pb {{ selectedPosition }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Segmento Gráfico de Bases con Esqueleto Azúcar-Fosfato (5' a 3' y complementaria 3' a 5') -->
-        <div class="track-viewport">
-          <div class="track-polarity-col left">
-            <span class="polarity-tag p5" title="Extremo 5' Fosfato libre">5' (P)</span>
-            <div class="polarity-v-link"></div>
-            <span class="polarity-tag p3" title="Extremo 3' Hidroxilo (-OH) complementario">3' (OH)</span>
-          </div>
-
-          <div class="bases-filmstrip">
-            <div 
-              v-for="item in visibleFilmstripBases" 
-              :key="item.idx"
-              :class="['base-column', item.base.toLowerCase(), { selected: selectedPosition === item.idx }]"
-              @click="selectBaseForMutation(item.idx, item.base)"
-            >
-              <span class="pos-index font-mono">{{ item.idx }}</span>
-
-              <!-- Esqueleto Superior Azúcar-Fosfato (5' -> 3') -->
-              <div class="bb-monomer top" title="Monómero 5': Fosfato (PO4) + 2'-Desoxirribosa">
-                <span class="bb-dot phosphate" title="Grupo Fosfato 5' (PO4^3-)">P</span>
-                <span class="bb-hyphen">—</span>
-                <span class="bb-dot sugar" title="Azúcar 2'-Desoxirribosa (pentosa)">D</span>
-                <div class="bb-stem-down"></div>
-              </div>
-
-              <!-- Base Nitrogenada Sentido (5' -> 3') -->
-              <div class="base-capsule primary-strand" :title="`Base nitrogenada: ${item.base} (unida al C1' de la desoxirribosa)`">
-                <span class="letter font-mono">{{ item.base }}</span>
-              </div>
-
-              <!-- Enlaces de Hidrógeno Watson-Crick -->
-              <div class="hydrogen-bond" :title="item.base === 'C' || item.base === 'G' ? '3 puentes de hidrógeno (C≡G)' : '2 puentes de hidrógeno (A=T)'">
-                <span class="h-line"></span>
-                <span class="h-line"></span>
-                <span class="h-line" v-if="item.base === 'C' || item.base === 'G'"></span>
-              </div>
-
-              <!-- Base Nitrogenada Complementaria (3' -> 5') -->
-              <div class="base-capsule comp-strand" :title="`Base complementaria: ${complementMap[item.base]}`">
-                <span class="letter font-mono">{{ complementMap[item.base] }}</span>
-              </div>
-
-              <!-- Esqueleto Inferior Antiparalelo Azúcar-Fosfato (3' -> 5') -->
-              <div class="bb-monomer bottom" title="Monómero 3': 2'-Desoxirribosa + Fosfato (antiparalelo)">
-                <div class="bb-stem-up"></div>
-                <span class="bb-dot sugar" title="Azúcar 2'-Desoxirribosa">D</span>
-                <span class="bb-hyphen">—</span>
-                <span class="bb-dot phosphate" title="Grupo Fosfato (PO4^3-)">P</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="track-polarity-col right">
-            <span class="polarity-tag p3" title="Extremo 3' Hidroxilo libre (-OH)">3' (OH)</span>
-            <div class="polarity-v-link"></div>
-            <span class="polarity-tag p5" title="Extremo 5' Fosfato libre complementario">5' (P)</span>
-          </div>
-        </div>
-
-        <!-- Leyenda Macromolecular: Monómero de Nucleótido -->
-        <div class="backbone-explanation-bar">
-          <div class="legend-eq-item">
-            <span class="sym-badge p">P</span>
-            <span class="txt">Fosfato (PO₄³⁻)</span>
-          </div>
-          <span class="eq-op">+</span>
-          <div class="legend-eq-item">
-            <span class="sym-badge d">D</span>
-            <span class="txt">2'-Desoxirribosa (Azúcar)</span>
-          </div>
-          <span class="eq-op">+</span>
-          <div class="legend-eq-item">
-            <span class="sym-badge b">Base</span>
-            <span class="txt">A, T, C, G</span>
-          </div>
-          <span class="eq-op">=</span>
-          <div class="legend-eq-item final">
-            <span class="highlight-txt">Nucleótido Completo (dNMP)</span>
-            <small>Cadenas unidas por enlaces fosfodiéster 3'→5' y puentes de H</small>
-          </div>
-        </div>
-
-        <!-- Telemetría de Codificación y Hebra Antisentido -->
-        <div class="encoded-data-row" v-if="complementStrand">
-          <div class="encoded-field">
-            <span class="field-label">Hebra Complementaria Antisentido (3' &rarr; 5'):</span>
-            <code class="font-mono strand-box">{{ complementStrand }}</code>
-          </div>
-          <div class="encoded-field">
-            <span class="field-label">Representación Binaria Biocontrolada (2 bits/base):</span>
-            <code class="font-mono strand-box binary">{{ binaryStrand }}</code>
-          </div>
+          <button class="md3-button-filled prompt-action-btn" @click="showGenomeModal = true">
+            <Icon name="genetics" size="18" />
+            <span>Configurar y Validar Molde</span>
+          </button>
         </div>
       </div>
 
-      <!-- Columna Derecha: Modelo Tridimensional Reactivo de la Doble Hélice (B-DNA) -->
-      <DNAHelix3D 
-        :sequence="cleanSequence" 
-        :selectedPosition="selectedPosition" 
-        :lesions="currentActiveLesions"
-        :activeAgent="activeAgentForP53"
-        :isSevereDamage="checkpointStatus?.state === 'arrested_severe'"
-        @selectBase="handleHelixBaseSelect"
-        @openDamageDialog="showDamageDialog = true"
-        @p53Repaired="handleP53Repaired"
-      />
-    </div>
+      <!-- Estación Molecular: Visualizador 3D Hero a Toda Pantalla con Cadena 2D Integrada en la Orilla Inferior -->
+      <div class="molecular-workbench-full" v-if="cleanSequence && validationData?.is_valid">
+        <DNAHelix3D 
+          :sequence="cleanSequence" 
+          :selectedPosition="selectedPosition" 
+          :lesions="currentActiveLesions"
+          :activeAgent="activeAgentForP53"
+          :isSevereDamage="checkpointG1Status?.state === 'arrested_severe'"
+          @selectBase="handleHelixBaseSelect"
+          @openDamageDialog="showDamageDialog = true"
+          @p53Repaired="handleP53Repaired"
+        />
+      </div>
 
     <!-- ========================================================================= -->
     <!-- MÓDULO 1: MUTAGÉNESIS Y REPARACIÓN CONTROLADA                             -->
@@ -1304,6 +1013,190 @@
 
     
     <!-- Diálogo Modal: Inducción de Daño en el Molde (Ambiental / CRISPR-Cas9) -->
+    <!-- ═══════════════════════ MODAL DIALOG: INTRODUCIR / SELECCIONAR GENOMA Y MOLDE (DISEÑO REFINADO) ═══════════════════════ -->
+    <div class="md3-dialog-backdrop" v-if="showGenomeModal" @click.self="showGenomeModal = false">
+      <div class="md3-dialog-surface md3-card-outlined genome-dialog-surface">
+        <!-- Encabezado del Diálogo -->
+        <div class="dialog-header">
+          <div class="dialog-title-group">
+            <div class="dialog-badge-avatar genome-badge">
+              <Icon name="genetics" size="22" />
+            </div>
+            <div>
+              <h3>Genoma de Referencia &amp; Configuración del Molde</h3>
+              <p class="dialog-subtext">Selecciona un gen modelo o introduce una secuencia canónica para todo el laboratorio</p>
+            </div>
+          </div>
+          <button class="dialog-close-btn" @click="showGenomeModal = false" title="Cerrar ventana">✕</button>
+        </div>
+
+        <div class="dialog-body genome-dialog-body">
+          <!-- SECCIÓN 1: SELECTOR DE GENES / MODO DE ENTRADA -->
+          <div class="modal-section-card">
+            <div class="modal-section-title">
+              <Icon name="dataset" size="18" />
+              <span>1. Catálogo de Genes y Modo de Entrada</span>
+            </div>
+
+            <!-- Fila compacta de genes sin repeticiones (todas en la misma fila) -->
+            <div class="gene-selector-row modal-gene-row">
+              <button
+                :class="['gene-chip', 'free-chip', { active: selectedGeneId === null }]"
+                @click="selectGene(null)"
+                title="Modo de entrada libre: introduce cualquier secuencia personalizada en el secuenciador"
+              >
+                <Icon name="edit_note" size="16" />
+                <span class="gene-chip-name">Entrada Libre / Personalizada</span>
+                <span class="chip-bp">Manual</span>
+                <span class="chip-active-dot" v-if="selectedGeneId === null">●</span>
+              </button>
+
+              <button
+                v-for="gene in genesCatalog"
+                :key="gene.id"
+                :class="['gene-chip', { active: selectedGeneId === gene.id, disabled: gene.id === 'tp53_hsapiens' }]"
+                :disabled="gene.id === 'tp53_hsapiens'"
+                @click="gene.id === 'tp53_hsapiens' ? null : selectGene(gene.id)"
+                :title="gene.id === 'tp53_hsapiens' ? 'En desarrollo: próximamente disponible con intrones' : gene.description"
+              >
+                <Icon :name="gene.gene_type === 'protein_coding' ? 'genetics' : 'science'" size="15" />
+                <span class="gene-chip-name">{{ gene.name }}</span>
+                <span class="chip-dev-badge" v-if="gene.id === 'tp53_hsapiens'">En desarrollo</span>
+                <span class="chip-bp font-mono" v-else>{{ gene.id === 'didactic_min_control' ? '16 bp (Genómico)' : `${gene.cds_info?.cds_sequence?.length || (gene.end_coord - gene.start_coord)} bp CDS` }}</span>
+                <span class="chip-active-dot" v-if="selectedGeneId === gene.id">●</span>
+              </button>
+            </div>
+
+            <!-- Metadatos contextuales sutiles en una sola línea (sin repetir el nombre del gen) -->
+            <div class="gene-submeta-bar" v-if="selectedGene">
+              <span class="submeta-item"><strong>Organismo:</strong> {{ selectedGene.organism }}</span>
+              <span class="submeta-sep">·</span>
+              <span class="submeta-item font-mono"><strong>Locus:</strong> {{ selectedGene.data_source.chromosome || `${selectedGene.start_coord}–${selectedGene.end_coord} bp` }}</span>
+              <span class="submeta-sep">·</span>
+              <span class="submeta-item"><strong>Hebra:</strong> {{ selectedGene.strand_orientation === '+' ? "5'→3' (+)" : "3'→5' (-)" }}</span>
+              <span class="submeta-sep">·</span>
+              <span class="submeta-item font-mono"><strong>CDS:</strong> {{ selectedGene.cds_info?.cds_sequence?.length || 0 }} bp</span>
+            </div>
+            <div class="gene-submeta-bar custom-mode" v-else>
+              <span class="submeta-item">Modo manual activo: ingresa o edita nucleótidos canónicos (A, T, C, G) en el campo inferior.</span>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: HEBRA CODIFICANTE DE ENTRADA -->
+          <div class="modal-section-card">
+            <div class="modal-section-title">
+              <Icon name="dna" size="18" />
+              <span>2. Hebra Codificante de Entrada (5' &rarr; 3')</span>
+            </div>
+
+            <div class="dna-input-section modal-input-section">
+              <div class="input-primary-row">
+                <div class="md3-textfield flex-grow">
+                  <div class="input-action-bar">
+                    <input 
+                      id="dna-seq-input-modal"
+                      type="text" 
+                      v-model="sequenceInput" 
+                      placeholder="Introduce bases A, T, C, G (ej: ATGGAAGTAGTTTTGA)..."
+                      class="font-mono sequence-field"
+                      @input="handleInput"
+                      @keyup.enter="validateAndProcess(true)"
+                      spellcheck="false"
+                      autocomplete="off"
+                    />
+                    <button class="md3-button-filled" @click="validateAndProcess(true)" :disabled="loading">
+                      <Icon name="analytics" size="18" />
+                      <span>Validar Molde</span>
+                    </button>
+                    <button class="md3-chip" v-if="initialMoldSequence && initialMoldSequence !== sequenceInput" @click="resetToInitialMold" title="Restaurar a la secuencia original del gen seleccionado">
+                      <Icon name="restart_alt" size="14" />
+                      <span>Restaurar Molde</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mensaje de aviso cuando la secuencia aun no ha sido validada -->
+              <div class="validation-pending-prompt" v-if="(!validationData || !validationData.is_valid) && sequenceInput.trim()">
+                <Icon name="info" size="18" class="prompt-info-icon" />
+                <span>Presiona el botón <strong>Validar Molde</strong> (o pulsa Enter) para verificar la secuencia y generar el modelo macromolecular 3D.</span>
+              </div>
+
+              <!-- SECCIÓN 3: CUADRÍCULA DE MÉTRICAS EN 1 SOLA FILA PERFECTA (4 TARJETAS EQUILIBRADAS) -->
+              <div class="modal-metrics-row" v-if="validationData && validationData.is_valid">
+                <!-- Tarjeta 1: Longitud -->
+                <div class="modal-metric-box">
+                  <span class="mm-label">Longitud Total</span>
+                  <div class="mm-val-group font-mono">
+                    <span class="mm-num">{{ validationData.length }}</span>
+                    <span class="mm-unit">pb</span>
+                  </div>
+                </div>
+
+                <!-- Tarjeta 2: Contenido GC -->
+                <div class="modal-metric-box">
+                  <span class="mm-label">Contenido GC</span>
+                  <div class="mm-val-group font-mono">
+                    <span class="mm-num highlight">{{ validationData.gc_content }}%</span>
+                  </div>
+                  <div class="mm-bar-track">
+                    <div class="mm-bar-fill" :style="{ width: validationData.gc_content + '%' }"></div>
+                  </div>
+                </div>
+
+                <!-- Tarjeta 3: Distribución de Nucleótidos con alto contraste -->
+                <div class="modal-metric-box metric-bases-box">
+                  <span class="mm-label">Distribución de Nucleótidos</span>
+                  <div class="nucleotide-badges-row">
+                    <span class="n-pill n-a" title="Adenina"><span class="pip a-pip"></span>A: {{ validationData.base_counts?.A || 0 }}</span>
+                    <span class="n-pill n-t" title="Timina"><span class="pip t-pip"></span>T: {{ validationData.base_counts?.T || 0 }}</span>
+                    <span class="n-pill n-c" title="Citosina"><span class="pip c-pip"></span>C: {{ validationData.base_counts?.C || 0 }}</span>
+                    <span class="n-pill n-g" title="Guanina"><span class="pip g-pip"></span>G: {{ validationData.base_counts?.G || 0 }}</span>
+                  </div>
+                </div>
+
+                <!-- Tarjeta 4: Estado de Calidad -->
+                <div class="modal-metric-box metric-status-box">
+                  <span class="mm-label">Estado de Calidad</span>
+                  <div class="status-badge-container">
+                    <span :class="['quality-pill', validationData.is_valid ? 'valid' : 'invalid']">
+                      <Icon :name="validationData.is_valid ? 'check_circle' : 'warning'" size="15" />
+                      <span>{{ validationData.is_valid ? 'Secuencia Válida' : 'Secuencia No Válida' }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Banner de Error si la secuencia contiene símbolos no válidos -->
+              <div class="validation-error-alert" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
+                <Icon name="warning" size="20" class="err-icon" />
+                <div class="err-text">
+                  <strong>Secuencia no válida:</strong>
+                  <span>{{ validationData.error_message || 'Contiene caracteres no canónicos. Solo se aceptan A, T, C, G.' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Diálogo -->
+        <div class="dialog-footer genome-dialog-footer">
+          <div class="footer-left-info" v-if="validationData && validationData.is_valid">
+            <Icon name="check" size="16" class="check-icon" />
+            <span class="font-mono">Cadena de {{ validationData.length }} pb lista para el laboratorio</span>
+          </div>
+          <div class="footer-buttons">
+            <button class="md3-button-tonal" @click="showGenomeModal = false">
+              <span>Cancelar</span>
+            </button>
+            <button class="md3-button-filled apply-btn" @click="showGenomeModal = false" :disabled="!validationData?.is_valid">
+              <Icon name="check_circle" size="18" />
+              <span>Aplicar y Continuar al Laboratorio</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="md3-dialog-backdrop" v-if="showDamageDialog" @click.self="showDamageDialog = false">
       <div class="md3-dialog-surface md3-card-outlined damage-dialog-surface">
         <div class="dialog-header">
@@ -2173,6 +2066,7 @@ import DNAHelix3D from './DNAHelix3D.vue';
 import ADNAtomico from './ADNAtomico.vue';
 
 const showDamageDialog = ref(false);
+const showGenomeModal = ref(false);
 
 const currentActiveLesions = computed(() => {
   if (envDamageResult.value?.lesions?.length) {
@@ -2380,7 +2274,7 @@ function selectGene(geneId, showToast = true) {
       sequenceInput.value = seqToLoad;
       initialMoldSequence.value = seqToLoad;
       transcriptionResult.value = null; // Reiniciar transcripcion previa para el nuevo gen
-      validateAndProcess(true);
+      validationData.value = null; // Hasta que no de validar no se carga nada
       if (showToast) {
         experimentNotification.value = {
           title: `Gen Activo: ${gene.name}`,
@@ -2673,6 +2567,10 @@ const checkpointG1Status = computed(() => {
     risk: null
   };
 });
+
+// Alias de compatibilidad para evitar advertencias de render
+const checkpointStatus = computed(() => checkpointG1Status.value);
+
 
 const currentStep = computed(() => {
   if ((breakResult.value && breakResult.value.status) || isFullyRepaired.value) return 5;
@@ -3206,6 +3104,7 @@ function handleInput() {
   if (selectedGeneId.value !== null) {
     selectedGeneId.value = null;
   }
+  validationData.value = null; // Al editar la secuencia, requiere validar de nuevo
   mismatchResult.value = null;
   duplexStrand.value = '';
 }
@@ -3569,11 +3468,7 @@ async function replicateWithProbabilities() {
 }
 
 onMounted(() => {
-  if (sequenceInput.value) {
-    validateAndProcess();
-  } else if (selectedGeneId.value) {
-    selectGene(selectedGeneId.value, false);
-  }
+  // Hasta que no de validar no se carga nada
   fetchLogs();
   fetchSavedExperiments();
 });
@@ -9589,4 +9484,602 @@ onMounted(() => {
   justify-content: center;
   color: #7df9ff;
 }
+
+/* ═══════════════════════ DOCK LATERAL DE ACCIONES RÁPIDAS (AZUL/CIAN CON TOOLTIPS) ═══════════════════════ */
+.lateral-quick-dock {
+  position: fixed;
+  right: 36px;
+  top: 110px;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+.dock-tooltip-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dock-icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 15, 23, 0.92);
+  border: 1.5px solid rgba(112, 214, 255, 0.45);
+  color: var(--md-sys-color-primary, #70d6ff);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(112, 214, 255, 0.1), 0 0 12px rgba(112, 214, 255, 0.2);
+  backdrop-filter: blur(12px);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.dock-icon-btn:hover:not(:disabled) {
+  transform: translateX(-3px) scale(1.08);
+  border-color: #a5f3fc;
+  color: #ffffff;
+  background: rgba(0, 77, 105, 0.55);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.65), inset 0 0 14px rgba(112, 214, 255, 0.3), 0 0 20px rgba(112, 214, 255, 0.55);
+}
+
+.dock-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: rgba(71, 85, 105, 0.4);
+  color: #64748b;
+  box-shadow: none;
+}
+
+.dock-icon-btn.primary-genome-btn {
+  border: 2px solid var(--md-sys-color-primary, #70d6ff);
+  background: linear-gradient(135deg, rgba(0, 77, 105, 0.6) 0%, rgba(11, 15, 23, 0.95) 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(112, 214, 255, 0.25), 0 0 16px rgba(112, 214, 255, 0.4);
+}
+
+.dock-icon-btn.primary-genome-btn:hover {
+  border-color: #e0f2fe;
+  background: linear-gradient(135deg, rgba(0, 114, 153, 0.75) 0%, rgba(15, 23, 42, 0.98) 100%);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.7), inset 0 0 18px rgba(112, 214, 255, 0.4), 0 0 26px rgba(112, 214, 255, 0.7);
+}
+
+.dock-glow-pulse {
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(112, 214, 255, 0.5);
+  animation: pulse-border-cyan 2.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-border-cyan {
+  0% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.12); opacity: 0.15; }
+  100% { transform: scale(1); opacity: 0.85; }
+}
+
+.dock-icon {
+  color: var(--md-sys-color-primary, #70d6ff);
+  flex-shrink: 0;
+}
+
+.dock-badge-pill {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  background: #0284c7;
+  border: 1px solid #70d6ff;
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-family: var(--md-ref-typeface-mono, monospace);
+  line-height: 1.2;
+}
+
+.dock-count-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 3px;
+  border-radius: 50%;
+  background: #0284c7;
+  border: 1px solid #70d6ff;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tooltip elegante a la izquierda */
+.dock-tooltip {
+  position: absolute;
+  right: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(11, 15, 23, 0.96);
+  border: 1px solid rgba(112, 214, 255, 0.38);
+  border-radius: 10px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(112, 214, 255, 0.2);
+  backdrop-filter: blur(12px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+}
+
+.dock-tooltip::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left: 6px solid rgba(112, 214, 255, 0.38);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+}
+
+.dock-tooltip-wrapper:hover .dock-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.tt-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.tt-desc {
+  font-size: 0.72rem;
+  color: #93c5fd;
+}
+
+/* ═══════════════════════ BARRA COMPACTA DE ESTADO DEL MOLDE ACTIVO ═══════════════════════ */
+.active-mold-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--md-sys-shape-corner-medium, 12px);
+  background: rgba(11, 18, 30, 0.72);
+  border: 1px solid rgba(112, 214, 255, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.strip-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.strip-dot-live {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-primary, #70d6ff);
+  box-shadow: 0 0 10px #70d6ff;
+}
+
+.strip-k {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.strip-gene {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #c3e8ff;
+}
+
+.strip-divider {
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.strip-detail {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.strip-badge-valid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.strip-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(0, 77, 105, 0.35);
+  border: 1px solid rgba(112, 214, 255, 0.5);
+  color: #70d6ff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.strip-edit-btn:hover {
+  background: rgba(0, 77, 105, 0.65);
+  border-color: #a5f3fc;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(112, 214, 255, 0.35);
+}
+
+.molecular-workbench-full {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════ MODAL GENOMA & MOLDE (DISEÑO REFINADO) ═══════════════════════ */
+.genome-dialog-surface {
+  max-width: 1040px;
+  width: min(96vw, 1040px);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--md-sys-color-surface-container, #0f172a);
+  border-radius: var(--md-sys-shape-corner-large, 16px);
+  border: 1px solid rgba(112, 214, 255, 0.35);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 24px rgba(112, 214, 255, 0.2);
+}
+
+.genome-badge {
+  background: rgba(0, 77, 105, 0.45);
+  color: #70d6ff;
+}
+
+.genome-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+}
+
+.modal-section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.1rem 1.3rem;
+  border-radius: 12px;
+  background: rgba(21, 29, 44, 0.65);
+  border: 1px solid rgba(112, 214, 255, 0.15);
+}
+
+.modal-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary, #70d6ff);
+  letter-spacing: 0.02em;
+}
+
+.modal-gene-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap !important;
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.modal-gene-row .gene-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.modal-gene-row .gene-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gene-submeta-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  padding: 6px 10px;
+  background: rgba(11, 15, 23, 0.55);
+  border-radius: 8px;
+  border-left: 3px solid var(--md-sys-color-primary, #70d6ff);
+}
+
+.submeta-item strong {
+  color: #cbd5e1;
+}
+
+.submeta-sep {
+  color: #475569;
+}
+
+.gene-submeta-bar.custom-mode {
+  border-left-color: #38bdf8;
+  color: #cbd5e1;
+}
+
+.modal-input-section {
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+
+/* Mensaje de espera de validación en el modal */
+.validation-pending-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(0, 77, 105, 0.25);
+  border: 1px dashed rgba(112, 214, 255, 0.4);
+  color: #c3e8ff;
+  font-size: 0.8rem;
+  margin-top: 0.75rem;
+}
+
+.prompt-info-icon {
+  color: var(--md-sys-color-primary, #70d6ff);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════ CUADRÍCULA DE MÉTRICAS EN 1 SOLA FILA PERFECTA (4 CAJAS) ═══════════════════════ */
+.modal-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 0.85rem;
+  width: 100%;
+}
+
+.modal-metric-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(11, 15, 23, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 64px;
+}
+
+.mm-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.mm-val-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.mm-num {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.mm-num.highlight {
+  color: var(--md-sys-color-primary, #70d6ff);
+}
+
+.mm-unit {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.mm-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.mm-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #70d6ff 100%);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+/* Pastillas de nucleótidos con ALTO CONTRASTE y colores luminosos */
+.nucleotide-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.n-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: var(--md-ref-typeface-mono, monospace);
+  line-height: 1.3;
+}
+
+.n-pill .pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.n-pill.n-a {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #bae6fd;
+}
+.n-pill.n-a .pip { background: #38bdf8; box-shadow: 0 0 6px #38bdf8; }
+
+.n-pill.n-t {
+  background: rgba(129, 140, 248, 0.18);
+  border: 1px solid #818cf8;
+  color: #c7d2fe;
+}
+.n-pill.n-t .pip { background: #818cf8; box-shadow: 0 0 6px #818cf8; }
+
+/* Citosina con ALTO CONTRASTE (Coral/Rosa luminoso, 100% legible) */
+.n-pill.n-c {
+  background: rgba(251, 113, 133, 0.2);
+  border: 1px solid #fb7185;
+  color: #fecdd3;
+}
+.n-pill.n-c .pip { background: #fb7185; box-shadow: 0 0 6px #fb7185; }
+
+.n-pill.n-g {
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid #34d399;
+  color: #a7f3d0;
+}
+.n-pill.n-g .pip { background: #34d399; box-shadow: 0 0 6px #34d399; }
+
+.status-badge-container {
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.quality-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.quality-pill.valid {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.quality-pill.invalid {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.genome-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 15, 23, 0.92);
+}
+
+.footer-left-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #34d399;
+}
+
+.footer-left-info .check-icon {
+  color: #34d399;
+}
+
+.footer-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.apply-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #004d69 100%) !important;
+  border: 1px solid #70d6ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(112, 214, 255, 0.3) !important;
+}
+
+.apply-btn:hover:not(:disabled) {
+  box-shadow: 0 0 20px rgba(112, 214, 255, 0.5) !important;
+}
+
+.prompt-action-btn {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  background: linear-gradient(135deg, #0284c7 0%, #004d69 100%) !important;
+  border: 1px solid #70d6ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(112, 214, 255, 0.3) !important;
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 8px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.prompt-action-btn:hover {
+  box-shadow: 0 0 20px rgba(112, 214, 255, 0.55) !important;
+  transform: translateY(-2px);
+}
+
+@media (min-width: 1200px) {
+  .dna-lab-layout {
+    padding-right: 96px;
+  }
+}
+
 </style>
