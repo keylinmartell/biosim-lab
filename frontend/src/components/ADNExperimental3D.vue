@@ -61,6 +61,8 @@
       <DNAHelix3D 
         :sequence="activeLocusSeq" 
         :selectedPosition="selectedPosition" 
+        :lesions="locusLesions"
+        :cellState="cellState"
         @selectBase="selectedPosition = $event" 
       />
     </div>
@@ -194,6 +196,24 @@ const currentLocus = computed(() => {
 const activeLocusSeq = computed(() => {
   if (!currentLocus.value?.forward) return 'ATCGATCGATCGATCGATCGAT';
   return currentLocus.value.forward;
+});
+
+// Lesiones visibles en el locus según el estado celular (daño, no mutación)
+const locusLesions = computed(() => {
+  const s = props.cellState || {};
+  const seq = activeLocusSeq.value;
+  const out = [];
+  const used = new Set();
+  const nDsb = Math.min(2, Math.floor(s.dsb || 0));
+  for (let k = 0; k < nDsb; k++) {
+    const p = Math.floor(seq.length * (k + 1) / (nDsb + 1));
+    out.push({ position: p, type: 'dsb' }); used.add(p);
+  }
+  const nOx = Math.min(4, Math.floor(s.lesiones_oxidativas || 0));
+  for (let i = 0, c = 0; i < seq.length && c < nOx; i += 3) {
+    if (seq[i] === 'G' && !used.has(i)) { out.push({ position: i, type: 'oxoG' }); used.add(i); c++; }
+  }
+  return out;
 });
 
 // Expresión génica (Transcripción, Splicing y Traducción)

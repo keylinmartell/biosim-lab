@@ -152,74 +152,7 @@
           <div class="phase-avatar g1">1</div>
           <div>
             <h3>Fase G1: Vigilancia del Molde, Daño Químico y Reparación Pre-Replicativa</h3>
-            <span class="subtext">Monitoreo pre-replicativo del molde: inducción de aductos/lesiones, sensor p53/MDM2 y reparación guiada por plantilla</span>
-          </div>
-        </div>
-        <div :class="['checkpoint-status-pill', checkpointG1Status.badgeClass]">
-          <Icon :name="checkpointG1Status.icon" size="16" />
-          <span>{{ checkpointG1Status.statusTitle }}</span>
-        </div>
-      </div>
-
-      <!-- Tarjeta Científica de Estado de Checkpoint G1/S, Dinámica p53/MDM2 y Freno Celular -->
-      <div :class="['checkpoint-g1-card', 'md3-card-outlined', checkpointG1Status.state]">
-        <div class="cp-card-header">
-          <div class="cp-status-badge">
-            <span :class="['cp-status-dot', checkpointG1Status.state]"></span>
-            <Icon :name="checkpointG1Status.icon" size="20" />
-            <span class="cp-status-title">{{ checkpointG1Status.statusTitle }}</span>
-          </div>
-          <div class="cp-phase-badge">
-            <Icon name="verified_user" size="14" />
-            <span>Fase G1 · Control Pre-Replicativo</span>
-          </div>
-        </div>
-
-        <!-- Grid de los 3 Pilares Moleculares -->
-        <div class="cp-grid-3col">
-          <!-- Pilar 1: Dinámica p53 / MDM2 -->
-          <div class="cp-node-box p53-node">
-            <div class="cp-node-header">
-              <Icon name="biotech" size="16" class="node-icon" />
-              <span class="node-title">{{ checkpointG1Status.p53Title }}</span>
-            </div>
-            <div class="node-badge" :class="checkpointG1Status.state">
-              {{ checkpointG1Status.p53Badge }}
-            </div>
-            <p class="node-desc">{{ checkpointG1Status.p53Details }}</p>
-          </div>
-
-          <!-- Pilar 2: Efector p21 / Freno CDK / Apoptosis -->
-          <div class="cp-node-box p21-node">
-            <div class="cp-node-header">
-              <Icon name="block" size="16" class="node-icon" />
-              <span class="node-title">{{ checkpointG1Status.p21Title }}</span>
-            </div>
-            <div class="node-badge" :class="checkpointG1Status.state">
-              {{ checkpointG1Status.p21Badge }}
-            </div>
-            <p class="node-desc">{{ checkpointG1Status.p21Details }}</p>
-          </div>
-
-          <!-- Pilar 3: Separación Conceptual Punto R -->
-          <div class="cp-node-box puntor-node">
-            <div class="cp-node-header">
-              <Icon name="alt_route" size="16" class="node-icon" />
-              <span class="node-title">{{ checkpointG1Status.puntoRTitle }}</span>
-            </div>
-            <div class="node-badge bypass-tag">
-              Bypass Externo ATM/ATR &rarr; p53 &rarr; p21
-            </div>
-            <p class="node-desc">{{ checkpointG1Status.puntoRDetails }}</p>
-          </div>
-        </div>
-
-        <!-- Banner de Corrección Conceptual: Lesión vs Mutación -->
-        <div class="cp-clarification-banner">
-          <Icon name="info" size="16" class="banner-icon" />
-          <div class="banner-body">
-            <strong>Precisión Biológica Fundamental (Lesión vs Mutación):</strong>
-            <span>{{ checkpointG1Status.damageNatureClarification }}</span>
+            <span class="subtext">Monitoreo pre-replicativo del molde: inducción de aductos/lesiones y reparación pre-replicativa</span>
           </div>
         </div>
       </div>
@@ -1239,6 +1172,7 @@
                 <option value="uv_radiation">Radiación Ultravioleta (Luz UV · Dímeros T-T)</option>
                 <option value="oxidative_ros">Estrés Oxidativo (Radicales Libres ROS · 8-oxo-G)</option>
                 <option value="deamination">Desaminación Espontánea (Hidrólisis C → U/T)</option>
+                <option value="tobacco">Humo de Tabaco / Benzo[a]pireno (Aductos BPDE-dG en Guanina)</option>
               </select>
             </div>
 
@@ -3388,7 +3322,7 @@ async function applyControlledMutation() {
     );
     showDamageDialog.value = false;
     sequenceInput.value = res.modified_sequence;
-    lastMutationApplied.value = res.mutation;
+    lastMutationApplied.value = { ...res.mutation, agent: g1DamageMode.value === 'crispr' ? 'crispr' : 'controlled' };
     repairResult.value = null;
     await validateAndProcess(false);
     const compMold = await api.complementDNA(moldRef);
@@ -5462,7 +5396,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 100000 !important;
   padding: 1.5rem;
   animation: fadeIn 0.2s ease-out;
 }
@@ -6870,15 +6804,19 @@ onMounted(() => {
   margin-right: 0.4rem;
 }
 
-.g1-repair-card { grid-column: 1 / -1; }
-.g1-actions-grid, .s-replication-grid {
+.g1-actions-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+.s-replication-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.2rem;
 }
-@media (max-width: 900px) {
-  .g1-repair-card { grid-column: 1 / -1; }
-.g1-actions-grid, .s-replication-grid { grid-template-columns: 1fr; }
+@media (max-width: 767px) {
+  .g1-actions-grid, .s-replication-grid { grid-template-columns: 1fr; }
 }
 
 .triple-fidelity-card {
@@ -7205,7 +7143,7 @@ onMounted(() => {
     gap: 1.25rem;
   }
   .g1-actions-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.25rem;
   }
   .button-guide-grid {

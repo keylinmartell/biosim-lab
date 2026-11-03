@@ -1,0 +1,12 @@
+{
+  "exclude": [],
+  "conversationRecording": {
+    "enabled": false,
+    "agents": {
+      "claude-code": true
+    }
+  },
+  "ruleSharing": {
+    "enabled": false
+  }
+}

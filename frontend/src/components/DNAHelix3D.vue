@@ -1,5 +1,5 @@
 <template>
-  <div class="dna-3d-card md3-card-outlined" :class="{ 'cinema-expanded': isExpanded }">
+  <div ref="cardRoot" class="dna-3d-card md3-card-outlined" :class="{ 'cinema-expanded': isExpanded }">
     <!-- Header de Tarjeta MD3 (Tonal Surface Header) -->
     <div class="card-header">
       <div class="header-main">
@@ -8,7 +8,7 @@
         </div>
         <div class="header-titles">
           <h3 class="title-text">
-            {{ packagingMode === 'linear' ? 'Modelo Atómico Tridimensional (B-DNA)' : 'Cromatina Pluripotente · Collar de Perlas (Alberts et al.)' }}
+            {{ packagingMode === 'linear' ? 'Modelo Atómico Tridimensional (B-DNA)' : 'Fibra de Cromatina (Alberts et al. · 147 pb)' }}
           </h3>
           <span class="subhead-text">
             {{ atomicStats.nucleosomes }} Nucleosomas ({{ atomicStats.octamerSubunits }} histonas core + {{ atomicStats.h1Count }} H1 lábil) · {{ atomicStats.totalAtoms }} átomos de ADN
@@ -21,11 +21,11 @@
         <button 
           class="md3-chip interactive-chip" 
           @click="cyclePackagingMode"
-          title="Alternar entre Fibra de Cromatina con Histonas (Collar de Perlas), Escala Alberts 147 pb y ADN Lineal"
+          title="Alternar entre Fibra de Cromatina (Alberts et al. · 147 pb) y ADN-B Lineal"
         >
           <Icon name="hub" size="14" class="chip-lead" />
           <span class="font-mono">
-            {{ packagingMode === 'chromatin_adaptive' ? 'Cromatina (Collar de Perlas)' : packagingMode === 'chromatin_alberts' ? 'Alberts Estricto (147+53 pb)' : 'ADN-B Lineal' }}
+            {{ packagingMode === 'chromatin_alberts' ? 'Cromatina (Alberts 147 pb)' : 'ADN-B Lineal' }}
           </span>
         </button>
 
@@ -322,6 +322,10 @@ const props = defineProps({
   isSevereDamage: {
     type: Boolean,
     default: false
+  },
+  cellState: {
+    type: Object,
+    default: null
   }
 });
 
@@ -363,6 +367,12 @@ function getDamageInspectionData(agent, pos) {
     return {
       damageKind: 'Desaminación Espontánea (Citosina → Uracilo)',
       enzymeName: 'BER · Uracilo-ADN Glicosilasa (UNG) + ADN Ligasa'
+    };
+  }
+  if (agent === 'tobacco' || agent === 'benzopyrene') {
+    return {
+      damageKind: 'Humo de Tabaco (Aducto Voluminoso BPDE-dG en Guanina)',
+      enzymeName: 'NER · Complejo XPC/TFIIH + Endonucleasas ERCC1-XPF / XPG'
     };
   }
   return {
@@ -580,7 +590,7 @@ const cleanFullSequence = computed(() => {
 
 const internalSelectedPos = ref(props.selectedPosition ?? 0);
 const selected3DPairIdx = ref(null);
-const packagingMode = ref('chromatin_adaptive'); // 'chromatin_adaptive' | 'chromatin_alberts' | 'linear'
+const packagingMode = ref('chromatin_alberts'); // 'chromatin_alberts' | 'linear'
 
 // Guardamos los pares generados para que zoomIn y el selector apunten a la coordenada 3D exacta
 let lastGeneratedPairs = [];
@@ -591,13 +601,7 @@ let mallaEnlacesRef = null;
 let damaged3DPairIndices = [];
 
 function cyclePackagingMode() {
-  if (packagingMode.value === 'chromatin_adaptive') {
-    packagingMode.value = 'chromatin_alberts';
-  } else if (packagingMode.value === 'chromatin_alberts') {
-    packagingMode.value = 'linear';
-  } else {
-    packagingMode.value = 'chromatin_adaptive';
-  }
+  packagingMode.value = (packagingMode.value === 'chromatin_alberts') ? 'linear' : 'chromatin_alberts';
   buildDNAHelix(true);
 }
 
@@ -620,6 +624,15 @@ const effectiveSelectedPos = computed(() => {
 const canvasContainer = ref(null);
 const atomicCanvasHolder = ref(null);
 const isExpanded = ref(false);
+const cardRoot = ref(null);
+function onFullscreenChange() {
+  const inFs = !!document.fullscreenElement;
+  if (!inFs && isExpanded.value) {
+    isExpanded.value = false;
+    nextTick(() => onWindowResize());
+  }
+}
+if (typeof document !== 'undefined') document.addEventListener('fullscreenchange', onFullscreenChange);
 const isAutoRotating = ref(false);
 const dragMode = ref('rotate');
 
@@ -706,6 +719,115 @@ watch(effectiveSelectedPos, (newPos) => {
 });
 
 
+// ===== Lesiones Químicas del ADN (Alberts Cap. 5) =====
+const AGENT_LESION = {
+  uv_radiation: 'dimer',
+  oxidative_ros: 'oxoG',
+  deamination: 'uracil',
+  tobacco: 'adduct',
+  benzopyrene: 'adduct',
+  crispr: 'dsb',
+  ionizing: 'dsb'
+};
+
+const LESION_STYLE = {
+  dsb:    { color: 0xff2d2d, label: 'Rotura Doble Cadena (DSB) · MRN-ATM' },
+  oxoG:   { color: 0xf97316, label: '8-oxoG · BER (OGG1)' },
+  dimer:  { color: 0xa855f7, label: 'Dímero Pirimidina · NER (TFIIH/XPC)' },
+  adduct: { color: 0xeab308, label: 'Aducto BPDE-dG · NER (XPF/XPG)' },
+  uracil: { color: 0x84cc16, label: 'Uracilo · BER (UNG)' }
+};
+
+function normalizeLesionType(raw, agent) {
+  const r = String(raw || '').toLowerCase();
+  if (LESION_STYLE[raw]) return raw;
+  if (r.includes('uv') || r.includes('dimer') || r.includes('dímero')) return 'dimer';
+  if (r.includes('oxo') || r.includes('ros') || r.includes('oxid')) return 'oxoG';
+  if (r.includes('deamin') || r.includes('uracil')) return 'uracil';
+  if (r.includes('tobacco') || r.includes('adduct') || r.includes('bpde')) return 'adduct';
+  if (r.includes('dsb') || r.includes('crispr') || r.includes('break')) return 'dsb';
+  return AGENT_LESION[agent] || 'dsb';
+}
+
+function baseCentroid(atoms, pair, strand) {
+  const c = new THREE.Vector3();
+  let n = 0;
+  for (let k = pair.startAtomIdx; k <= pair.endAtomIdx; k++) {
+    const a = atoms[k];
+    if (a[6] === strand && 'ATGC'.includes(a[4])) {
+      c.x += a[0]; c.y += a[1]; c.z += a[2]; n++;
+    }
+  }
+  return n ? c.multiplyScalar(1 / n) : null;
+}
+
+function addStick(group, p1, p2, r, mat) {
+  const d = new THREE.Vector3().subVectors(p2, p1);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 10), mat);
+  m.position.copy(p1).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  group.add(m);
+}
+
+function buildLesionDecorations(atoms, bonds, pairs, lesionTypeMap) {
+  if (!lesionTypeMap.size) return;
+  const g = new THREE.Group();
+  g.name = 'lesion_decorations';
+  const glow = (hex, ei = 0.8) => new THREE.MeshStandardMaterial({ color: hex, emissive: hex, emissiveIntensity: ei, roughness: 0.3 });
+
+  lesionTypeMap.forEach((type, idx) => {
+    const pair = pairs[idx];
+    if (!pair) return;
+    const center = new THREE.Vector3(...pair.centerPos);
+    const b1 = baseCentroid(atoms, pair, 1);
+    if (!b1) return;
+    const out = new THREE.Vector3().subVectors(b1, center).normalize();
+
+    if (type === 'oxoG') {
+      const o = b1.clone().addScaledVector(out, 2.4);
+      const om = new THREE.Mesh(new THREE.SphereGeometry(0.75, 18, 14), glow(0xff3b30, 0.9));
+      om.position.copy(o); g.add(om);
+      addStick(g, b1.clone().addScaledVector(out, 1.2), o, 0.18, glow(0xf97316, 0.5));
+    } else if (type === 'dimer') {
+      const nb = pairs[idx + 1] || pairs[idx - 1];
+      const b2 = nb && baseCentroid(atoms, nb, 1);
+      if (b2) {
+        const side = new THREE.Vector3().crossVectors(out, new THREE.Vector3().subVectors(b2, b1)).normalize().multiplyScalar(0.7);
+        const mat = glow(0xa855f7, 0.9);
+        addStick(g, b1.clone().add(side), b2.clone().add(side), 0.2, mat);
+        addStick(g, b1.clone().sub(side), b2.clone().sub(side), 0.2, mat);
+      }
+    } else if (type === 'adduct') {
+      const mat = glow(0xeab308, 0.55);
+      const anchor = b1.clone().addScaledVector(out, 1.6);
+      const tip = b1.clone().addScaledVector(out, 3.2);
+      addStick(g, anchor, tip, 0.16, mat);
+      const ringGeo = new THREE.TorusGeometry(0.85, 0.16, 6, 6);
+      const lateral = new THREE.Vector3(...pair.tangent).normalize();
+      const offs = [[0, 0], [1.47, 0], [0.735, 1.27], [2.2, 1.27]];
+      offs.forEach(([u, v]) => {
+        const r = new THREE.Mesh(ringGeo, mat);
+        r.position.copy(tip).addScaledVector(out, 0.85 + v).addScaledVector(lateral, u - 1.1);
+        r.lookAt(r.position.clone().add(new THREE.Vector3().crossVectors(out, lateral)));
+        g.add(r);
+      });
+    } else if (type === 'uracil') {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.6, 14, 10), new THREE.MeshStandardMaterial({ color: 0x84cc16, wireframe: true }));
+      m.position.copy(b1).addScaledVector(out, 2.0); g.add(m);
+    } else if (type === 'dsb') {
+      bonds.forEach(e => {
+        const a1 = atoms[e[0]], a2 = atoms[e[1]];
+        if (e[3] !== idx || !a1 || !a2 || a1[7] === a2[7] || e[2] === 'h') return;
+        [a1, a2].forEach(a => {
+          const m = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 12), glow(0xff2d2d, 1.1));
+          m.position.set(a[0], a[1], a[2]); m.userData.pulse = true; g.add(m);
+        });
+      });
+    }
+  });
+  mainHelixGroup.add(g);
+}
+
 function buildDNAHelix(reframe = false) {
   if (!mainHelixGroup || !scene) return;
 
@@ -764,6 +886,14 @@ function buildDNAHelix(reframe = false) {
     (props.lesions || []).map(l => (typeof l === 'object' && l.position !== undefined) ? Number(l.position) : Number(l))
   );
 
+  const lesionTypeMap = new Map();
+  (props.lesions || []).forEach(l => {
+    const pos = (typeof l === 'object' && l.position !== undefined) ? Number(l.position) : Number(l);
+    const t = normalizeLesionType(typeof l === 'object' ? l.type : null, props.activeAgent);
+    lesionTypeMap.set(pos, t);
+  });
+  const lesionOf = (idx) => lesionTypeMap.get(idx);
+
   // 1. ÁTOMOS DE LA SECUENCIA REAL (Resalta suavemente el par 3D exacto seleccionado)
   const geoEsfera = new THREE.SphereGeometry(1, 20, 16);
   const matEsfera = new THREE.MeshStandardMaterial({ roughness: 0.3, metalness: 0.08 });
@@ -780,8 +910,9 @@ function buildDNAHelix(reframe = false) {
     dummy.updateMatrix();
     mallaAtomos.setMatrixAt(i, dummy.matrix);
 
+    const lt = lesionOf(a[7]);
     if (isDamagedPair) {
-      color.setHex(0xff1a1a); // Rojo fuego de daño
+      color.setHex(LESION_STYLE[lt]?.color ?? 0xff1a1a);
     } else if (isSelectedPair) {
       color.setHex(0x38bdf8).lerp(new THREE.Color(0xffffff), 0.55);
     } else {
@@ -1008,6 +1139,16 @@ function buildDNAHelix(reframe = false) {
     p3.position.set(0.95, -0.55, -0.38);
     unitGroup.add(p3);
 
+    // Fosfatos en p53 (ATM/ATR → Ser15, CHK1/CHK2 → Ser20)
+    {
+      const matPhos = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.9, roughness: 0.3 });
+      [[0, 2.35, 0.3], [-0.9, 1.9, -0.5]].forEach((pp, k) => {
+        const ph = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), matPhos);
+        ph.position.set(pp[0], pp[1], pp[2]); ph.name = k ? 'pSer20' : 'pSer15';
+        unitGroup.add(ph);
+      });
+    }
+
     // 2. Grupo MDM2 independiente con DOS bolitas de ubiquitina (del tamaño de p53)
     const mdm2Group = new THREE.Group();
     mdm2Group.name = 'mdm2_complex_' + u;
@@ -1062,7 +1203,14 @@ function buildDNAHelix(reframe = false) {
     });
   }
 
+  // 5b. Representación química de lesiones
+  buildLesionDecorations(atoms, bonds, pairs, lesionTypeMap);
+
   mainHelixGroup.add(p53MeshGroup);
+
+  lastLesionTypeMap = lesionTypeMap;
+  p53Reservoir = reservoirCenter;
+  buildSignaling();
 
   if (reframe) {
     const allPts = atoms.map(a => [a[0], a[1], a[2]]);
@@ -1072,6 +1220,439 @@ function buildDNAHelix(reframe = false) {
     });
     encuadrar(allPts);
   }
+}
+
+
+// ============================================================================
+// RED DE SEÑALIZACIÓN Y CONTROL DEL CICLO G1/S (ALBERTS CAP. 12 Y 17)
+// ============================================================================
+let signalingGroup = null;
+let lastLesionTypeMap = new Map();
+let p53Reservoir = [0, 0, 0];
+let animClock = 0;
+
+function makeLabel(text, hex, scale = 1.0) {
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  const font = '600 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = font;
+  const metrics = ctx.measureText(text);
+  const textWidth = Math.ceil(metrics.width);
+  const w = textWidth + 80;
+  const h = 64;
+  c.width = w;
+  c.height = h;
+
+  const hexCol = '#' + hex.toString(16).padStart(6, '0');
+
+  // Pastilla con fondo de vidrio oscuro y borde en color del complejo
+  ctx.font = font;
+  ctx.fillStyle = 'rgba(6, 12, 26, 0.90)';
+  ctx.beginPath();
+  ctx.roundRect(3, 3, w - 6, h - 6, 30);
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = hexCol;
+  ctx.stroke();
+
+  // Indicador de estado emisor
+  ctx.fillStyle = hexCol;
+  ctx.beginPath();
+  ctx.arc(32, 32, 8.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Texto nítido
+  ctx.fillStyle = '#f8fafc';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 52, 33);
+
+  const texture = new THREE.CanvasTexture(c);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const mat = new THREE.SpriteMaterial({ 
+    map: texture, 
+    depthTest: false, 
+    transparent: true, 
+    fog: false 
+  });
+  const sp = new THREE.Sprite(mat);
+  const spriteH = 1.65 * scale;
+  sp.scale.set(spriteH * (w / h), spriteH, 1);
+  sp.renderOrder = 9999;
+  sp.userData.isLabel = true;
+  return sp;
+}
+
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+function getKineticState() {
+  const cs = props.cellState;
+  if (cs && Object.keys(cs).length && (cs.p53 !== undefined || cs.ATM !== undefined)) {
+    return {
+      ATM: cs.ATM || 0,
+      ATR: cs.ATR || 0,
+      CHK2: cs.CHK2 || cs.ATM || 0,
+      CHK1: cs.CHK1 || cs.ATR || 0,
+      pSer15: cs.pSer15 || 0,
+      pSer20: cs.pSer20 || 0,
+      p53: cs.p53 || 0.05,
+      p21: cs.p21 || 0.02,
+      OGG1: cs.OGG1 || 0.35,
+      ciclinaD: cs.ciclinaD || 0.65,
+      ciclinaE: cs.ciclinaE || 0.50,
+      RbP: cs.RbP || 0.50
+    };
+  }
+
+  const types = [...lastLesionTypeMap.values()];
+  const nDSB = types.filter(t => t === 'dsb').length;
+  const nBase = types.filter(t => t !== 'dsb').length;
+
+  const ATM = nDSB > 0 ? Math.min(1.0, 0.50 + 0.25 * nDSB) : 0.03;
+  const ATR = nBase > 0 ? Math.min(1.0, 0.35 + 0.20 * nBase) : 0.02;
+  const CHK2 = Math.min(1.0, ATM * 0.95);
+  const CHK1 = Math.min(1.0, ATR * 0.92);
+
+  const pSer15 = Math.min(1.0, Math.max(ATM, ATR) * 0.98);
+  const pSer20 = Math.min(1.0, Math.max(CHK1, CHK2) * 0.90);
+  const shield = Math.min(1.0, 0.6 * pSer15 + 0.4 * pSer20);
+
+  const p53 = types.length > 0 ? Math.min(1.0, 0.05 + 0.88 * shield) : 0.05;
+  const p21 = types.length > 0 ? Math.min(1.0, Math.pow(p53, 1.6) * 1.25) : 0.02;
+  const OGG1 = Math.min(1.0, 0.30 + 0.65 * p53);
+
+  const inh = p21 / (p21 + 0.25);
+  const ciclinaD = 0.65;
+  const ciclinaE = Math.max(0.04, 0.70 * (1 - inh));
+  const actTotal = (ciclinaD * 0.4 + ciclinaE * 0.6) * (1 - inh);
+  const RbP = clamp01(actTotal * 1.4);
+
+  return { ATM, ATR, CHK2, CHK1, pSer15, pSer20, p53, p21, OGG1, ciclinaD, ciclinaE, RbP };
+}
+
+function disposeHierarchy(obj) {
+  obj.traverse(node => {
+    if (node.geometry) node.geometry.dispose();
+    if (node.material) {
+      if (Array.isArray(node.material)) node.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+      else { if (node.material.map) node.material.map.dispose(); node.material.dispose(); }
+    }
+  });
+}
+
+function buildSignaling() {
+  if (!mainHelixGroup) return;
+  if (signalingGroup) {
+    mainHelixGroup.remove(signalingGroup);
+    disposeHierarchy(signalingGroup);
+    signalingGroup = null;
+  }
+
+  const pairs = lastGeneratedPairs;
+  const atoms = lastGeneratedAtoms;
+  if (!pairs || !pairs.length) return;
+
+  const st = getKineticState();
+  const g = new THREE.Group();
+  g.name = 'signaling_master_group';
+
+  const UP = new THREE.Vector3(0, 1, 0);
+  const pct = (v) => Math.round(clamp01(v || 0) * 100) + '%';
+  const createMat = (hex, emissiveInt = 0.4, opacity = 1.0) => new THREE.MeshStandardMaterial({
+    color: hex,
+    emissive: hex,
+    emissiveIntensity: emissiveInt,
+    roughness: 0.35,
+    metalness: 0.15,
+    transparent: opacity < 1.0,
+    opacity: opacity
+  });
+  const createSph = (r, hex, ei = 0.4, op = 1.0) => new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), createMat(hex, ei, op));
+
+  // --- 1. SENSORES FÍSICOS SOBRE EL ADN (MRN-ATM y RPA-ATR) ---
+  const sensorFluxNodes = [];
+  const oxoGCoordinates = [];
+  let dsbSensorRendered = false;
+  let baseSensorRendered = false;
+
+  lastLesionTypeMap.forEach((type, pairIndex) => {
+    const pair = pairs[pairIndex];
+    if (!pair) return;
+    const center = new THREE.Vector3(...pair.centerPos);
+    const b1 = baseCentroid(atoms, pair, 1) || center.clone().add(UP);
+    const radialOut = new THREE.Vector3().subVectors(b1, center).normalize();
+    const tangent = new THREE.Vector3(...(pair.tangent || [0, 0, 1])).normalize();
+
+    if (type === 'dsb') {
+      const mrnGroup = new THREE.Group();
+      mrnGroup.name = 'sensor_mrn_' + pairIndex;
+      const anchorPos = center.clone().addScaledVector(radialOut, -6.0);
+      mrnGroup.position.copy(anchorPos);
+
+      const mre11_A = createSph(1.15, 0x4f46e5, 0.5); mre11_A.position.set(-0.6, 0, 0);
+      const mre11_B = createSph(1.15, 0x4338ca, 0.5); mre11_B.position.set(0.6, 0, 0);
+      mrnGroup.add(mre11_A, mre11_B);
+
+      const rodGeo = new THREE.CylinderGeometry(0.24, 0.24, 7.5, 8);
+      const rodMat = createMat(0x818cf8, 0.5);
+      const rod1 = new THREE.Mesh(rodGeo, rodMat); rod1.position.set(-1.2, 3.8, 0.4); rod1.rotation.z = 0.22;
+      const rod2 = new THREE.Mesh(rodGeo, rodMat); rod2.position.set(1.2, 3.8, -0.4); rod2.rotation.z = -0.22;
+      mrnGroup.add(rod1, rod2);
+
+      const nbs1 = createSph(0.95, 0xa5b4fc, 0.6); nbs1.position.set(0, 7.8, 0);
+      mrnGroup.add(nbs1);
+
+      const atmAct = clamp01(st.ATM);
+      const atmKinase = createSph(1.5, 0xef4444, 0.3 + 0.8 * atmAct, 0.4 + 0.6 * atmAct);
+      atmKinase.position.set(2.4, 8.8, 0.6);
+      mrnGroup.add(atmKinase);
+      g.add(mrnGroup);
+
+      if (!dsbSensorRendered) {
+        const lbl = makeLabel('MRN + ATM · Sensor DSB (' + pct(atmAct) + ')', 0xef4444, 0.80);
+        lbl.position.copy(anchorPos).add(new THREE.Vector3(0, 11.2, 0));
+        g.add(lbl);
+        dsbSensorRendered = true;
+      }
+
+      sensorFluxNodes.push({
+        worldPos: anchorPos.clone().add(atmKinase.position),
+        type: 'CHK2',
+        level: st.CHK2
+      });
+
+    } else {
+      const rpaGroup = new THREE.Group();
+      rpaGroup.name = 'sensor_rpa_' + pairIndex;
+      const anchorPos = center.clone().addScaledVector(radialOut, -5.2);
+      rpaGroup.position.copy(anchorPos);
+
+      const rpa1 = createSph(0.85, 0x94a3b8, 0.3); rpa1.position.set(-1.2, 0, 0);
+      const rpa2 = createSph(0.95, 0x64748b, 0.3); rpa2.position.set(0, 0.2, 0);
+      const rpa3 = createSph(0.70, 0x475569, 0.3); rpa3.position.set(1.2, -0.1, 0);
+      rpaGroup.add(rpa1, rpa2, rpa3);
+
+      const atrAct = clamp01(st.ATR);
+      const atrKinase = createSph(1.35, 0x0284c7, 0.3 + 0.8 * atrAct, 0.4 + 0.6 * atrAct);
+      atrKinase.position.set(0, 2.6, 0.8);
+      const atripAdapter = createSph(0.75, 0x38bdf8, 0.4);
+      atripAdapter.position.set(1.4, 2.0, 0);
+      rpaGroup.add(atrKinase, atripAdapter);
+      g.add(rpaGroup);
+
+      if (!baseSensorRendered) {
+        const lbl = makeLabel('RPA + ATR-ATRIP · Sensor (' + pct(atrAct) + ')', 0x0284c7, 0.80);
+        lbl.position.copy(anchorPos).add(new THREE.Vector3(0, 4.8, 0));
+        g.add(lbl);
+        baseSensorRendered = true;
+      }
+
+      sensorFluxNodes.push({
+        worldPos: anchorPos.clone().add(atrKinase.position),
+        type: 'CHK1',
+        level: st.CHK1
+      });
+
+      if (type === 'oxoG') oxoGCoordinates.push({ b1, radialOut });
+    }
+  });
+
+  // --- 2. BER POR OGG1 SOBRE 8-OXO-GUANINA ---
+  const ogg1Cap = Math.round(st.OGG1 * 4);
+  oxoGCoordinates.forEach((ox, idx) => {
+    const ogg1Pos = ox.b1.clone().addScaledVector(ox.radialOut, 3.8);
+    if (idx < ogg1Cap) {
+      const ogg1Mesh = createSph(1.1, 0x10b981, 0.65);
+      ogg1Mesh.position.copy(ogg1Pos);
+      g.add(ogg1Mesh);
+      if (idx === 0) {
+        const lbl = makeLabel('OGG1 · Glicosilasa BER Activa', 0x10b981, 0.75);
+        lbl.position.copy(ogg1Pos).add(new THREE.Vector3(0, 2.4, 0));
+        g.add(lbl);
+      }
+    } else {
+      const lbl = makeLabel('8-oxoG no reparada (Vía BER Saturada)', 0xf97316, 0.72);
+      lbl.position.copy(ogg1Pos).add(new THREE.Vector3(0, 1.8, 0));
+      g.add(lbl);
+    }
+  });
+
+  // --- 3. TRANSDUCCIÓN DE SEÑAL CHK1 / CHK2 HACIA p53 ---
+  const p53Target = new THREE.Vector3(...p53Reservoir);
+  const labelsShown = {};
+  sensorFluxNodes.forEach(node => {
+    const hex = node.type === 'CHK1' ? 0x38bdf8 : 0xf472b6;
+    const particleCount = Math.round(1 + 4 * clamp01(node.level));
+    for (let k = 0; k < particleCount; k++) {
+      const particle = createSph(0.38, hex, 0.9);
+      particle.userData.fluxData = {
+        from: node.worldPos.clone(),
+        to: p53Target.clone(),
+        phase: k / particleCount
+      };
+      g.add(particle);
+    }
+    if (!labelsShown[node.type]) {
+      labelsShown[node.type] = true;
+      const midPoint = node.worldPos.clone().lerp(p53Target, 0.45).add(new THREE.Vector3(0, 2.4, 0));
+      const lbl = makeLabel(node.type + ' Quinasa · ' + pct(node.level), hex, 0.72);
+      lbl.position.copy(midPoint);
+      g.add(lbl);
+    }
+  });
+
+  // --- 4. p53, FOSFATO SER15/20 Y MDM2 ---
+  const shieldFactor = Math.min(1.0, 0.6 * st.pSer15 + 0.4 * st.pSer20);
+  const visibleP53Count = Math.max(1, Math.round(st.p53 * p53UnitsList.length / 0.6));
+
+  p53UnitsList.forEach((u, i) => {
+    u.group.children.filter(c => c.userData.isLabel).forEach(c => { u.group.remove(c); disposeHierarchy(c); });
+    u.mdm2Group.children.filter(c => c.userData.isLabel).forEach(c => { u.mdm2Group.remove(c); disposeHierarchy(c); });
+
+    u.group.visible = i < visibleP53Count;
+
+    const s15 = u.group.getObjectByName('pSer15');
+    const s20 = u.group.getObjectByName('pSer20');
+    if (s15) s15.scale.setScalar(Math.max(0.001, st.pSer15));
+    if (s20) s20.scale.setScalar(Math.max(0.001, st.pSer20));
+
+    const ubiGroup = u.mdm2Group.getObjectByName('ubi_group_' + i);
+    if (ubiGroup) ubiGroup.scale.setScalar(Math.max(0.001, 1.0 - shieldFactor));
+
+    if (i === 0) {
+      const p53Lbl = makeLabel('p53 Tetrámero · ' + pct(st.p53), 0xf59e0b, 0.78);
+      p53Lbl.position.set(0, -3.2, 0);
+      u.group.add(p53Lbl);
+
+      if (st.pSer15 > 0.05) {
+        const s15Lbl = makeLabel('P-Ser15 (ATM/ATR)', 0xfacc15, 0.62);
+        s15Lbl.position.set(2.8, 2.6, 0);
+        u.group.add(s15Lbl);
+      }
+      if (st.pSer20 > 0.05) {
+        const s20Lbl = makeLabel('P-Ser20 (CHK1/2)', 0xfacc15, 0.62);
+        s20Lbl.position.set(-3.6, 2.4, 0);
+        u.group.add(s20Lbl);
+      }
+
+      const mdm2Lbl = makeLabel('MDM2 E3-Ligasa', 0x8b5cf6, 0.72);
+      mdm2Lbl.position.set(0, 2.8, 0);
+      u.mdm2Group.add(mdm2Lbl);
+
+      if (shieldFactor < 0.95) {
+        const ubiLbl = makeLabel('Ubiquitinación (' + pct(1 - shieldFactor) + ')', 0xffffff, 0.60);
+        ubiLbl.position.set(3.4, 1.2, 0);
+        u.mdm2Group.add(ubiLbl);
+      }
+    }
+  });
+
+  // --- 5. REGULACIÓN G1 TARDÍA: CICLINA D, CICLINA E Y ABRAZO DE p21 ---
+  const dnaCenterRef = new THREE.Vector3(...pairs[0].centerPos);
+  const p21Level = clamp01(st.p21);
+  const cdkInhibitionRatio = p21Level / (p21Level + 0.25);
+
+  // Ciclina D - CDK4/6
+  const cdk46Group = new THREE.Group();
+  cdk46Group.name = 'complex_cycD_cdk46';
+  const cdk46Pos = dnaCenterRef.clone().add(new THREE.Vector3(22.0, 4.0, 6.0));
+  cdk46Group.position.copy(cdk46Pos);
+  cdk46Group.userData.brownian = { origin: cdk46Pos.clone(), phase: 0.0 };
+
+  const actD = clamp01(st.ciclinaD * (1.0 - cdkInhibitionRatio));
+  const cdk4Col = new THREE.Color(0x22c55e).lerp(new THREE.Color(0x475569), cdkInhibitionRatio * 0.7);
+  const cdk4Mesh = new THREE.Mesh(new THREE.SphereGeometry(1.5, 18, 14), createMat(cdk4Col, 0.2 + 0.6 * actD));
+  const cycDMesh = createSph(1.3, 0xeab308, 0.45); cycDMesh.position.set(2.2, 0.4, 0);
+  cdk46Group.add(cdk4Mesh, cycDMesh);
+
+  const cdk46Label = makeLabel('Ciclina D–CDK4/6 · Actividad ' + pct(actD), 0x22c55e, 0.75);
+  cdk46Label.position.set(1.1, 3.4, 0);
+  cdk46Group.add(cdk46Label);
+  g.add(cdk46Group);
+
+  // Ciclina E - CDK2 con p21 docking
+  const cdk2Group = new THREE.Group();
+  cdk2Group.name = 'complex_cycE_cdk2';
+  const cdk2Pos = dnaCenterRef.clone().add(new THREE.Vector3(25.0, -14.0, -4.0));
+  cdk2Group.position.copy(cdk2Pos);
+  cdk2Group.userData.brownian = { origin: cdk2Pos.clone(), phase: 1.8 };
+
+  const actE = clamp01(st.ciclinaE * (1.0 - cdkInhibitionRatio));
+  const cdk2Col = new THREE.Color(0x16a34a).lerp(new THREE.Color(0x334155), cdkInhibitionRatio * 0.9);
+  const cdk2Mesh = new THREE.Mesh(new THREE.SphereGeometry(1.55, 18, 14), createMat(cdk2Col, 0.15 + 0.65 * actE));
+  const cycEMesh = createSph(1.35, 0xf97316, 0.45); cycEMesh.position.set(2.3, 0.3, 0);
+  cdk2Group.add(cdk2Mesh, cycEMesh);
+
+  if (p21Level > 0.03) {
+    const p21ClampMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(2.1, 0.30, 12, 48, Math.PI * 2 * Math.min(1.0, cdkInhibitionRatio * 1.25)),
+      createMat(0x38bdf8, 0.90)
+    );
+    p21ClampMesh.position.set(1.15, 0.15, 0);
+    p21ClampMesh.rotation.z = Math.PI * 0.5;
+    p21ClampMesh.userData.isP21Clamp = true;
+    cdk2Group.add(p21ClampMesh);
+
+    const p21Label = makeLabel('p21 (CIP1/WAF1) · Freno Activo (' + pct(p21Level) + ')', 0x38bdf8, 0.72);
+    p21Label.position.set(7.5, 0.15, 0);
+    cdk2Group.add(p21Label);
+  }
+
+  const cdk2Label = makeLabel('Ciclina E–CDK2 · Actividad ' + pct(actE), 0x16a34a, 0.75);
+  cdk2Label.position.set(1.1, 3.4, 0);
+  cdk2Group.add(cdk2Label);
+  g.add(cdk2Group);
+
+  // --- 6. DINÁMICA DE Rb Y E2F ANCLADO AL PROMOTOR DE LA CROMATINA ---
+  const promoterPairIdx = Math.min(pairs.length - 1, Math.max(0, Math.floor(pairs.length * 0.65)));
+  const promoterPair = pairs[promoterPairIdx];
+  const promoterPos = new THREE.Vector3(...promoterPair.centerPos);
+
+  const promoterComplexGroup = new THREE.Group();
+  promoterComplexGroup.name = 'promoter_e2f_rb_locus';
+  promoterComplexGroup.position.copy(promoterPos);
+
+  // E2F sobre la hebra del promotor
+  const e2fMesh = createSph(1.2, 0x06b6d4, 0.6);
+  e2fMesh.position.set(0, 2.2, 0);
+  promoterComplexGroup.add(e2fMesh);
+
+  // Rb: asentado sobre E2F si hipofosforilado, o desprendido al fosforilarse
+  const isHypoRb = cdkInhibitionRatio > 0.45;
+  const rbGroup = new THREE.Group();
+  rbGroup.name = 'rb_protein_subgroup';
+
+  const rbColor = isHypoRb ? 0x94a3b8 : 0xec4899;
+  const rbMesh = createSph(1.4, rbColor, isHypoRb ? 0.25 : 0.85);
+  rbGroup.add(rbMesh);
+
+  if (isHypoRb) {
+    rbGroup.position.set(0, 4.4, 0);
+    const rbStatusLabel = makeLabel('Rb hipofosforilado · Secuestra a E2F en Promotor (G1)', 0x94a3b8, 0.74);
+    rbStatusLabel.position.set(0, 7.2, 0);
+    promoterComplexGroup.add(rbStatusLabel);
+  } else {
+    rbGroup.position.set(0, 11.5, 4.0);
+    rbGroup.userData.brownian = { origin: promoterPos.clone().add(new THREE.Vector3(0, 11.5, 4.0)), phase: 2.7 };
+
+    [[0, 1.8, 0], [1.4, 0.6, 0.8], [-1.4, 0.6, -0.8]].forEach(po => {
+      const phos = createSph(0.42, 0xfacc15, 0.95);
+      phos.position.set(po[0], po[1], po[2]);
+      rbGroup.add(phos);
+    });
+
+    const detachedLabel = makeLabel('Rb-P Hiperfosforilado · Disociado del ADN (Punto R Cruzado)', 0xec4899, 0.74);
+    detachedLabel.position.set(0, 3.2, 0);
+    rbGroup.add(detachedLabel);
+
+    const e2fActiveLabel = makeLabel('E2F Libre en Promotor · Transcripción de Fase S Activa', 0x06b6d4, 0.74);
+    e2fActiveLabel.position.set(0, 5.0, 0);
+    promoterComplexGroup.add(e2fActiveLabel);
+  }
+  promoterComplexGroup.add(rbGroup);
+  g.add(promoterComplexGroup);
+
+  signalingGroup = g;
+  mainHelixGroup.add(g);
 }
 
 function encuadrar(puntos) {
@@ -1093,7 +1674,8 @@ function encuadrar(puntos) {
   // Distancia y encuadre equilibrados: el ADN se aprecia en detalle y centrado con espacio natural hacia abajo
   const dist = isLinear ? maxDim * 1.85 : maxDim * 1.95;
   // Centro natural de la molécula (baja el ADN desde la parte superior para aprovechar el espacio inferior)
-  const targetY = centro.y;
+  // Elevar el ADN en pantalla desplazando el foco visual de cámara hacia abajo
+  const targetY = centro.y - (isLinear ? 12.0 : 15.0);
 
   camera.position.set(centro.x, targetY, dist);
   controls.target.set(centro.x, targetY, centro.z);
@@ -1214,6 +1796,45 @@ function initScene() {
 
 function animate() {
   animId = requestAnimationFrame(animate);
+
+  if (signalingGroup) {
+    animClock += 0.016;
+    const t = animClock;
+    const tt = performance.now() * 0.00035;
+
+    signalingGroup.children.forEach(child => {
+      // 1. Quinasas CHK1 / CHK2 en tránsito direccional hacia p53
+      if (child.userData && child.userData.fluxData) {
+        const f = child.userData.fluxData;
+        child.position.lerpVectors(f.from, f.to, (tt + f.phase) % 1.0);
+      }
+
+      // 2. Difusión browniana nucleoplásmica suave amortiguada
+      if (child.userData && child.userData.brownian) {
+        const b = child.userData.brownian;
+        child.position.x = b.origin.x + Math.sin(t * 1.2 + b.phase) * 0.45;
+        child.position.y = b.origin.y + Math.cos(t * 0.9 + b.phase) * 0.55;
+        child.position.z = b.origin.z + Math.sin(t * 0.7 + b.phase) * 0.35;
+        child.rotation.y = Math.sin(t * 0.6 + b.phase) * 0.08;
+      }
+
+      // 3. Respiración mecánica del anillo p21 en la hendidura catalítica
+      if (child.children) {
+        child.children.forEach(sub => {
+          if (sub.userData && sub.userData.isP21Clamp) {
+            const clampPulse = 1.0 + 0.05 * Math.sin(t * 2.8);
+            sub.scale.set(clampPulse, clampPulse, 1.0);
+          }
+        });
+      }
+    });
+  }
+
+  const lesG = mainHelixGroup && mainHelixGroup.getObjectByName('lesion_decorations');
+  if (lesG) {
+    const sc = 1 + 0.25 * Math.sin(performance.now() * 0.006);
+    lesG.children.forEach(m => { if (m.userData.pulse) m.scale.setScalar(sc); });
+  }
   controls?.update();
 
   // Animación de complejos p53 / Mdm2 / Ubiquitina
@@ -1327,7 +1948,20 @@ function toggleAutoRotate() {
 
 function toggleExpand() {
   isExpanded.value = !isExpanded.value;
-  nextTick(() => onWindowResize());
+  if (isExpanded.value) {
+    if (document.documentElement && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+  } else {
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+  nextTick(() => {
+    onWindowResize();
+    setTimeout(onWindowResize, 80);
+    setTimeout(onWindowResize, 250);
+  });
 }
 
 function panUp() {
@@ -1419,6 +2053,12 @@ function resetCamera() {
   controls.update();
 }
 
+let sigTimer = null;
+watch(() => props.cellState, () => {
+  if (sigTimer) return;
+  sigTimer = setTimeout(() => { sigTimer = null; buildSignaling(); }, 1000);
+}, { deep: true });
+
 watch(() => props.sequence, () => {
   internalSelectedPos.value = 0;
   buildDNAHelix(true);
@@ -1453,6 +2093,7 @@ onUnmounted(() => {
   const container = atomicCanvasHolder.value || canvasContainer.value;
   if (container) container.removeEventListener('wheel', handleCanvasWheel);
   if (resizeObserver) resizeObserver.disconnect();
+  if (typeof document !== 'undefined') document.removeEventListener('fullscreenchange', onFullscreenChange);
   if (controls) controls.dispose();
   if (renderer) renderer.dispose();
 });
@@ -1472,14 +2113,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.dna-3d-card.cinema-expanded {
-  position: fixed;
-  inset: 12px;
-  z-index: 1000;
-  height: calc(100vh - 24px) !important;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.3);
-  border: 1px solid #38bdf8;
-}
+
 
 /* Header de la tarjeta */
 .card-header {
@@ -1573,9 +2207,7 @@ onUnmounted(() => {
   background: radial-gradient(ellipse at 50% 50%, #0c1a2e 0%, #06111e 65%, #040812 100%);
 }
 
-.dna-3d-card.cinema-expanded .canvas-wrapper {
-  height: calc(100vh - 120px);
-}
+
 
 .canvas-wrapper:active {
   cursor: grabbing;
@@ -2106,13 +2738,39 @@ onUnmounted(() => {
 
 /* ═══════════════════════ CADENA DE NUCLEÓTIDOS DOCK COMPACTO EN LA ORILLA INFERIOR ═══════════════════════ */
 .canvas-wrapper {
-  height: 72vh !important;
-  min-height: 660px !important;
+  height: 90vh !important;
+  min-height: 860px !important;
 }
 
 .atomic-canvas-box {
   height: 100% !important;
-  min-height: 660px !important;
+  min-height: 860px !important;
+}
+
+.dna-3d-card.cinema-expanded,
+.dna-3d-card:fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  z-index: 1200 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.dna-3d-card.cinema-expanded .canvas-wrapper,
+.dna-3d-card:fullscreen .canvas-wrapper {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.dna-3d-card.cinema-expanded .atomic-canvas-box,
+.dna-3d-card:fullscreen .atomic-canvas-box {
+  min-height: 0 !important;
+  height: 100% !important;
 }
 
 .hud-toolbar {

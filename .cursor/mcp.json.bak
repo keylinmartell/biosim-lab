@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "comp": {
+      "command": "c:\\Users\\marte\\.antigravity-ide\\extensions\\tsucky230.comp-vscode-0.11.10-universal\\daemon\\target\\release\\comp-daemon-win.exe",
+      "args": [],
+      "env": {
+        "RUST_LOG": "info",
+        "COMP_AGENT_ID": "cursor",
+        "COMP_WORKSPACE_ROOT": "d:\\Proyectos\\- miosssssssssss\\biosim-lab"
+      }
+    }
+  }
+}

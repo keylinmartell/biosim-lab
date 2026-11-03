@@ -52,7 +52,7 @@ const VERTICAL_STEP = 3.4;               // 3.4 Å EXACTOS por par de bases
 /**
  * Calcula la estequiometría de histonas y nucleosomas según Alberts et al. (Molecular Biology of the Cell)
  */
-export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_adaptive') {
+export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_alberts') {
   if (mode === 'linear') {
     return {
       originalBp: seqLength,
@@ -71,9 +71,9 @@ export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_ada
     };
   }
 
-  const isAlberts = (mode === 'chromatin_alberts');
-  const coreBp = isAlberts ? 147 : 74;
-  const linkerBp = isAlberts ? 53 : 26;
+  // Modelo canónico único estricto según Alberts et al. (Molecular Biology of the Cell)
+  const coreBp = 147;
+  const linkerBp = 53;
   const unitBp = coreBp + linkerBp;
 
   let nucleosomeCount = 1;
@@ -86,7 +86,7 @@ export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_ada
   } else {
     // Para secuencias cortas (didácticas), se cicla en tándem para completar nucleosomas cerrados
     // evitando fragmentos rotos o hebras colgantes incompletas
-    const minTargetBp = isAlberts ? 200 : 200;
+    const minTargetBp = 200;
     effectiveRepeats = Math.ceil(minTargetBp / Math.max(1, seqLength));
     nucleosomeCount = Math.max(1, Math.floor((seqLength * effectiveRepeats) / unitBp));
   }
@@ -139,7 +139,7 @@ function buildChromatinFrames(N, mode, stoich) {
 
   const { coreBp, linkerBp, nucleosomeCount } = stoich;
   const TURNS = 1.65;
-  const PITCH_Z = mode === 'chromatin_alberts' ? 38.0 : 26.0;
+  const PITCH_Z = 38.0;
   const dTheta = (TURNS * 2 * Math.PI) / coreBp;
   const dZ = PITCH_Z / coreBp;
 
@@ -150,7 +150,7 @@ function buildChromatinFrames(N, mode, stoich) {
   const nucMeta = [];
 
   // Espaciado entre centros de nucleosomas a lo largo de la fibra de cromatina (10 nm)
-  const NUC_SPACING_X = mode === 'chromatin_alberts' ? 140.0 : 95.0;
+  const NUC_SPACING_X = 140.0;
   const NUC_STAGGER_Y = 28.0;
 
   let bp = 0;
@@ -449,7 +449,7 @@ function generateHistoneClusters(nucleosomeCenters) {
 /**
  * Genera la estructura molecular completa de ADN y cromatina.
  */
-export function generateAtomicDNA(rawSequence, centerVertical = true, packagingMode = 'chromatin_adaptive') {
+export function generateAtomicDNA(rawSequence, centerVertical = true, packagingMode = 'chromatin_alberts') {
   const baseSeq = (rawSequence || '').toUpperCase().replace(/[^ATCG]/g, '') || 'GATTACAGGCTATCCGATACG';
   const stoich = calculateChromatinStoichiometry(baseSeq.length, packagingMode);
 

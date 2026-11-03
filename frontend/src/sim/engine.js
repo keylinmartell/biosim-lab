@@ -99,7 +99,9 @@ export class CellSimulation {
 
     // --- Reparacion probabilistica con saturacion (R13)
     const repCap = c.eficiencia_reparacion * (1 + 0.5 * (s.GADD45 || 0))
-    if (s.lesiones_oxidativas > 0 && rng() < (repCap * dt) / (60 * (1 + s.lesiones_oxidativas / 20))) {
+    // BER: OGG1 (glicosilasa de 8-oxoG) basal + inducida por p53 (alta afinidad); se satura con la carga
+    s.OGG1 = (s.OGG1 ?? 0.3) + dt * (0.3 + 0.7 * hill(s.p53 || 0, 0.3, 3) - (s.OGG1 ?? 0.3)) / 600
+    if (s.lesiones_oxidativas > 0 && rng() < (repCap * s.OGG1 * dt) / (60 * (1 + s.lesiones_oxidativas / 20))) {
       s.lesiones_oxidativas -= 1
     }
     if (s.dsb > 0 && rng() < (c.eficiencia_reparacion * dt) / (900 * (1 + s.dsb / 30))) {
@@ -110,9 +112,19 @@ export class CellSimulation {
     // --- ATM (R01) y p53/MDM2 (R02)
     const dmg = s.dsb + 0.1 * s.lesiones_oxidativas
     s.ATM += dt * (hill(dmg, 3) - s.ATM) / 120
+    // ATR: ADN de cadena sencilla recubierto de RPA (lesiones de base en reparación / horquillas detenidas)
+    s.ATR = (s.ATR || 0) + dt * (hill(s.lesiones_oxidativas || 0, 5) - (s.ATR || 0)) / 120
+    // CHK2 (sustrato de ATM) y CHK1 (sustrato de ATR)
+    s.CHK2 = (s.CHK2 || 0) + dt * (s.ATM - (s.CHK2 || 0)) / 90
+    s.CHK1 = (s.CHK1 || 0) + dt * (s.ATR - (s.CHK1 || 0)) / 90
+    // Código de fosforilación de p53: Ser15 (ATM/ATR) y Ser20 (CHK1/CHK2); las fosfatasas lo revierten
+    s.pSer15 = clamp01((s.pSer15 || 0) + dt * (0.01 * Math.max(s.ATM, s.ATR) * (1 - (s.pSer15 || 0)) - 0.002 * (s.pSer15 || 0)))
+    s.pSer20 = clamp01((s.pSer20 || 0) + dt * (0.01 * Math.max(s.CHK1, s.CHK2) * (1 - (s.pSer20 || 0)) - 0.002 * (s.pSer20 || 0)))
     const p53ok = c.TP53_funcional ? 1 : 0
-    const mdm2Deg = 0.004 * s.MDM2 * (1 - 0.9 * s.ATM)
-    s.p53 += dt * p53ok * (0.00012 * (1 + 4 * s.ATM) - mdm2Deg * s.p53 - this.k('p53') * 0.2 * s.p53)
+    // p53 fosforilado deja de ser reconocido por MDM2
+    const shield = Math.min(1, 0.6 * s.pSer15 + 0.4 * s.pSer20)
+    const mdm2Deg = 0.004 * s.MDM2 * (1 - 0.9 * shield)
+    s.p53 += dt * p53ok * (0.00012 * (1 + 4 * shield) - mdm2Deg * s.p53 - this.k('p53') * 0.2 * s.p53)
     s.p53 = clamp01(s.p53)
 
     // --- Dianas de p53 (R03 alta afinidad, R04 baja afinidad)
@@ -138,7 +150,10 @@ export class CellSimulation {
     // --- Punto R (R05, R06, R07)
     const cdkInhib = hill(s.p21, 0.3)
     s.ciclinaD += dt * (0.0004 * c.mitogenos - this.k('ciclinaD') * s.ciclinaD)
-    const kin = (s.ciclinaD + 1.5 * s.ciclinaE) * (1 - cdkInhib)
+    // Complejos separados: ciclina D-CDK4/6 (inicia) y ciclina E-CDK2 (bucle). p21 frena a ambos
+    s.CDK46 = s.ciclinaD * (1 - cdkInhib)
+    s.CDK2 = s.ciclinaE * (1 - cdkInhib)
+    const kin = s.CDK46 + 1.5 * s.CDK2
     s.RbP = clamp01(s.RbP + dt * (0.0008 * kin * (1 - s.RbP) - 0.00015 * s.RbP))
     s.E2F = s.RbP
     s.ciclinaE += dt * (0.0006 * hill(s.E2F, 0.5) - this.k('ciclinaE') * s.ciclinaE)
