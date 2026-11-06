@@ -17,6 +17,57 @@
       </div>
 
       <div class="header-chips">
+        <!-- Barra de Herramientas de Navegación 3D Integrada -->
+        <div class="header-nav-toolbar">
+          <div class="nav-mode-pill">
+            <button 
+              :class="['nav-tool-btn', { active: dragMode === 'rotate' }]" 
+              @click="setDragMode('rotate')" 
+              title="Modo Girar: Clic y arrastra para orbitar en 3D"
+            >
+              <Icon name="rotate" size="15" />
+            </button>
+            <button 
+              :class="['nav-tool-btn', { active: dragMode === 'pan' }]" 
+              @click="setDragMode('pan')" 
+              title="Modo Mover: Clic y arrastra para desplazar la fibra"
+            >
+              <Icon name="pan_tool" size="15" />
+            </button>
+          </div>
+
+          <div class="nav-tools-divider"></div>
+
+          <button class="nav-tool-btn" @click="panUp" title="Desplazar arriba">
+            <Icon name="arrow_upward" size="15" />
+          </button>
+          <button class="nav-tool-btn" @click="panDown" title="Desplazar abajo">
+            <Icon name="arrow_downward" size="15" />
+          </button>
+
+          <div class="nav-tools-divider"></div>
+
+          <button class="nav-tool-btn" @click="zoomIn" title="Acercar par seleccionado (+)">
+            <Icon name="zoom_in" size="16" />
+          </button>
+          <button class="nav-tool-btn" @click="zoomOut" title="Ver fibra completa (-)">
+            <Icon name="zoom_out" size="16" />
+          </button>
+
+          <div class="nav-tools-divider"></div>
+
+          <button 
+            :class="['nav-tool-btn', { active: isAutoRotating }]" 
+            @click="toggleAutoRotate" 
+            :title="isAutoRotating ? 'Pausar rotación' : 'Rotación automática'"
+          >
+            <Icon name="3d_rotation" size="15" />
+          </button>
+          <button class="nav-tool-btn" @click="resetCamera" title="Restablecer vista inicial">
+            <Icon name="refresh" size="15" />
+          </button>
+        </div>
+
         <!-- Selector de Empaquetamiento en Histonas -->
         <button 
           class="md3-chip interactive-chip" 
@@ -108,113 +159,122 @@
         class="atomic-canvas-box"
       ></div>
 
-      <!-- HUD Superior Izquierdo: Leyenda Atómica Colapsable (No tapa el ADN) -->
-      <div class="hud-card hud-top-left" :class="{ collapsed: !showLegend }">
-        <div class="hud-card-header clickable" @click="showLegend = !showLegend" role="button" title="Alternar visibilidad de leyenda atómica">
-          <div class="hud-header-left">
-            <Icon name="palette" size="14" class="text-sky" />
-            <span class="hud-label">Leyenda Atómica</span>
-          </div>
-          <button class="hud-toggle-btn" :title="showLegend ? 'Ocultar leyenda' : 'Mostrar leyenda'">
-            <span class="toggle-text">{{ showLegend ? 'Ocultar' : 'Ver' }}</span>
-            <Icon :name="showLegend ? 'expand_less' : 'expand_more'" size="14" />
-          </button>
-        </div>
-        <div class="spectral-legend-grid" v-show="showLegend">
-          <span class="spectral-pill a"><span class="swatch" style="background:#8cccff"></span>A · Adenina</span>
-          <span class="spectral-pill t"><span class="swatch" style="background:#4080f2"></span>T · Timina</span>
-          <span class="spectral-pill g"><span class="swatch" style="background:#bfe0ff"></span>G · Guanina</span>
-          <span class="spectral-pill c"><span class="swatch" style="background:#2659d9"></span>C · Citosina</span>
-          <span class="spectral-pill caz"><span class="swatch" style="background:#738cbf"></span>Azúcar (Caz)</span>
-          <span class="spectral-pill p"><span class="swatch" style="background:#3373e6"></span>Fósforo (P)</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#00e5ff"></span>Histona H2A</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#10b981"></span>Histona H2B</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#3b82f6"></span>Histona H3</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#c084fc"></span>Histona H4</span>
-          <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Broche exterior)</span>
-          <span class="spectral-pill hbond"><span class="swatch pin" style="background:#8fb4e0"></span>Puente H</span>
-        </div>
-      </div>
-
-      <!-- HUD Atómico Superior Derecho: Detalle del Par -->
-      <div class="hud-card hud-top-right" v-if="selectedBaseData">
-        <div class="hud-card-header">
-          <span class="hud-label">Nucleótido Dúplex (Posición {{ effectiveSelectedPos }})</span>
-        </div>
-        <div class="pair-display-row">
-          <div :class="['base-badge', selectedBaseData.strand1.toLowerCase()]">
-            <span class="strand-id">5'</span>
-            <span class="base-letter font-mono">{{ selectedBaseData.strand1 }}</span>
-          </div>
-
-          <div class="h-bond-indicator">
-            <span class="bond-dots">
-              <span class="dot" v-for="n in selectedBaseData.bonds" :key="n"></span>
-            </span>
-            <span class="bond-caption font-mono">{{ selectedBaseData.bonds }} enlaces H</span>
-          </div>
-
-          <div :class="['base-badge', selectedBaseData.strand2.toLowerCase()]">
-            <span class="strand-id">3'</span>
-            <span class="base-letter font-mono">{{ selectedBaseData.strand2 }}</span>
-          </div>
-        </div>
-
-        <div class="hud-backbone-detail compact">
-          <span class="hud-bb-tag">Dúplex Watson-Crick:</span>
-          <span class="font-mono text-dim">{{ packagingMode === 'linear' ? 'B-DNA Lineal' : 'Superhélice en Octámeros (1.75v)' }}</span>
-        </div>
-      </div>
-
-      <!-- Barra de Herramientas Flotante MD3 -->
-      <div class="hud-toolbar">
-        <div class="toolbar-mode-group">
-          <button 
-            :class="['md3-icon-btn', { active: dragMode === 'rotate' }]" 
-            @click="setDragMode('rotate')" 
-            title="Modo Girar: Clic arrastra para orbitar la cromatina en 3D"
-          >
-            <Icon name="rotate" size="18" />
-          </button>
-          <button 
-            :class="['md3-icon-btn', { active: dragMode === 'pan' }]" 
-            @click="setDragMode('pan')" 
-            title="Modo Mover: Clic arrastra para desplazar la fibra"
-          >
-            <Icon name="pan_tool" size="18" />
-          </button>
-        </div>
-
-        <div class="toolbar-sep"></div>
-
-        <button class="md3-icon-btn" @click="panUp" title="Desplazar arriba">
-          <Icon name="arrow_upward" size="18" />
-        </button>
-        <button class="md3-icon-btn" @click="panDown" title="Desplazar abajo">
-          <Icon name="arrow_downward" size="18" />
-        </button>
-
-        <div class="toolbar-sep"></div>
-
-        <button class="md3-icon-btn" @click="zoomIn" title="Acercar par seleccionado (+)">
-          <Icon name="zoom_in" size="18" />
-        </button>
-        <button class="md3-icon-btn" @click="zoomOut" title="Ver fibra de cromatina completa (-)">
-          <Icon name="zoom_out" size="18" />
-        </button>
-
-        <div class="toolbar-sep"></div>
-
+      <!-- Barra Interactiva de Identificación y Enfoque de Complejos 3D (Alberts et al.) -->
+      <div class="molecular-complex-focus-bar" aria-label="Mapa de Complejos 3D sobre el ADN">
         <button 
-          :class="['md3-icon-btn', { active: isAutoRotating }]" 
-          @click="toggleAutoRotate" 
-          :title="isAutoRotating ? 'Pausar rotación automática' : 'Reanudar rotación automática'"
+          class="complex-focus-pill" 
+          :class="{ active: activeFocusKey === 'all' }"
+          @click="focusOnComplex('all')"
+          title="Ver escena molecular completa"
         >
-          <Icon name="3d_rotation" size="18" />
+          <span class="cf-dot" style="background:#38bdf8"></span>
+          <span>Vista Global</span>
         </button>
-        <button class="md3-icon-btn" @click="resetCamera" title="Restablecer vista inicial completa">
-          <Icon name="refresh" size="18" />
+        <button 
+          class="complex-focus-pill" 
+          :class="{ active: activeFocusKey === 'p53' }"
+          @click="focusOnComplex('p53')"
+          title="Enfocar Tetrámero p53, Fosfatos Ser15/Ser20 y Ligasa E3 MDM2-Ubiquitina"
+        >
+          <span class="cf-dot" style="background:#f59e0b"></span>
+          <span>p53 Tetrámero · MDM2</span>
         </button>
+        <button 
+          class="complex-focus-pill" 
+          :class="{ active: activeFocusKey === 'cdk46' }"
+          @click="focusOnComplex('cdk46')"
+          title="Enfocar complejo iniciador G1 Ciclina D–CDK4/6"
+        >
+          <span class="cf-dot" style="background:#eab308"></span>
+          <span>Ciclina D–CDK4/6</span>
+        </button>
+        <button 
+          class="complex-focus-pill" 
+          :class="{ active: activeFocusKey === 'cdk2' }"
+          @click="focusOnComplex('cdk2')"
+          title="Enfocar Ciclina E–CDK2 y la pinza inhibidora alostérica p21 (CIP1/WAF1)"
+        >
+          <span class="cf-dot" style="background:#38bdf8"></span>
+          <span>Ciclina E–CDK2 · p21</span>
+        </button>
+        <button 
+          class="complex-focus-pill" 
+          :class="{ active: activeFocusKey === 'rb_e2f' }"
+          @click="focusOnComplex('rb_e2f')"
+          title="Enfocar Locus Promotor en el ADN: Factor E2F–DP1 y Bolsillo de Rb (Punto R)"
+        >
+          <span class="cf-dot" style="background:#ec4899"></span>
+          <span>Promotor Rb · E2F</span>
+        </button>
+        <button 
+          v-if="(props.lesions || []).length > 0"
+          class="complex-focus-pill sensor-pill" 
+          :class="{ active: activeFocusKey === 'sensor' }"
+          @click="focusOnComplex('sensor')"
+          title="Enfocar Sensores de Daño anclados al ADN (MRN–ATM / RPA–ATR / OGG1)"
+        >
+          <span class="cf-dot" style="background:#ef4444"></span>
+          <span>Sensores en Lesión ({{ (props.lesions || []).length }})</span>
+        </button>
+      </div>
+
+      <!-- HUD Superior Izquierdo: Leyenda en la esquina superior izquierda con flechita para desplegar -->
+      <div class="hud-corner-dropdown corner-left" :class="{ open: showLegend }">
+        <button 
+          class="hud-corner-pill-btn" 
+          @click="showLegend = !showLegend" 
+          type="button"
+          title="Desplegar Leyenda Atómica"
+        >
+          <span class="pill-title">Leyenda</span>
+          <Icon :name="showLegend ? 'chevron_up' : 'chevron_down'" size="15" class="pill-arrow" />
+        </button>
+
+        <div class="hud-dropdown-panel" v-show="showLegend">
+          <div class="spectral-legend-grid">
+            <span class="spectral-pill a"><span class="swatch" style="background:#8cccff"></span>A · Adenina</span>
+            <span class="spectral-pill t"><span class="swatch" style="background:#4080f2"></span>T · Timina</span>
+            <span class="spectral-pill g"><span class="swatch" style="background:#bfe0ff"></span>G · Guanina</span>
+            <span class="spectral-pill c"><span class="swatch" style="background:#2659d9"></span>C · Citosina</span>
+            <span class="spectral-pill caz"><span class="swatch" style="background:#738cbf"></span>Azúcar (Caz)</span>
+            <span class="spectral-pill p"><span class="swatch" style="background:#3373e6"></span>Fósforo (P)</span>
+            <span class="spectral-pill"><span class="swatch" style="background:#00e5ff"></span>Histona H2A</span>
+            <span class="spectral-pill"><span class="swatch" style="background:#10b981"></span>Histona H2B</span>
+            <span class="spectral-pill"><span class="swatch" style="background:#3b82f6"></span>Histona H3</span>
+            <span class="spectral-pill"><span class="swatch" style="background:#c084fc"></span>Histona H4</span>
+            <span class="spectral-pill"><span class="swatch" style="background:#f43f5e"></span>H1 (Broche exterior)</span>
+            <span class="spectral-pill hbond"><span class="swatch pin" style="background:#8fb4e0"></span>Puente H</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD Superior Derecho: Nucleótido Dúplex en la esquina pegado arriba -->
+      <div class="hud-corner-dropdown corner-right" v-if="selectedBaseData">
+        <div class="hud-corner-pill-card">
+          <div class="pair-display-row compact-corner">
+            <div :class="['base-badge', selectedBaseData.strand1.toLowerCase()]">
+              <span class="strand-id">5'</span>
+              <span class="base-letter font-mono">{{ selectedBaseData.strand1 }}</span>
+            </div>
+
+            <div class="h-bond-indicator">
+              <span class="bond-dots">
+                <span class="dot" v-for="n in selectedBaseData.bonds" :key="n"></span>
+              </span>
+              <span class="bond-caption font-mono">{{ selectedBaseData.bonds }} enlaces H</span>
+            </div>
+
+            <div :class="['base-badge', selectedBaseData.strand2.toLowerCase()]">
+              <span class="strand-id">3'</span>
+              <span class="base-letter font-mono">{{ selectedBaseData.strand2 }}</span>
+            </div>
+          </div>
+
+          <div class="corner-pair-label">
+            <span class="c-pos font-mono">Posición {{ effectiveSelectedPos }}</span>
+            <span class="c-type font-mono">{{ packagingMode === 'linear' ? 'B-DNA' : '1.65v Histonas' }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- DOCK COMPACTO DE DOBLE CADENA: ENLACES H, ESQUELETO AZÚCAR-FOSFATO Y POLARIDAD 5' / 3' -->
@@ -1060,136 +1120,175 @@ function buildDNAHelix(reframe = false) {
     }
   });
 
-      // 7. COMPLEJOS MOLECULARES p53 / Mdm2 / Ubiquitina (Tamaño molecular elegante y proporcionado)
+  // 7. COMPLEJOS MACROMOLECULARES p53 (TETRÁMERO D2) / MDM2 (RING E3) / UBIQUITINA (Alberts Cap. 17)
   p53MeshGroup = new THREE.Group();
   p53MeshGroup.name = 'p53_complex_group';
 
   const numLesions = damagedPositions.size;
-  const p53Count = numLesions > 0 ? Math.min(8, Math.max(2, numLesions * 2)) : 2;
+  const p53Count = numLesions > 0 ? Math.min(6, Math.max(2, numLesions * 2)) : 2;
   p53State.value.p53UnitsCount = p53Count;
 
-  // Materiales requeridos: p53 ÁMBAR, Mdm2 MORADO, Ubiquitina BLANCA
   const matP53Amber = new THREE.MeshStandardMaterial({ 
     color: 0xf59e0b, 
     roughness: 0.25, 
-    metalness: 0.2,
+    metalness: 0.22,
     emissive: 0xd97706,
-    emissiveIntensity: 0.45 
+    emissiveIntensity: 0.48 
+  });
+  const matP53CoreLink = new THREE.MeshStandardMaterial({
+    color: 0xfbbf24,
+    roughness: 0.3,
+    metalness: 0.2,
+    emissive: 0xb45309,
+    emissiveIntensity: 0.35
   });
 
   const matMdm2Purple = new THREE.MeshStandardMaterial({ 
     color: 0x8b5cf6, 
-    roughness: 0.35, 
-    metalness: 0.15,
+    roughness: 0.32, 
+    metalness: 0.18,
     emissive: 0x6d28d9,
-    emissiveIntensity: 0.35
+    emissiveIntensity: 0.42
   });
 
   const matUbiWhite = new THREE.MeshStandardMaterial({ 
     color: 0xffffff, 
-    roughness: 0.2, 
+    roughness: 0.18, 
     metalness: 0.1, 
-    emissive: 0xffffff, 
-    emissiveIntensity: 0.5 
+    emissive: 0xe2e8f0, 
+    emissiveIntensity: 0.55 
   });
 
-  // Geometría molecular destacada
-  // p53 y MDM2: Mismo tamaño molecular aumentado y visualmente equilibrado
-  const geoP53Large = new THREE.SphereGeometry(1.35, 18, 16);
-  const geoMdm2 = new THREE.SphereGeometry(1.35, 18, 16);
-  const geoUbi = new THREE.SphereGeometry(0.70, 16, 12);
+  const geoP53Sub = new THREE.SphereGeometry(1.15, 18, 16);
+  const geoP53TetAxis = new THREE.CylinderGeometry(0.32, 0.32, 2.4, 12);
+  const geoMdm2 = new THREE.SphereGeometry(1.30, 18, 16);
+  const geoMdm2Ring = new THREE.TorusGeometry(1.05, 0.24, 10, 28);
+  const geoUbi = new THREE.SphereGeometry(0.62, 16, 12);
 
-  // Calcular límites de la molécula para posicionar MDM2 flotando ARRIBA en el espacio libre
+  // Caja delimitadora real de todos los átomos del ADN + histonas para ubicar complejos sin colisión
   let minY = Infinity, maxY = -Infinity;
   let minX = Infinity, maxX = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
-  pairs.forEach(p => {
-    if (p.centerPos) {
-      minX = Math.min(minX, p.centerPos[0]);
-      maxX = Math.max(maxX, p.centerPos[0]);
-      minY = Math.min(minY, p.centerPos[1]);
-      maxY = Math.max(maxY, p.centerPos[1]);
-      minZ = Math.min(minZ, p.centerPos[2]);
-      maxZ = Math.max(maxZ, p.centerPos[2]);
-    }
+  atoms.forEach(a => {
+    if (a[0] < minX) minX = a[0];
+    if (a[0] > maxX) maxX = a[0];
+    if (a[1] < minY) minY = a[1];
+    if (a[1] > maxY) maxY = a[1];
+    if (a[2] < minZ) minZ = a[2];
+    if (a[2] > maxZ) maxZ = a[2];
+  });
+  histoneSpheres.forEach(hs => {
+    const r = hs[3] || 6;
+    if (hs[0] - r < minX) minX = hs[0] - r;
+    if (hs[0] + r > maxX) maxX = hs[0] + r;
+    if (hs[1] - r < minY) minY = hs[1] - r;
+    if (hs[1] + r > maxY) maxY = hs[1] + r;
+    if (hs[2] - r < minZ) minZ = hs[2] - r;
+    if (hs[2] + r > maxZ) maxZ = hs[2] + r;
   });
 
-  const firstP = pairs[0]?.centerPos || [0, 0, 0];
-  const dnaCenterX = isFinite(minX) ? (minX + maxX) / 2 : firstP[0];
-  const dnaMaxY = isFinite(maxY) ? maxY : firstP[1] + 22.0;
-  const dnaCenterZ = isFinite(minZ) ? (minZ + maxZ) / 2 : firstP[2];
+  if (!isFinite(minX)) { minX = -20; maxX = 20; minY = -20; maxY = 20; minZ = -20; maxZ = 20; }
+  const dnaCenterX = (minX + maxX) / 2;
+  const dnaCenterY = (minY + maxY) / 2;
+  const dnaCenterZ = (minZ + maxZ) / 2;
+  const isLin = packagingMode.value === 'linear';
+
+  lastDnaBounds = { minX, maxX, minY, maxY, minZ, maxZ, cx: dnaCenterX, cy: dnaCenterY, cz: dnaCenterZ };
+
+  // Reservorio nuclear de p53 situado en el dominio izquierdo exterior del ADN (libre de solapamiento)
+  const reservoirCenter = isLin
+    ? [minX - 28.0, dnaCenterY, dnaCenterZ - 6.0]
+    : [minX - 38.0, dnaCenterY - 2.0, dnaCenterZ + 4.0];
 
   p53UnitsList = [];
-  const reservoirCenter = [firstP[0] - 8.0, firstP[1] - 14.0, firstP[2] + 4.0];
 
   for (let u = 0; u < p53Count; u++) {
-    // 1. Grupo p53: 3 bolitas ámbar/naranjas de tamaño aumentado en tríada
+    // 1. Tetrámero canónico de p53 (4 subunidades core en simetría D2 + dominio central de tetramerización)
     const unitGroup = new THREE.Group();
     unitGroup.name = 'p53_unit_' + u;
+    unitGroup.scale.setScalar(1.45);
 
-    const p1 = new THREE.Mesh(geoP53Large, matP53Amber);
-    p1.position.set(0, 1.05, 0);
-    unitGroup.add(p1);
+    const tetCore = new THREE.Mesh(geoP53TetAxis, matP53CoreLink);
+    tetCore.rotation.z = Math.PI / 4;
+    unitGroup.add(tetCore);
 
-    const p2 = new THREE.Mesh(geoP53Large, matP53Amber);
-    p2.position.set(-0.95, -0.55, 0.38);
-    unitGroup.add(p2);
+    const tetOffsets = [
+      [ 1.15,  1.10,  0.45],
+      [-1.15,  1.10, -0.45],
+      [-1.15, -1.10,  0.45],
+      [ 1.15, -1.10, -0.45]
+    ];
+    tetOffsets.forEach(([ox, oy, oz]) => {
+      const sub = new THREE.Mesh(geoP53Sub, matP53Amber);
+      sub.position.set(ox, oy, oz);
+      unitGroup.add(sub);
+    });
 
-    const p3 = new THREE.Mesh(geoP53Large, matP53Amber);
-    p3.position.set(0.95, -0.55, -0.38);
-    unitGroup.add(p3);
+    // Halo estructural del dominio de unión al ADN (DBD)
+    const dbdHalo = new THREE.Mesh(
+      new THREE.TorusGeometry(2.0, 0.10, 10, 32),
+      new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 0.65, transparent: true, opacity: 0.75 })
+    );
+    dbdHalo.rotation.x = Math.PI / 3;
+    unitGroup.add(dbdHalo);
 
-    // Fosfatos en p53 (ATM/ATR → Ser15, CHK1/CHK2 → Ser20)
+    // Fosfatos reguladores sobre N-terminal de p53: P-Ser15 (ATM/ATR), P-Ser20 (CHK1/2) y P-Ser46 (Apoptosis)
     {
-      const matPhos = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.9, roughness: 0.3 });
-      [[0, 2.35, 0.3], [-0.9, 1.9, -0.5]].forEach((pp, k) => {
-        const ph = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), matPhos);
-        ph.position.set(pp[0], pp[1], pp[2]); ph.name = k ? 'pSer20' : 'pSer15';
-        unitGroup.add(ph);
-      });
+      const matPhos = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.95, roughness: 0.25 });
+      const matSer46 = new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xf97316, emissiveIntensity: 0.95, roughness: 0.25 });
+      const ph15 = new THREE.Mesh(new THREE.SphereGeometry(0.50, 14, 12), matPhos);
+      ph15.position.set(1.6, 2.2, 0.55); ph15.name = 'pSer15';
+      unitGroup.add(ph15);
+
+      const ph20 = new THREE.Mesh(new THREE.SphereGeometry(0.50, 14, 12), matPhos);
+      ph20.position.set(-1.6, 2.2, -0.55); ph20.name = 'pSer20';
+      unitGroup.add(ph20);
+
+      const ph46 = new THREE.Mesh(new THREE.SphereGeometry(0.48, 14, 12), matSer46);
+      ph46.position.set(0, -2.3, 0.85); ph46.name = 'pSer46';
+      unitGroup.add(ph46);
     }
 
-    // 2. Grupo MDM2 independiente con DOS bolitas de ubiquitina (del tamaño de p53)
+    // 2. Complejo E3 Ubiquitina-Ligasa MDM2 (Dominio globular + Anillo RING + Cadena de Poli-Ubiquitina)
     const mdm2Group = new THREE.Group();
     mdm2Group.name = 'mdm2_complex_' + u;
+    mdm2Group.scale.setScalar(1.35);
 
     const mdm2M = new THREE.Mesh(geoMdm2, matMdm2Purple);
     mdm2M.name = 'mdm2_sub_' + u;
     mdm2Group.add(mdm2M);
 
-    // Dos bolitas de ubiquitina bien proporcionadas
+    const ringM = new THREE.Mesh(geoMdm2Ring, matMdm2Purple);
+    ringM.position.set(0.9, 0.3, 0);
+    ringM.rotation.y = Math.PI / 3;
+    mdm2Group.add(ringM);
+
     const ubiG = new THREE.Group();
     ubiG.name = 'ubi_group_' + u;
-    const u1 = new THREE.Mesh(geoUbi, matUbiWhite);
-    u1.position.set(0.95, 0.95, 0.45);
-    ubiG.add(u1);
-    const u2 = new THREE.Mesh(geoUbi, matUbiWhite);
-    u2.position.set(-0.95, 0.95, -0.45);
-    ubiG.add(u2);
+    [[1.45, 1.15, 0.45], [0.55, 1.65, -0.35], [-0.45, 1.85, 0.25]].forEach(([ux, uy, uz]) => {
+      const ub = new THREE.Mesh(geoUbi, matUbiWhite);
+      ub.position.set(ux, uy, uz);
+      ubiG.add(ub);
+    });
     mdm2Group.add(ubiG);
 
-    // Posición de reposo: Reservorio nuclear (debajo de la entrada del ADN)
     const phi = u * 2.39996;
     const cosTheta = 1 - (2 * (u + 0.5) / Math.max(1, p53Count));
     const sinTheta = Math.sqrt(Math.max(0, 1 - cosTheta * cosTheta));
-    const rSpread = 4.2 + (u % 2) * 1.8;
+    const rSpread = 6.0 + (u % 2) * 2.5;
 
     const anchor = [
       reservoirCenter[0] + sinTheta * Math.cos(phi) * rSpread,
-      reservoirCenter[1] + cosTheta * rSpread * 0.8,
+      reservoirCenter[1] + cosTheta * rSpread * 0.9,
       reservoirCenter[2] + sinTheta * Math.sin(phi) * rSpread
     ];
     unitGroup.position.set(anchor[0], anchor[1], anchor[2]);
+    mdm2Group.position.set(anchor[0], anchor[1] + 4.8, anchor[2]);
 
-    // MDM2 acoplado junto a p53 en reposo
-    mdm2Group.position.set(anchor[0], anchor[1] + 2.6, anchor[2]);
-
-    // Posición desacoplada: Flotando MUCHO MÁS ARRIBA en el espacio libre superior (lejos del ADN)
-    const distantAnchor = [
-      dnaCenterX - ((p53Count - 1) * 8.0) + (u * 16.0),
-      dnaMaxY + 28.0 + (u % 2) * 5.0,
-      dnaCenterZ + 6.0 + (u % 2) * 4.0
-    ];
+    // Posición desacoplada de MDM2 cuando p53 se fosforila en Ser15/Ser20
+    const distantAnchor = isLin
+      ? [minX - 30.0 - (u * 6.0), dnaCenterY + 14.0, maxZ + 16.0]
+      : [minX - 28.0 + (u * 8.5), maxY + 22.0 + (u % 2) * 4.5, dnaCenterZ + 4.0];
 
     p53MeshGroup.add(unitGroup);
     p53MeshGroup.add(mdm2Group);
@@ -1216,7 +1315,9 @@ function buildDNAHelix(reframe = false) {
     const allPts = atoms.map(a => [a[0], a[1], a[2]]);
     p53UnitsList.forEach(u => {
       if (u.floatingAnchor) allPts.push(u.floatingAnchor);
-      if (u.distantAnchor) allPts.push(u.distantAnchor);
+    });
+    Object.values(complexFocusCoords).forEach(pt => {
+      if (Array.isArray(pt)) allPts.push(pt);
     });
     encuadrar(allPts);
   }
@@ -1224,47 +1325,79 @@ function buildDNAHelix(reframe = false) {
 
 
 // ============================================================================
-// RED DE SEÑALIZACIÓN Y CONTROL DEL CICLO G1/S (ALBERTS CAP. 12 Y 17)
+// RED DE SEÑALIZACIÓN Y CONTROL DEL CICLO G1/S (ALBERTS CAP. 5, 12 Y 17)
 // ============================================================================
 let signalingGroup = null;
 let lastLesionTypeMap = new Map();
 let p53Reservoir = [0, 0, 0];
+let lastDnaBounds = { minX: -20, maxX: 20, minY: -20, maxY: 20, minZ: -20, maxZ: 20, cx: 0, cy: 0, cz: 0 };
+let complexFocusCoords = {};
+const activeFocusKey = ref('all');
 let animClock = 0;
 
-function makeLabel(text, hex, scale = 1.0) {
+function addTether(parentGroup, fromVec, toVec, hex = 0x38bdf8, opacity = 0.55) {
+  const pts = [fromVec.clone(), toVec.clone()];
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = new THREE.LineBasicMaterial({
+    color: hex,
+    transparent: true,
+    opacity,
+    depthTest: false
+  });
+  const line = new THREE.Line(geo, mat);
+  line.renderOrder = 9990;
+  parentGroup.add(line);
+  return line;
+}
+
+function makeLabel(text, hex, scale = 1.0, subText = '') {
   const c = document.createElement('canvas');
   const ctx = c.getContext('2d');
-  const font = '600 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.font = font;
-  const metrics = ctx.measureText(text);
-  const textWidth = Math.ceil(metrics.width);
-  const w = textWidth + 80;
-  const h = 64;
+  const titleFont = '700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const subFont = '500 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+  ctx.font = titleFont;
+  const titleW = Math.ceil(ctx.measureText(text).width);
+  let subW = 0;
+  if (subText) {
+    ctx.font = subFont;
+    subW = Math.ceil(ctx.measureText(subText).width);
+  }
+
+  const w = Math.max(titleW, subW) + 84;
+  const h = subText ? 82 : 56;
   c.width = w;
   c.height = h;
 
   const hexCol = '#' + hex.toString(16).padStart(6, '0');
 
-  // Pastilla con fondo de vidrio oscuro y borde en color del complejo
-  ctx.font = font;
-  ctx.fillStyle = 'rgba(6, 12, 26, 0.90)';
+  // Pastilla compacta estilizada de alto contraste
+  ctx.fillStyle = 'rgba(5, 11, 26, 0.92)';
   ctx.beginPath();
-  ctx.roundRect(3, 3, w - 6, h - 6, 30);
+  ctx.roundRect(3, 3, w - 6, h - 6, 18);
   ctx.fill();
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.4;
   ctx.strokeStyle = hexCol;
   ctx.stroke();
 
-  // Indicador de estado emisor
+  // Indicador cromático del complejo
   ctx.fillStyle = hexCol;
   ctx.beginPath();
-  ctx.arc(32, 32, 8.5, 0, Math.PI * 2);
+  ctx.arc(28, subText ? 28 : 28, 8, 0, Math.PI * 2);
   ctx.fill();
 
-  // Texto nítido
+  // Título principal
+  ctx.font = titleFont;
   ctx.fillStyle = '#f8fafc';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, 52, 33);
+  ctx.fillText(text, 48, subText ? 28 : 28);
+
+  // Subtítulo bioquímico / estado
+  if (subText) {
+    ctx.font = subFont;
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(subText, 48, 58);
+  }
 
   const texture = new THREE.CanvasTexture(c);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -1275,7 +1408,7 @@ function makeLabel(text, hex, scale = 1.0) {
     fog: false 
   });
   const sp = new THREE.Sprite(mat);
-  const spriteH = 1.65 * scale;
+  const spriteH = (subText ? 3.0 : 2.1) * scale;
   sp.scale.set(spriteH * (w / h), spriteH, 1);
   sp.renderOrder = 9999;
   sp.userData.isLabel = true;
@@ -1355,99 +1488,140 @@ function buildSignaling() {
   const g = new THREE.Group();
   g.name = 'signaling_master_group';
 
-  const UP = new THREE.Vector3(0, 1, 0);
+  const isLin = packagingMode.value === 'linear';
+  const UP = isLin ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0);
   const pct = (v) => Math.round(clamp01(v || 0) * 100) + '%';
   const createMat = (hex, emissiveInt = 0.4, opacity = 1.0) => new THREE.MeshStandardMaterial({
     color: hex,
     emissive: hex,
     emissiveIntensity: emissiveInt,
-    roughness: 0.35,
-    metalness: 0.15,
+    roughness: 0.32,
+    metalness: 0.16,
     transparent: opacity < 1.0,
     opacity: opacity
   });
   const createSph = (r, hex, ei = 0.4, op = 1.0) => new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), createMat(hex, ei, op));
 
-  // --- 1. SENSORES FÍSICOS SOBRE EL ADN (MRN-ATM y RPA-ATR) ---
+  const { minX, maxX, minY, maxY, minZ, maxZ, cx, cy, cz } = lastDnaBounds;
+  const dnaCenter = new THREE.Vector3(cx, cy, cz);
+
+  // Vector radial seguro hacia el exterior del volumen del ADN/histonas
+  const safeOutwardDir = (pt) => {
+    const v = new THREE.Vector3(pt.x - cx, isLin ? (pt.y - cy) : (pt.y - cy), isLin ? 0 : (pt.z - cz));
+    if (v.lengthSq() < 0.01) return UP.clone();
+    return v.normalize();
+  };
+
+  // --- 1. SENSORES FÍSICOS SOBRE EL ADN (MRN-ATM en DSB y RPA-ATR en Lesiones de Base) ---
   const sensorFluxNodes = [];
   const oxoGCoordinates = [];
   let dsbSensorRendered = false;
   let baseSensorRendered = false;
+  let firstSensorFocusPos = null;
 
   lastLesionTypeMap.forEach((type, pairIndex) => {
     const pair = pairs[pairIndex];
     if (!pair) return;
     const center = new THREE.Vector3(...pair.centerPos);
     const b1 = baseCentroid(atoms, pair, 1) || center.clone().add(UP);
-    const radialOut = new THREE.Vector3().subVectors(b1, center).normalize();
+    const radialOut = safeOutwardDir(b1);
     const tangent = new THREE.Vector3(...(pair.tangent || [0, 0, 1])).normalize();
 
     if (type === 'dsb') {
+      // Complejo MRN (Mre11₂·Rad50₂·Nbs1) + Quinasa ATM proyectado hacia el exterior del corte DSB
       const mrnGroup = new THREE.Group();
       mrnGroup.name = 'sensor_mrn_' + pairIndex;
-      const anchorPos = center.clone().addScaledVector(radialOut, -6.0);
+      mrnGroup.scale.setScalar(1.35);
+      const anchorPos = center.clone().addScaledVector(radialOut, 13.0);
       mrnGroup.position.copy(anchorPos);
+      if (!firstSensorFocusPos) firstSensorFocusPos = anchorPos.toArray();
 
-      const mre11_A = createSph(1.15, 0x4f46e5, 0.5); mre11_A.position.set(-0.6, 0, 0);
-      const mre11_B = createSph(1.15, 0x4338ca, 0.5); mre11_B.position.set(0.6, 0, 0);
+      // Conector al extremo roto del ADN
+      addTether(g, center, anchorPos, 0xef4444, 0.75);
+
+      // Dímero Mre11 (2 lóbulos nucleasa índigo)
+      const mre11_A = createSph(1.25, 0x4f46e5, 0.55); mre11_A.position.set(-0.9, 0, 0);
+      const mre11_B = createSph(1.25, 0x4338ca, 0.55); mre11_B.position.set(0.9, 0, 0);
       mrnGroup.add(mre11_A, mre11_B);
 
-      const rodGeo = new THREE.CylinderGeometry(0.24, 0.24, 7.5, 8);
+      // Brazos Coiled-Coil de Rad50 + Gancho de Zinc apical (Zn-hook)
+      const rodGeo = new THREE.CylinderGeometry(0.24, 0.24, 6.8, 10);
       const rodMat = createMat(0x818cf8, 0.5);
-      const rod1 = new THREE.Mesh(rodGeo, rodMat); rod1.position.set(-1.2, 3.8, 0.4); rod1.rotation.z = 0.22;
-      const rod2 = new THREE.Mesh(rodGeo, rodMat); rod2.position.set(1.2, 3.8, -0.4); rod2.rotation.z = -0.22;
-      mrnGroup.add(rod1, rod2);
+      const rod1 = new THREE.Mesh(rodGeo, rodMat); rod1.position.set(-1.1, 3.4, 0.3); rod1.rotation.z = -0.16;
+      const rod2 = new THREE.Mesh(rodGeo, rodMat); rod2.position.set(1.1, 3.4, -0.3); rod2.rotation.z = 0.16;
+      const znHook = createSph(0.65, 0x22d3ee, 0.85); znHook.position.set(0, 6.9, 0);
+      mrnGroup.add(rod1, rod2, znHook);
 
-      const nbs1 = createSph(0.95, 0xa5b4fc, 0.6); nbs1.position.set(0, 7.8, 0);
+      // Subunidad adaptadora Nbs1
+      const nbs1 = createSph(1.05, 0xa855f7, 0.6); nbs1.position.set(1.8, 1.4, 0.6);
       mrnGroup.add(nbs1);
 
+      // Quinasa ATM bilobular activada (dominio FAT + dominio Quinasa + anillo P-Ser1981)
       const atmAct = clamp01(st.ATM);
-      const atmKinase = createSph(1.5, 0xef4444, 0.3 + 0.8 * atmAct, 0.4 + 0.6 * atmAct);
-      atmKinase.position.set(2.4, 8.8, 0.6);
-      mrnGroup.add(atmKinase);
+      const atmLobe1 = createSph(1.55, 0xef4444, 0.35 + 0.75 * atmAct, 0.5 + 0.5 * atmAct);
+      atmLobe1.position.set(3.2, 3.2, 0.8);
+      const atmLobe2 = createSph(1.15, 0xdc2626, 0.35 + 0.75 * atmAct, 0.5 + 0.5 * atmAct);
+      atmLobe2.position.set(4.5, 4.1, 0.8);
+      const atmRing = new THREE.Mesh(new THREE.TorusGeometry(1.75, 0.16, 10, 28), createMat(0xfacc15, 0.85));
+      atmRing.position.copy(atmLobe1.position);
+      atmRing.rotation.x = Math.PI / 3;
+      mrnGroup.add(atmLobe1, atmLobe2, atmRing);
       g.add(mrnGroup);
 
       if (!dsbSensorRendered) {
-        const lbl = makeLabel('MRN + ATM · Sensor DSB (' + pct(atmAct) + ')', 0xef4444, 0.80);
-        lbl.position.copy(anchorPos).add(new THREE.Vector3(0, 11.2, 0));
+        const lblPos = anchorPos.clone().addScaledVector(UP, 10.5).addScaledVector(radialOut, 4.5);
+        const lbl = makeLabel('Complejo MRN + Quinasa ATM', 0xef4444, 0.82, 'Sensor de Rotura DSB · Act: ' + pct(atmAct));
+        lbl.position.copy(lblPos);
         g.add(lbl);
+        addTether(g, anchorPos, lblPos, 0xef4444, 0.72);
         dsbSensorRendered = true;
       }
 
       sensorFluxNodes.push({
-        worldPos: anchorPos.clone().add(atmKinase.position),
+        worldPos: anchorPos.clone(),
         type: 'CHK2',
         level: st.CHK2
       });
 
     } else {
+      // Trímero RPA (RPA70·RPA32·RPA14) recubriendo ssDNA + Complejo ATR-ATRIP
       const rpaGroup = new THREE.Group();
       rpaGroup.name = 'sensor_rpa_' + pairIndex;
-      const anchorPos = center.clone().addScaledVector(radialOut, -5.2);
+      rpaGroup.scale.setScalar(1.35);
+      const anchorPos = b1.clone().addScaledVector(radialOut, 11.0);
       rpaGroup.position.copy(anchorPos);
+      if (!firstSensorFocusPos) firstSensorFocusPos = anchorPos.toArray();
 
-      const rpa1 = createSph(0.85, 0x94a3b8, 0.3); rpa1.position.set(-1.2, 0, 0);
-      const rpa2 = createSph(0.95, 0x64748b, 0.3); rpa2.position.set(0, 0.2, 0);
-      const rpa3 = createSph(0.70, 0x475569, 0.3); rpa3.position.set(1.2, -0.1, 0);
-      rpaGroup.add(rpa1, rpa2, rpa3);
+      addTether(g, b1, anchorPos, 0x38bdf8, 0.75);
 
+      // 3 subunidades OB-fold de RPA alineadas con la hebra
+      const rpa70 = createSph(1.05, 0x94a3b8, 0.35); rpa70.position.copy(tangent.clone().multiplyScalar(-1.4));
+      const rpa32 = createSph(0.90, 0x64748b, 0.35); rpa32.position.set(0, 0.2, 0);
+      const rpa14 = createSph(0.75, 0x475569, 0.35); rpa14.position.copy(tangent.clone().multiplyScalar(1.3));
+      rpaGroup.add(rpa70, rpa32, rpa14);
+
+      // Adaptador ATRIP + Quinasa ATR bilobular
       const atrAct = clamp01(st.ATR);
-      const atrKinase = createSph(1.35, 0x0284c7, 0.3 + 0.8 * atrAct, 0.4 + 0.6 * atrAct);
-      atrKinase.position.set(0, 2.6, 0.8);
-      const atripAdapter = createSph(0.75, 0x38bdf8, 0.4);
-      atripAdapter.position.set(1.4, 2.0, 0);
-      rpaGroup.add(atrKinase, atripAdapter);
+      const atripAdapter = createSph(0.95, 0x38bdf8, 0.5);
+      atripAdapter.position.set(0.8, 1.7, 0.4);
+      const atrKinase = createSph(1.45, 0x0284c7, 0.35 + 0.75 * atrAct, 0.5 + 0.5 * atrAct);
+      atrKinase.position.set(-0.4, 2.9, 0.8);
+      const atrRing = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.15, 10, 26), createMat(0x38bdf8, 0.75));
+      atrRing.position.copy(atrKinase.position);
+      rpaGroup.add(atripAdapter, atrKinase, atrRing);
       g.add(rpaGroup);
 
       if (!baseSensorRendered) {
-        const lbl = makeLabel('RPA + ATR-ATRIP · Sensor (' + pct(atrAct) + ')', 0x0284c7, 0.80);
-        lbl.position.copy(anchorPos).add(new THREE.Vector3(0, 4.8, 0));
+        const lblPos = anchorPos.clone().addScaledVector(UP, 8.5).addScaledVector(radialOut, 4.5);
+        const lbl = makeLabel('Trímero RPA + ATR–ATRIP', 0x38bdf8, 0.82, 'Sensor ssDNA / Lesión · Act: ' + pct(atrAct));
+        lbl.position.copy(lblPos);
         g.add(lbl);
+        addTether(g, anchorPos, lblPos, 0x38bdf8, 0.72);
         baseSensorRendered = true;
       }
 
       sensorFluxNodes.push({
-        worldPos: anchorPos.clone().add(atrKinase.position),
+        worldPos: anchorPos.clone(),
         type: 'CHK1',
         level: st.CHK1
       });
@@ -1456,53 +1630,56 @@ function buildSignaling() {
     }
   });
 
-  // --- 2. BER POR OGG1 SOBRE 8-OXO-GUANINA ---
+  // --- 2. ESCISIÓN DE BASES (BER) POR GLICOSILASA OGG1 SOBRE 8-OXOGUANINA ---
   const ogg1Cap = Math.round(st.OGG1 * 4);
   oxoGCoordinates.forEach((ox, idx) => {
-    const ogg1Pos = ox.b1.clone().addScaledVector(ox.radialOut, 3.8);
+    const ogg1Pos = ox.b1.clone().addScaledVector(ox.radialOut, 6.0);
     if (idx < ogg1Cap) {
-      const ogg1Mesh = createSph(1.1, 0x10b981, 0.65);
-      ogg1Mesh.position.copy(ogg1Pos);
-      g.add(ogg1Mesh);
+      const ogg1Group = new THREE.Group();
+      ogg1Group.scale.setScalar(1.35);
+      ogg1Group.position.copy(ogg1Pos);
+      const clampArc = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.34, 12, 24, Math.PI * 1.45), createMat(0x10b981, 0.7));
+      const catDomain = createSph(0.95, 0x059669, 0.6); catDomain.position.set(0.6, 0.5, 0);
+      ogg1Group.add(clampArc, catDomain);
+      g.add(ogg1Group);
+
       if (idx === 0) {
-        const lbl = makeLabel('OGG1 · Glicosilasa BER Activa', 0x10b981, 0.75);
-        lbl.position.copy(ogg1Pos).add(new THREE.Vector3(0, 2.4, 0));
+        const lblPos = ogg1Pos.clone().addScaledVector(UP, -5.5).addScaledVector(ox.radialOut, 5.0);
+        const lbl = makeLabel('OGG1 Glicosilasa (Vía BER)', 0x10b981, 0.80, 'Escisión activa de 8-oxoG');
+        lbl.position.copy(lblPos);
         g.add(lbl);
+        addTether(g, ogg1Pos, lblPos, 0x10b981, 0.68);
       }
     } else {
-      const lbl = makeLabel('8-oxoG no reparada (Vía BER Saturada)', 0xf97316, 0.72);
-      lbl.position.copy(ogg1Pos).add(new THREE.Vector3(0, 1.8, 0));
+      const lblPos = ogg1Pos.clone().addScaledVector(ox.radialOut, 5.0);
+      const lbl = makeLabel('8-oxoG sin OGG1', 0xf97316, 0.76, 'Capacidad BER saturada');
+      lbl.position.copy(lblPos);
       g.add(lbl);
     }
   });
 
-  // --- 3. TRANSDUCCIÓN DE SEÑAL CHK1 / CHK2 HACIA p53 ---
+  // --- 3. QUINASAS DIFUSIBLES CHK1 / CHK2 EN TRÁNSITO HACIA EL TETRÁMERO p53 ---
   const p53Target = new THREE.Vector3(...p53Reservoir);
   const labelsShown = {};
   sensorFluxNodes.forEach(node => {
     const hex = node.type === 'CHK1' ? 0x38bdf8 : 0xf472b6;
-    const particleCount = Math.round(1 + 4 * clamp01(node.level));
-    for (let k = 0; k < particleCount; k++) {
-      const particle = createSph(0.38, hex, 0.9);
-      particle.userData.fluxData = {
-        from: node.worldPos.clone(),
-        to: p53Target.clone(),
-        phase: k / particleCount
-      };
-      g.add(particle);
-    }
+    // Línea guía tenue de la ruta de transducción hacia p53
+    addTether(g, node.worldPos, p53Target, hex, 0.22);
+
     if (!labelsShown[node.type]) {
       labelsShown[node.type] = true;
-      const midPoint = node.worldPos.clone().lerp(p53Target, 0.45).add(new THREE.Vector3(0, 2.4, 0));
-      const lbl = makeLabel(node.type + ' Quinasa · ' + pct(node.level), hex, 0.72);
+      const midPoint = node.worldPos.clone().lerp(p53Target, 0.52).addScaledVector(UP, 3.5);
+      const sub = node.type === 'CHK1' ? 'Activada por ATR · Fosforila Ser20' : 'Activada por ATM · Fosforila Ser20';
+      const lbl = makeLabel(node.type + ' Quinasa Difusible (' + pct(node.level) + ')', hex, 0.76, sub);
       lbl.position.copy(midPoint);
       g.add(lbl);
     }
   });
 
-  // --- 4. p53, FOSFATO SER15/20 Y MDM2 ---
+  // --- 4. TETRÁMERO p53, CÓDIGO DE FOSFORILACIÓN (Ser15/Ser20/Ser46) Y LIGASA MDM2 ---
   const shieldFactor = Math.min(1.0, 0.6 * st.pSer15 + 0.4 * st.pSer20);
   const visibleP53Count = Math.max(1, Math.round(st.p53 * p53UnitsList.length / 0.6));
+  const isSevere = props.isSevereDamage || lastLesionTypeMap.size >= 3;
 
   p53UnitsList.forEach((u, i) => {
     u.group.children.filter(c => c.userData.isLabel).forEach(c => { u.group.remove(c); disposeHierarchy(c); });
@@ -1512,147 +1689,221 @@ function buildSignaling() {
 
     const s15 = u.group.getObjectByName('pSer15');
     const s20 = u.group.getObjectByName('pSer20');
+    const s46 = u.group.getObjectByName('pSer46');
     if (s15) s15.scale.setScalar(Math.max(0.001, st.pSer15));
     if (s20) s20.scale.setScalar(Math.max(0.001, st.pSer20));
+    if (s46) s46.scale.setScalar(isSevere ? 1.15 : 0.001);
 
     const ubiGroup = u.mdm2Group.getObjectByName('ubi_group_' + i);
     if (ubiGroup) ubiGroup.scale.setScalar(Math.max(0.001, 1.0 - shieldFactor));
 
     if (i === 0) {
-      const p53Lbl = makeLabel('p53 Tetrámero · ' + pct(st.p53), 0xf59e0b, 0.78);
-      p53Lbl.position.set(0, -3.2, 0);
+      const p53ModeTxt = isSevere
+        ? 'Alto Sostenido + P-Ser46 → Activa BAX/PUMA'
+        : (st.p53 > 0.25 ? 'Tetrámero Estabilizado → Induce p21 y BER' : 'Nivel Basal · Recambio rápido (~20 min)');
+      const p53Lbl = makeLabel('Tetrámero p53 (' + pct(st.p53) + ')', 0xf59e0b, 0.78, p53ModeTxt);
+      p53Lbl.position.set(0, -3.8, 0);
       u.group.add(p53Lbl);
 
-      if (st.pSer15 > 0.05) {
-        const s15Lbl = makeLabel('P-Ser15 (ATM/ATR)', 0xfacc15, 0.62);
-        s15Lbl.position.set(2.8, 2.6, 0);
+      if (st.pSer15 > 0.05 || st.pSer20 > 0.05) {
+        const phosTxt = isSevere ? 'P-Ser15 · P-Ser20 · P-Ser46 (Apoptosis)' : 'P-Ser15 (ATM/ATR) · P-Ser20 (CHK1/2)';
+        const s15Lbl = makeLabel(phosTxt, 0xfacc15, 0.70, 'Bloquea unión de MDM2');
+        s15Lbl.position.set(0, 3.8, 0);
         u.group.add(s15Lbl);
       }
-      if (st.pSer20 > 0.05) {
-        const s20Lbl = makeLabel('P-Ser20 (CHK1/2)', 0xfacc15, 0.62);
-        s20Lbl.position.set(-3.6, 2.4, 0);
-        u.group.add(s20Lbl);
-      }
 
-      const mdm2Lbl = makeLabel('MDM2 E3-Ligasa', 0x8b5cf6, 0.72);
-      mdm2Lbl.position.set(0, 2.8, 0);
+      const mdm2Sub = shieldFactor > 0.5
+        ? 'Desacoplada de p53 (Sin ubiquitinación)'
+        : 'Acoplada a p53 · Ubiquitinación (' + pct(1 - shieldFactor) + ')';
+      const mdm2Lbl = makeLabel('MDM2 Ligasa E3 + Ubiquitina', 0x8b5cf6, 0.78, mdm2Sub);
+      mdm2Lbl.position.set(0, 3.6, 0);
       u.mdm2Group.add(mdm2Lbl);
-
-      if (shieldFactor < 0.95) {
-        const ubiLbl = makeLabel('Ubiquitinación (' + pct(1 - shieldFactor) + ')', 0xffffff, 0.60);
-        ubiLbl.position.set(3.4, 1.2, 0);
-        u.mdm2Group.add(ubiLbl);
-      }
     }
   });
 
-  // --- 5. REGULACIÓN G1 TARDÍA: CICLINA D, CICLINA E Y ABRAZO DE p21 ---
-  const dnaCenterRef = new THREE.Vector3(...pairs[0].centerPos);
+  // --- 5. INTERRUPTOR DEL PUNTO R (DOMINIO DERECHO DESPEJADO): CICLINA D–CDK4/6, CICLINA E–CDK2 Y PINZA p21 ---
   const p21Level = clamp01(st.p21);
   const cdkInhibitionRatio = p21Level / (p21Level + 0.25);
 
-  // Ciclina D - CDK4/6
+  const rightDomainX = maxX + 32.0;
+
+  // 5A. Complejo Ciclina D – CDK4/6 (Cuadrante Superior Derecho)
   const cdk46Group = new THREE.Group();
   cdk46Group.name = 'complex_cycD_cdk46';
-  const cdk46Pos = dnaCenterRef.clone().add(new THREE.Vector3(22.0, 4.0, 6.0));
+  cdk46Group.scale.setScalar(1.45);
+  const cdk46Pos = isLin
+    ? new THREE.Vector3(rightDomainX, cy, cz + 16.0)
+    : new THREE.Vector3(rightDomainX, cy + 18.0, cz + 4.0);
   cdk46Group.position.copy(cdk46Pos);
   cdk46Group.userData.brownian = { origin: cdk46Pos.clone(), phase: 0.0 };
 
   const actD = clamp01(st.ciclinaD * (1.0 - cdkInhibitionRatio));
   const cdk4Col = new THREE.Color(0x22c55e).lerp(new THREE.Color(0x475569), cdkInhibitionRatio * 0.7);
-  const cdk4Mesh = new THREE.Mesh(new THREE.SphereGeometry(1.5, 18, 14), createMat(cdk4Col, 0.2 + 0.6 * actD));
-  const cycDMesh = createSph(1.3, 0xeab308, 0.45); cycDMesh.position.set(2.2, 0.4, 0);
-  cdk46Group.add(cdk4Mesh, cycDMesh);
+  // Quinasa CDK4/6 bilobular (lóbulo N + lóbulo C)
+  const cdk4LobeN = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 14), createMat(cdk4Col, 0.25 + 0.55 * actD));
+  cdk4LobeN.position.set(-0.8, 0.45, 0);
+  const cdk4LobeC = new THREE.Mesh(new THREE.SphereGeometry(1.55, 18, 14), createMat(cdk4Col, 0.25 + 0.55 * actD));
+  cdk4LobeC.position.set(-0.6, -0.75, 0);
+  // Ciclina D (dominio helicoidal cilíndrico dorado)
+  const cycDCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 2.7, 16), createMat(0xeab308, 0.5));
+  cycDCyl.position.set(1.65, 0, 0);
+  cycDCyl.rotation.z = 0.18;
+  cdk46Group.add(cdk4LobeN, cdk4LobeC, cycDCyl);
 
-  const cdk46Label = makeLabel('Ciclina D–CDK4/6 · Actividad ' + pct(actD), 0x22c55e, 0.75);
-  cdk46Label.position.set(1.1, 3.4, 0);
+  const cdk46Label = makeLabel('Ciclina D–CDK4/6 (' + pct(actD) + ')', 0x22c55e, 0.78, 'Sensor Mitogénico · Inicia fosforilación de Rb');
+  cdk46Label.position.copy(UP.clone().multiplyScalar(3.6));
   cdk46Group.add(cdk46Label);
+  addTether(cdk46Group, new THREE.Vector3(0.4, 1.2, 0), cdk46Label.position, 0x22c55e, 0.65);
   g.add(cdk46Group);
 
-  // Ciclina E - CDK2 con p21 docking
+  // 5B. Complejo Ciclina E – CDK2 + Abrazadera Alostérica p21 (Cuadrante Inferior Derecho, separado 36 Å)
   const cdk2Group = new THREE.Group();
   cdk2Group.name = 'complex_cycE_cdk2';
-  const cdk2Pos = dnaCenterRef.clone().add(new THREE.Vector3(25.0, -14.0, -4.0));
+  cdk2Group.scale.setScalar(1.45);
+  const cdk2Pos = isLin
+    ? new THREE.Vector3(rightDomainX, cy, cz - 16.0)
+    : new THREE.Vector3(rightDomainX, cy - 18.0, cz - 2.0);
   cdk2Group.position.copy(cdk2Pos);
   cdk2Group.userData.brownian = { origin: cdk2Pos.clone(), phase: 1.8 };
 
   const actE = clamp01(st.ciclinaE * (1.0 - cdkInhibitionRatio));
   const cdk2Col = new THREE.Color(0x16a34a).lerp(new THREE.Color(0x334155), cdkInhibitionRatio * 0.9);
-  const cdk2Mesh = new THREE.Mesh(new THREE.SphereGeometry(1.55, 18, 14), createMat(cdk2Col, 0.15 + 0.65 * actE));
-  const cycEMesh = createSph(1.35, 0xf97316, 0.45); cycEMesh.position.set(2.3, 0.3, 0);
-  cdk2Group.add(cdk2Mesh, cycEMesh);
+  const cdk2LobeN = new THREE.Mesh(new THREE.SphereGeometry(1.4, 18, 14), createMat(cdk2Col, 0.2 + 0.6 * actE));
+  cdk2LobeN.position.set(-0.85, 0.45, 0);
+  const cdk2LobeC = new THREE.Mesh(new THREE.SphereGeometry(1.6, 18, 14), createMat(cdk2Col, 0.2 + 0.6 * actE));
+  cdk2LobeC.position.set(-0.65, -0.8, 0);
+  const cycECyl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.8, 16), createMat(0xf97316, 0.5));
+  cycECyl.position.set(1.75, 0, 0);
+  cycECyl.rotation.z = -0.15;
+  cdk2Group.add(cdk2LobeN, cdk2LobeC, cycECyl);
+
+  const cdk2Label = makeLabel('Ciclina E–CDK2 (' + pct(actE) + ')', 0x16a34a, 0.78, 'Bucle Biestable del Punto R (G1 → S)');
+  cdk2Label.position.copy(UP.clone().multiplyScalar(3.6));
+  cdk2Group.add(cdk2Label);
+  addTether(cdk2Group, new THREE.Vector3(0.4, 1.2, 0), cdk2Label.position, 0x16a34a, 0.65);
 
   if (p21Level > 0.03) {
+    // Abrazadera alostérica p21 (CIP1/WAF1) bloqueando la hendidura catalítica Ciclina-CDK
     const p21ClampMesh = new THREE.Mesh(
-      new THREE.TorusGeometry(2.1, 0.30, 12, 48, Math.PI * 2 * Math.min(1.0, cdkInhibitionRatio * 1.25)),
-      createMat(0x38bdf8, 0.90)
+      new THREE.TorusGeometry(2.55, 0.36, 14, 48, Math.PI * 2 * Math.min(1.0, cdkInhibitionRatio * 1.25)),
+      createMat(0x38bdf8, 0.92)
     );
-    p21ClampMesh.position.set(1.15, 0.15, 0);
+    p21ClampMesh.position.set(0.45, 0, 0);
     p21ClampMesh.rotation.z = Math.PI * 0.5;
     p21ClampMesh.userData.isP21Clamp = true;
     cdk2Group.add(p21ClampMesh);
 
-    const p21Label = makeLabel('p21 (CIP1/WAF1) · Freno Activo (' + pct(p21Level) + ')', 0x38bdf8, 0.72);
-    p21Label.position.set(7.5, 0.15, 0);
+    const p21LabelPos = UP.clone().multiplyScalar(-3.8);
+    const p21Label = makeLabel('Inhibidor p21 (CIP1/WAF1 · ' + pct(p21Level) + ')', 0x38bdf8, 0.76, 'Pinza alostérica que bloquea CDK2/CDK4');
+    p21Label.position.copy(p21LabelPos);
     cdk2Group.add(p21Label);
+    addTether(cdk2Group, new THREE.Vector3(0.45, -1.8, 0), p21LabelPos, 0x38bdf8, 0.7);
   }
-
-  const cdk2Label = makeLabel('Ciclina E–CDK2 · Actividad ' + pct(actE), 0x16a34a, 0.75);
-  cdk2Label.position.set(1.1, 3.4, 0);
-  cdk2Group.add(cdk2Label);
   g.add(cdk2Group);
 
-  // --- 6. DINÁMICA DE Rb Y E2F ANCLADO AL PROMOTOR DE LA CROMATINA ---
+  // --- 6. LOCUS PROMOTOR EN LA CROMATINA: HETERODÍMERO E2F–DP1 Y PROTEÍNA Rb (p105) ---
   const promoterPairIdx = Math.min(pairs.length - 1, Math.max(0, Math.floor(pairs.length * 0.65)));
   const promoterPair = pairs[promoterPairIdx];
-  const promoterPos = new THREE.Vector3(...promoterPair.centerPos);
+  const promoterBasePos = new THREE.Vector3(...promoterPair.centerPos);
+  const promOut = safeOutwardDir(promoterBasePos);
+  const promoterPos = promoterBasePos.clone().addScaledVector(promOut, 9.5);
 
   const promoterComplexGroup = new THREE.Group();
   promoterComplexGroup.name = 'promoter_e2f_rb_locus';
+  promoterComplexGroup.scale.setScalar(1.40);
   promoterComplexGroup.position.copy(promoterPos);
 
-  // E2F sobre la hebra del promotor
-  const e2fMesh = createSph(1.2, 0x06b6d4, 0.6);
-  e2fMesh.position.set(0, 2.2, 0);
-  promoterComplexGroup.add(e2fMesh);
+  addTether(g, promoterBasePos, promoterPos, 0x06b6d4, 0.75);
 
-  // Rb: asentado sobre E2F si hipofosforilado, o desprendido al fosforilarse
+  // Heterodímero E2F1 + DP1 asentado sobre el surco mayor del promotor
+  const e2fSub = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 2.4, 14), createMat(0x06b6d4, 0.65));
+  e2fSub.position.set(-0.7, 0, 0);
+  e2fSub.rotation.z = 0.25;
+  const dp1Sub = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 2.2, 14), createMat(0x0891b2, 0.55));
+  dp1Sub.position.set(0.75, 0, 0);
+  dp1Sub.rotation.z = -0.25;
+  promoterComplexGroup.add(e2fSub, dp1Sub);
+
+  // Proteína Rb (dominio de bolsillo A/B en herradura)
   const isHypoRb = cdkInhibitionRatio > 0.45;
   const rbGroup = new THREE.Group();
   rbGroup.name = 'rb_protein_subgroup';
 
   const rbColor = isHypoRb ? 0x94a3b8 : 0xec4899;
-  const rbMesh = createSph(1.4, rbColor, isHypoRb ? 0.25 : 0.85);
-  rbGroup.add(rbMesh);
+  const rbPocketArc = new THREE.Mesh(
+    new THREE.TorusGeometry(1.75, 0.58, 14, 32, Math.PI * 1.45),
+    createMat(rbColor, isHypoRb ? 0.3 : 0.8)
+  );
+  rbPocketArc.rotation.z = -Math.PI * 0.22;
+  const rbLobeA = createSph(0.95, rbColor, isHypoRb ? 0.3 : 0.8); rbLobeA.position.set(-1.35, 0.8, 0);
+  const rbLobeB = createSph(0.95, rbColor, isHypoRb ? 0.3 : 0.8); rbLobeB.position.set(1.35, 0.8, 0);
+  rbGroup.add(rbPocketArc, rbLobeA, rbLobeB);
 
   if (isHypoRb) {
-    rbGroup.position.set(0, 4.4, 0);
-    const rbStatusLabel = makeLabel('Rb hipofosforilado · Secuestra a E2F en Promotor (G1)', 0x94a3b8, 0.74);
-    rbStatusLabel.position.set(0, 7.2, 0);
+    // Rb hipofosforilado encajado sobre E2F secuestrándolo
+    rbGroup.position.copy(promOut.clone().multiplyScalar(1.5));
+    const rbLblPos = promOut.clone().multiplyScalar(4.5).addScaledVector(UP, -2.0);
+    const rbStatusLabel = makeLabel('Rb Hipofosforilado + E2F Secuestrado', 0x94a3b8, 0.78, 'Promotor reprimido · Arresto en G1 (No cruza Punto R)');
+    rbStatusLabel.position.copy(rbLblPos);
     promoterComplexGroup.add(rbStatusLabel);
+    addTether(promoterComplexGroup, rbGroup.position, rbLblPos, 0x94a3b8, 0.65);
   } else {
-    rbGroup.position.set(0, 11.5, 4.0);
-    rbGroup.userData.brownian = { origin: promoterPos.clone().add(new THREE.Vector3(0, 11.5, 4.0)), phase: 2.7 };
+    // Rb-P hiperfosforilado disociado en el nucleoplasma con sus 4 grupos fosfato
+    const detachedOffset = promOut.clone().multiplyScalar(4.2).addScaledVector(UP, -1.8);
+    rbGroup.position.copy(detachedOffset);
 
-    [[0, 1.8, 0], [1.4, 0.6, 0.8], [-1.4, 0.6, -0.8]].forEach(po => {
-      const phos = createSph(0.42, 0xfacc15, 0.95);
+    [[0, 2.1, 0], [1.8, 1.1, 0.6], [-1.8, 1.1, -0.6], [0, -1.9, 0.7]].forEach(po => {
+      const phos = createSph(0.48, 0xfacc15, 0.95);
       phos.position.set(po[0], po[1], po[2]);
       rbGroup.add(phos);
     });
 
-    const detachedLabel = makeLabel('Rb-P Hiperfosforilado · Disociado del ADN (Punto R Cruzado)', 0xec4899, 0.74);
-    detachedLabel.position.set(0, 3.2, 0);
+    const detachedLabel = makeLabel('Rb-P Hiperfosforilado (Disociado)', 0xec4899, 0.76, 'Inactivado por CDK4/6 y CDK2 · Punto R Cruzado');
+    detachedLabel.position.copy(UP.clone().multiplyScalar(-3.0));
     rbGroup.add(detachedLabel);
 
-    const e2fActiveLabel = makeLabel('E2F Libre en Promotor · Transcripción de Fase S Activa', 0x06b6d4, 0.74);
-    e2fActiveLabel.position.set(0, 5.0, 0);
+    const e2fLblPos = promOut.clone().multiplyScalar(2.0).addScaledVector(UP, 2.8);
+    const e2fActiveLabel = makeLabel('Factor E2F–DP1 Libre en Promotor', 0x06b6d4, 0.78, 'Transcribiendo genes de Fase S (Ciclina E, Pol α)');
+    e2fActiveLabel.position.copy(e2fLblPos);
     promoterComplexGroup.add(e2fActiveLabel);
+    addTether(promoterComplexGroup, new THREE.Vector3(0, 0, 0), e2fLblPos, 0x06b6d4, 0.65);
   }
   promoterComplexGroup.add(rbGroup);
   g.add(promoterComplexGroup);
 
+  // Guardar coordenadas de cada complejo para enfoque interactivo con 1 clic
+  complexFocusCoords = {
+    p53: p53Reservoir.slice(),
+    cdk46: cdk46Pos.toArray(),
+    cdk2: cdk2Pos.toArray(),
+    rb_e2f: promoterPos.toArray(),
+    sensor: firstSensorFocusPos || [cx, cy, cz]
+  };
+
   signalingGroup = g;
   mainHelixGroup.add(g);
+}
+
+function toWorldCoords(localPt) {
+  const v = new THREE.Vector3(localPt[0], localPt[1], localPt[2]);
+  if (packagingMode.value === 'linear') {
+    v.applyAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+  }
+  return v;
+}
+
+function focusOnComplex(key) {
+  if (!camera || !controls) return;
+  activeFocusKey.value = key;
+  if (key === 'all' || !complexFocusCoords[key]) {
+    resetCamera();
+    return;
+  }
+  const targetWorld = toWorldCoords(complexFocusCoords[key]);
+  const offsetDist = key === 'sensor' ? 46.0 : 54.0;
+  controls.target.copy(targetWorld);
+  camera.position.set(targetWorld.x, targetWorld.y + 4.0, targetWorld.z + offsetDist);
+  controls.update();
 }
 
 function encuadrar(puntos) {
@@ -1671,16 +1922,15 @@ function encuadrar(puntos) {
   const centro = caja.getCenter(new THREE.Vector3());
   const tam = caja.getSize(new THREE.Vector3());
   const maxDim = Math.max(tam.x, tam.y, tam.z);
-  // Distancia y encuadre equilibrados: el ADN se aprecia en detalle y centrado con espacio natural hacia abajo
-  const dist = isLinear ? maxDim * 1.85 : maxDim * 1.95;
-  // Centro natural de la molécula (baja el ADN desde la parte superior para aprovechar el espacio inferior)
-  // Elevar el ADN en pantalla desplazando el foco visual de cámara hacia abajo
-  const targetY = centro.y - (isLinear ? 12.0 : 15.0);
+  // Vista un poco más alejada y centrada para ver cómodamente el promotor Rb-E2F y el dock inferior sin cortes
+  const dist = isLinear ? maxDim * 1.55 : maxDim * 1.48;
+  const targetY = centro.y - (isLinear ? 1.0 : 1.5);
 
   camera.position.set(centro.x, targetY, dist);
   controls.target.set(centro.x, targetY, centro.z);
   camPos0.copy(camera.position);
   target0.copy(controls.target);
+  activeFocusKey.value = 'all';
   controls.update();
 }
 
@@ -1863,7 +2113,7 @@ function animate() {
 
           // MDM2 acoplado junto al trímero de p53 en reposo
           u.mdm2Group.position.x += (posX - u.mdm2Group.position.x) * 0.16;
-          u.mdm2Group.position.y += (posY + 2.5 - u.mdm2Group.position.y) * 0.16;
+          u.mdm2Group.position.y += (posY + 6.5 - u.mdm2Group.position.y) * 0.16;
           u.mdm2Group.position.z += (posZ - u.mdm2Group.position.z) * 0.16;
 
           u.mdm2Group.rotation.y += 0.012;
@@ -2100,31 +2350,33 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Contenedor Principal de la Tarjeta */
+/* Contenedor Principal de la Tarjeta (100% Edge-to-Edge Full Viewport) */
 .dna-3d-card {
   position: relative;
-  background-color: var(--md-sys-color-surface-container-low, #0b1329);
-  border-radius: var(--md-sys-shape-corner-medium, 16px);
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  background-color: #030b24;
+  border-radius: 0;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(56, 189, 248, 0.15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  border: none;
+  box-shadow: none;
 }
 
-
-
-/* Header de la tarjeta */
+/* Header de la tarjeta integrado tipo HUD superior */
 .card-header {
-  padding: 0.85rem 1.25rem;
-  background-color: var(--md-sys-color-surface-container, #0f172a);
-  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  padding: 0.55rem 1.25rem;
+  background: linear-gradient(90deg, rgba(6, 12, 26, 0.96) 0%, rgba(11, 20, 42, 0.92) 50%, rgba(6, 12, 26, 0.96) 100%);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.22);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.75rem;
+  flex-shrink: 0;
+  z-index: 30;
 }
 
 .header-main {
@@ -2134,11 +2386,11 @@ onUnmounted(() => {
 }
 
 .header-avatar {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--md-sys-shape-corner-small, 8px);
   background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 132, 199, 0.35) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(56, 189, 248, 0.35);
   color: #38bdf8;
   display: flex;
   align-items: center;
@@ -2148,19 +2400,19 @@ onUnmounted(() => {
 .header-titles {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .title-text {
-  font-size: 1.05rem;
-  color: #f1f5f9;
+  font-size: 0.98rem;
+  color: #f8fafc;
   font-weight: 700;
   letter-spacing: -0.2px;
   margin: 0;
 }
 
 .subhead-text {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: #94a3b8;
 }
 
@@ -2190,21 +2442,22 @@ onUnmounted(() => {
 .atomic-canvas-box {
   width: 100%;
   height: 100%;
-  min-height: 600px;
+  min-height: 0;
 }
 
 /* Canvas Area */
 .canvas-wrapper {
   position: relative;
   width: 100%;
-  height: 78vh;
-  min-height: 720px;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: grab;
-  background: radial-gradient(ellipse at 50% 50%, #0c1a2e 0%, #06111e 65%, #040812 100%);
+  background: radial-gradient(ellipse at 50% 46%, #0d1f3a 0%, #061121 62%, #030813 100%);
 }
 
 
@@ -2221,30 +2474,135 @@ onUnmounted(() => {
   cursor: grabbing;
 }
 
+/* Estilos para los elementos HUD situados directamente en las esquinas */
+.hud-corner-dropdown {
+  position: absolute;
+  top: 14px;
+  z-index: 25;
+}
+
+.hud-corner-dropdown.corner-left {
+  left: 18px;
+}
+
+.hud-corner-dropdown.corner-right {
+  right: 18px;
+}
+
+.hud-corner-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(8, 15, 32, 0.90);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #f1f5f9;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 0 12px rgba(56, 189, 248, 0.15);
+  transition: all 0.2s ease;
+}
+
+.hud-corner-pill-btn:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+
+.pill-icon {
+  color: #38bdf8;
+}
+
+.pill-title {
+  letter-spacing: 0.02em;
+}
+
+.pill-arrow {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.hud-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 280px;
+  background: rgba(7, 13, 28, 0.95);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: fadeInDown 0.2s ease;
+}
+
+.hud-corner-pill-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: rgba(8, 15, 32, 0.90);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), 0 0 12px rgba(56, 189, 248, 0.15);
+}
+
+.pair-display-row.compact-corner {
+  margin: 0;
+  gap: 0.55rem;
+}
+
+.corner-pair-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  color: #94a3b8;
+  padding-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.corner-pair-label .c-pos {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.corner-pair-label .c-type {
+  color: #64748b;
+}
+
 /* Floating HUDs */
 .hud-card {
   position: absolute;
-  background: rgba(11, 19, 41, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  background: rgba(7, 13, 28, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.28);
   border-radius: var(--md-sys-shape-corner-medium, 12px);
-  padding: 0.85rem 1rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-  z-index: 10;
+  padding: 0.75rem 0.95rem;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65);
+  z-index: 15;
   pointer-events: auto;
 }
 
 .hud-top-left {
-  top: 1rem;
-  left: 1rem;
+  top: 0.75rem;
+  left: 214px;
   max-width: 320px;
 }
 
 .hud-top-right {
-  top: 1rem;
-  right: 1rem;
-  min-width: 260px;
+  top: 0.75rem;
+  right: 214px;
+  min-width: 245px;
 }
 
 .hud-card-header {
@@ -2564,7 +2922,7 @@ onUnmounted(() => {
 
 .apoptosis-overlay-banner {
   position: absolute;
-  top: 1.25rem;
+  top: 3.5rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 45;
@@ -2600,7 +2958,7 @@ onUnmounted(() => {
 /* RECUADRO PROMINENTE DE INSPECCIÓN Y REPARACIÓN p53 */
 .damage-inspection-card {
   position: absolute;
-  top: 1.25rem;
+  top: 3.5rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 40;
@@ -2699,7 +3057,7 @@ onUnmounted(() => {
 /* Badge Flotante Conciso p53 (Solo enzima y mecanismo activo) */
 .p53-hud-pill {
   position: absolute;
-  top: 1rem;
+  top: 3.5rem;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -2736,15 +3094,90 @@ onUnmounted(() => {
 }
 
 
+/* ═══════════════════════ BARRA FLOTANTE DE ENFOQUE A COMPLEJOS (ALBERTS) ═══════════════════════ */
+.molecular-complex-focus-bar {
+  position: absolute;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  background: rgba(8, 15, 30, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 9999px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 18px rgba(56, 189, 248, 0.14);
+  pointer-events: auto;
+  max-width: calc(100% - 620px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.molecular-complex-focus-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.complex-focus-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.3rem 0.72rem;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #cbd5e1;
+  font-size: 0.71rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.complex-focus-pill:hover {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+.complex-focus-pill.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.38) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+
+.complex-focus-pill.lesions-pill {
+  border-color: rgba(244, 63, 94, 0.55);
+  color: #fecdd3;
+}
+
+.cf-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cf-dot.p53 { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.cf-dot.cdk4 { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+.cf-dot.cdk2 { background: #f97316; box-shadow: 0 0 6px #f97316; }
+.cf-dot.rb { background: #a855f7; box-shadow: 0 0 6px #a855f7; }
+.cf-dot.lesion { background: #f43f5e; box-shadow: 0 0 6px #f43f5e; }
+
 /* ═══════════════════════ CADENA DE NUCLEÓTIDOS DOCK COMPACTO EN LA ORILLA INFERIOR ═══════════════════════ */
 .canvas-wrapper {
-  height: 90vh !important;
-  min-height: 860px !important;
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
 }
 
 .atomic-canvas-box {
   height: 100% !important;
-  min-height: 860px !important;
+  min-height: 0 !important;
 }
 
 .dna-3d-card.cinema-expanded,
@@ -2773,33 +3206,82 @@ onUnmounted(() => {
   height: 100% !important;
 }
 
-.hud-toolbar {
-  bottom: 7rem !important;
-  right: 1.25rem !important;
-  z-index: 22 !important;
+.header-nav-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 9999px;
+  padding: 2px 6px;
+  backdrop-filter: blur(10px);
+}
+
+.nav-mode-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(2, 6, 23, 0.6);
+  border-radius: 9999px;
+  padding: 1px 2px;
+}
+
+.nav-tool-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.nav-tool-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.nav-tool-btn.active {
+  background: rgba(14, 165, 233, 0.35);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.nav-tools-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(56, 189, 248, 0.22);
+  margin: 0 2px;
 }
 
 .bottom-nucleotide-dock {
   position: absolute;
-  bottom: 12px;
-  left: 16px;
-  right: 16px;
+  bottom: 10px;
+  left: 214px;
+  right: 214px;
   margin-left: auto;
   margin-right: auto;
   width: max-content;
-  max-width: calc(100% - 32px);
+  max-width: calc(100vw - 428px);
   box-sizing: border-box;
   z-index: 20;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(6, 12, 24, 0.92);
-  border: 1px solid rgba(56, 189, 248, 0.28);
+  background: rgba(6, 12, 24, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.32);
   border-radius: 12px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), 0 0 16px rgba(56, 189, 248, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.78), 0 0 18px rgba(56, 189, 248, 0.14);
 }
 
 .dock-polarity-col {

@@ -1,70 +1,176 @@
 <template>
-  <div class="dna-lab-layout">
-    <!-- ═══════════════════════ DOCK LATERAL DE ACCIONES RÁPIDAS (ICONOS AZUL/CIAN CON TOOLTIPS) ═══════════════════════ -->
-    <aside class="lateral-quick-dock" aria-label="Acciones Rápidas del Laboratorio">
-      <!-- Botón 1: Introducir / Seleccionar Genoma y Molde -->
-      <div class="dock-tooltip-wrapper">
+  <div class="dna-lab-layout full-workstation-mode">
+    <!-- ═══════════════════════ DOCK LATERAL IZQUIERDO: OPERACIONES MOLECULARES Y BIOCATÁLISIS ═══════════════════════ -->
+    <aside class="lateral-left-dock pro-console-dock" aria-label="Operaciones Moleculares">
+      <div class="dock-section-tag">OPERACIONES</div>
+
+      <!-- 1. Genoma & Molde -->
+      <div class="dock-tooltip-wrapper left-side">
         <button 
-          class="dock-icon-btn primary-genome-btn" 
+          class="dock-console-btn primary-genome-btn" 
           @click="showGenomeModal = true"
           aria-label="Introducir o Seleccionar Genoma y Molde"
         >
-          <span class="dock-glow-pulse"></span>
-          <Icon name="genetics" size="22" class="dock-btn-icon" />
-          <span class="dock-badge-pill" v-if="cleanSequence">{{ cleanSequence.length }}</span>
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="genetics" size="20" class="dock-btn-icon" />
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Genoma &amp; Molde</span>
+            <span class="dock-btn-meta font-mono">{{ cleanSequence ? cleanSequence.length + ' pb activo' : 'Configurar' }}</span>
+          </div>
         </button>
-        <div class="dock-tooltip">
-          <strong class="tt-title">Genoma &amp; Molde</strong>
-          <span class="tt-desc">{{ selectedGene ? selectedGene.name : (cleanSequence ? 'Personalizado' : 'Sin Validar') }} · {{ cleanSequence ? cleanSequence.length + ' pb' : 'Configurar' }}</span>
-        </div>
       </div>
 
-      <!-- Botón 2: Guardar Experimento -->
+      <!-- 2. Inducir Daño (UV, ROS, Tabaco, CRISPR) -->
+      <div class="dock-tooltip-wrapper left-side">
+        <button 
+          :class="['dock-console-btn', 'amber-dock-btn', { active: showDamageDialog || currentActiveLesions.length > 0 }]" 
+          @click="showDamageDialog = true"
+          :disabled="!cleanSequence"
+          aria-label="Inducir Daño o Edición CRISPR"
+        >
+          <div class="dock-btn-icon-box amber-box">
+            <Icon name="bolt" size="20" class="dock-icon" />
+            <span class="dock-count-badge alert-badge" v-if="currentActiveLesions.length">{{ currentActiveLesions.length }}</span>
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Daño / CRISPR</span>
+            <span class="dock-btn-meta">{{ currentActiveLesions.length ? currentActiveLesions.length + ' lesión(es)' : 'UV · ROS · Cas9' }}</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- 3. Reparación Enzimática (BER / NER) & Escaneo Dúplex -->
+      <div class="dock-tooltip-wrapper left-side">
+        <button 
+          :class="['dock-console-btn', 'emerald-dock-btn', { active: activeLabDrawer === 'repair' }]" 
+          @click="toggleLabDrawer('repair')"
+          :disabled="!cleanSequence"
+          aria-label="Reparación BER/NER y Escaneo Dúplex"
+        >
+          <div class="dock-btn-icon-box emerald-box">
+            <Icon name="shield" size="19" class="dock-icon" />
+            <span class="dock-count-badge warn-badge" v-if="mismatchResult && !mismatchResult.is_fully_canonical">{{ mismatchResult.mismatch_count }}</span>
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Reparar &amp; Dúplex</span>
+            <span class="dock-btn-meta">Vías BER / NER (G1)</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- 4. Expresión Génica (ARN Pol II & Gen Modelo) -->
+      <div class="dock-tooltip-wrapper left-side">
+        <button 
+          :class="['dock-console-btn', 'purple-dock-btn', { active: activeLabDrawer === 'expression' }]" 
+          @click="toggleLabDrawer('expression')"
+          :disabled="!cleanSequence"
+          aria-label="Expresión Génica y Transcripción ARN Pol II"
+        >
+          <div class="dock-btn-icon-box purple-box">
+            <Icon name="biotech" size="20" class="dock-icon" />
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Expresión Pol II</span>
+            <span class="dock-btn-meta">{{ transcriptionResult ? transcriptionResult.length + ' nt ARNm' : 'Exón / Intrón' }}</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ═══════════════════════ DOCK LATERAL DERECHO: INSPECCIÓN, BITÁCORA Y SISTEMA ═══════════════════════ -->
+    <aside class="lateral-quick-dock pro-console-dock" aria-label="Inspección, Bitácora y Sistema">
+      <div class="dock-section-tag">TELEMETRÍA</div>
+
+      <!-- Botón 1: Inspector Diferencial (Diff) -->
       <div class="dock-tooltip-wrapper">
         <button 
-          class="dock-icon-btn" 
+          :class="['dock-console-btn', { active: activeLabDrawer === 'diff' }]" 
+          @click="toggleLabDrawer('diff')"
+          :disabled="!cleanSequence"
+          aria-label="Reporte Diferencial (Original vs Modificada)"
+        >
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="compare_arrows" size="20" class="dock-icon" />
+            <span class="dock-count-badge alert-badge" v-if="diffResult?.difference_count">{{ diffResult.difference_count }}</span>
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Inspector Diff</span>
+            <span class="dock-btn-meta">{{ diffResult?.difference_count ? diffResult.difference_count + ' cambio(s)' : 'Molde vs Actual' }}</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Botón 2: Bitácora de Auditoría -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          :class="['dock-console-btn', { active: activeLabDrawer === 'audit' }]" 
+          @click="toggleLabDrawer('audit')"
+          aria-label="Registro de Experimentos y Auditoría"
+        >
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="analytics" size="19" class="dock-icon" />
+            <span class="dock-count-badge" v-if="experimentLogs.length">{{ experimentLogs.length }}</span>
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Bitácora</span>
+            <span class="dock-btn-meta">{{ experimentLogs.length }} evento(s)</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Botón 3: Guardar Experimento -->
+      <div class="dock-tooltip-wrapper">
+        <button 
+          class="dock-console-btn" 
           @click="openSaveDialog" 
           :disabled="loading"
           aria-label="Guardar Experimento"
         >
-          <Icon name="save" size="20" class="dock-icon" />
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="save" size="19" class="dock-icon" />
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Guardar Ensayo</span>
+            <span class="dock-btn-meta">Snapshot BD</span>
+          </div>
         </button>
-        <div class="dock-tooltip">
-          <strong class="tt-title">Guardar Experimento</strong>
-          <span class="tt-desc">Snapshot del estado actual y notas</span>
-        </div>
       </div>
 
-      <!-- Botón 3: Cargar Experimento -->
+      <!-- Botón 4: Cargar Experimento -->
       <div class="dock-tooltip-wrapper">
         <button 
-          class="dock-icon-btn" 
+          class="dock-console-btn" 
           @click="openLoadDialog" 
           :disabled="loading"
           aria-label="Cargar Experimento"
         >
-          <Icon name="history" size="20" class="dock-icon" />
-          <span class="dock-count-badge" v-if="savedExperimentsList.length">{{ savedExperimentsList.length }}</span>
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="history" size="19" class="dock-icon" />
+            <span class="dock-count-badge" v-if="savedExperimentsList.length">{{ savedExperimentsList.length }}</span>
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Cargar Ensayo</span>
+            <span class="dock-btn-meta">{{ savedExperimentsList.length }} guardado(s)</span>
+          </div>
         </button>
-        <div class="dock-tooltip">
-          <strong class="tt-title">Cargar Experimento</strong>
-          <span class="tt-desc">Restaurar experimentos guardados ({{ savedExperimentsList.length }})</span>
-        </div>
       </div>
 
-      <!-- Botón 4: Manual del Lab -->
+      <!-- Botón 5: Manual del Lab -->
       <div class="dock-tooltip-wrapper">
         <button 
-          class="dock-icon-btn" 
+          class="dock-console-btn" 
           @click="showManualDialog = true"
           aria-label="Manual del Laboratorio"
         >
-          <Icon name="menu_book" size="20" class="dock-icon" />
+          <div class="dock-btn-icon-box cyan-box">
+            <Icon name="menu_book" size="19" class="dock-icon" />
+          </div>
+          <div class="dock-btn-text">
+            <span class="dock-btn-label">Manual Alberts</span>
+            <span class="dock-btn-meta">Guía 7.ª ed.</span>
+          </div>
         </button>
-        <div class="dock-tooltip">
-          <strong class="tt-title">Manual del Lab</strong>
-          <span class="tt-desc">Guía metodológica interactiva</span>
-        </div>
       </div>
     </aside>
 
@@ -78,61 +184,12 @@
       <button class="toast-close-btn" @click="experimentNotification = null" title="Cerrar">✕</button>
     </div>
 
-    <!-- ═══════════════════════ BARRA DE NAVEGACIÓN POR FASES (TABS) ═══════════════════════ -->
-    <nav class="phase-tabs-nav">
-      <button
-        :class="['phase-tab-btn', { active: activePhaseTab === 'phase1' }]"
-        @click="activePhaseTab = 'phase1'"
-      >
-        <Icon name="biotech" size="18" />
-        <span class="tab-label">Fase 1: Integridad y Reparación del Molde (ADN)</span>
-        <span class="tab-badge" v-if="cleanSequence">{{ cleanSequence.length }} bp</span>
-      </button>
-      <button
-        :class="['phase-tab-btn', { active: activePhaseTab === 'phase2' }]"
-        @click="activePhaseTab = 'phase2'"
-      >
-        <Icon name="genetics" size="18" />
-        <span class="tab-label">Fase 2: Expresión Génica &amp; Proteínas (Dogma Central)</span>
-        <span class="tab-badge phase2-badge" v-if="selectedGene">{{ selectedGene.name }}</span>
-      </button>
-      <div class="tab-indicator" :class="activePhaseTab"></div>
-    </nav>
-
-    <!-- ═══════════════════════ CONTENEDOR FASE 1 ═══════════════════════ -->
-    <div class="phase-content-wrapper" v-show="activePhaseTab === 'phase1'">
-      <!-- Aviso si la secuencia actual contiene símbolos no válidos -->
-    <div class="invalid-sequence-placeholder md3-card-outlined" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
-      <div class="placeholder-content">
-        <Icon name="warning" size="36" class="placeholder-icon" />
-        <div>
-          <h3>Secuencia con Símbolos No Permitidos</h3>
-          <p>La cadena ingresada contiene caracteres no canónicos <strong>({{ (validationData.invalid_chars || []).join(', ') }})</strong>. Corrige la secuencia eliminando los símbolos no válidos para restaurar la doble hélice 3D y habilitar las operaciones de recombinación.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Guía Inicial: Estación Lista para Entrada Manual (Hasta que no de validar no carga nada) -->
-      <div class="manual-input-prompt-card md3-card-outlined" v-if="!cleanSequence || !validationData?.is_valid">
-        <div class="prompt-content">
-          <div class="prompt-icon-box">
-            <Icon name="biotech" size="36" />
-          </div>
-          <div class="prompt-text">
-            <h3>Estación Molecular en Espera</h3>
-            <p>No hay ninguna secuencia molde activa. Para inicializar el secuenciador y el modelo atómico 3D, abre el panel de genoma, selecciona o ingresa una cadena y presiona <strong>Validar Molde</strong>.</p>
-          </div>
-          <button class="md3-button-filled prompt-action-btn" @click="showGenomeModal = true">
-            <Icon name="genetics" size="18" />
-            <span>Configurar y Validar Molde</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Estación Molecular: Visualizador 3D Hero a Toda Pantalla con Cadena 2D Integrada en la Orilla Inferior -->
-      <div class="molecular-workbench-full" v-if="cleanSequence && validationData?.is_valid">
+    <!-- ═══════════════════════ ESCENARIO 3D FULL-VIEWPORT (SIEMPRE ACTIVO) ═══════════════════════ -->
+    <div class="workstation-3d-stage">
+      <!-- Visor 3D Hero a Toda Pantalla con Cadena 2D Integrada en la Orilla Inferior -->
+      <div class="molecular-workbench-full">
         <DNAHelix3D 
-          :sequence="cleanSequence" 
+          :sequence="cleanSequence || 'ATGGAAGTAGTTTTGA'" 
           :selectedPosition="selectedPosition" 
           :lesions="currentActiveLesions"
           :activeAgent="activeAgentForP53"
@@ -143,10 +200,64 @@
         />
       </div>
 
-    <!-- ========================================================================= -->
-    <!-- MÓDULO 1: MUTAGÉNESIS Y REPARACIÓN CONTROLADA                             -->
-    <!-- ========================================================================= -->
-    <div class="phase-block g1-phase-block md3-card-outlined" v-if="cleanSequence">
+      <!-- Overlay Flotante si la secuencia contiene símbolos no válidos -->
+      <div class="invalid-sequence-placeholder md3-card-outlined floating-stage-alert" v-if="validationData && !validationData.is_valid && sequenceInput.trim()">
+        <div class="placeholder-content">
+          <Icon name="warning" size="32" class="placeholder-icon" />
+          <div>
+            <h3>Secuencia con Símbolos No Permitidos</h3>
+            <p>La cadena ingresada contiene caracteres no canónicos <strong>({{ (validationData.invalid_chars || []).join(', ') }})</strong>. Abre el configurador de Genoma para corregirla.</p>
+          </div>
+          <button class="md3-button-filled" @click="showGenomeModal = true">Corregir</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ DRAWER FLOTANTE DE MÓDULOS DE LABORATORIO SOBRE EL VISOR 3D ═══════════════════════ -->
+    <div class="lab-drawer-backdrop" v-if="activeLabDrawer" @click.self="activeLabDrawer = null">
+      <div class="lab-floating-drawer">
+        <!-- Barra Superior del Drawer con Selector Rápido de Módulos -->
+        <div class="lab-drawer-topbar">
+          <div class="drawer-tabs-strip">
+            <button
+              :class="['drawer-tab-pill', { active: activeLabDrawer === 'repair' }]"
+              @click="activeLabDrawer = 'repair'"
+            >
+              <Icon name="shield" size="16" />
+              <span>Reparación (BER/NER) &amp; Dúplex</span>
+            </button>
+            <button
+              :class="['drawer-tab-pill', { active: activeLabDrawer === 'expression' }]"
+              @click="activeLabDrawer = 'expression'"
+            >
+              <Icon name="biotech" size="16" />
+              <span>Expresión Génica (Pol II)</span>
+            </button>
+            <button
+              :class="['drawer-tab-pill', { active: activeLabDrawer === 'diff' }]"
+              @click="activeLabDrawer = 'diff'"
+            >
+              <Icon name="compare_arrows" size="16" />
+              <span>Inspector Diff</span>
+              <span class="drawer-pill-badge" v-if="diffResult?.difference_count">{{ diffResult.difference_count }}</span>
+            </button>
+            <button
+              :class="['drawer-tab-pill', { active: activeLabDrawer === 'audit' }]"
+              @click="activeLabDrawer = 'audit'"
+            >
+              <Icon name="analytics" size="16" />
+              <span>Bitácora ({{ experimentLogs.length }})</span>
+            </button>
+          </div>
+          <button class="drawer-close-btn" @click="activeLabDrawer = null" title="Cerrar panel y volver al visor 3D (Esc)">
+            <span>Volver al 3D</span>
+            <span class="close-x">✕</span>
+          </button>
+        </div>
+
+        <div class="lab-drawer-scroll-body">
+          <!-- PANEL 1: REPARACIÓN G1 (BER/NER) Y APAREAMIENTOS DÚPLEX -->
+          <div class="phase-block g1-phase-block md3-card-outlined" v-show="activeLabDrawer === 'repair'">
       <div class="phase-block-header">
         <div class="phase-title-group">
           <div class="phase-avatar g1">1</div>
@@ -317,8 +428,8 @@
       </div>
     </div>
 
-      <!-- MÓDULO 2: DIFF INSPECTOR -->
-      <div class="diff-inspector-card" v-if="diffResult && Array.isArray(diffResult.differences)">
+      <!-- PANEL 3: MÓDULO 2: DIFF INSPECTOR -->
+      <div class="diff-inspector-card" v-show="activeLabDrawer === 'diff'">
         <div class="diff-header">
           <div class="diff-title-row">
             <Icon name="compare_arrows" size="24" class="diff-icon" />
@@ -328,13 +439,13 @@
             </div>
           </div>
 
-          <div :class="['diff-badge-pill', { alert: (diffResult.difference_count || 0) > 0 }]">
-            <Icon :name="(diffResult.difference_count || 0) > 0 ? 'warning' : 'check_circle'" size="16" class="pill-icon" />
-            <span>{{ diffResult.difference_count || 0 }} mutaciones detectadas</span>
+          <div :class="['diff-badge-pill', { alert: (diffResult?.difference_count || 0) > 0 }]">
+            <Icon :name="(diffResult?.difference_count || 0) > 0 ? 'warning' : 'check_circle'" size="16" class="pill-icon" />
+            <span>{{ diffResult?.difference_count || 0 }} mutaciones / lesiones detectadas</span>
           </div>
         </div>
 
-        <div class="diff-alignment-table" v-if="diffResult.reference !== undefined || diffResult.modified !== undefined">
+        <div class="diff-alignment-table" v-if="diffResult && (diffResult.reference !== undefined || diffResult.modified !== undefined)">
           <div class="alignment-row">
             <span class="row-tag">MOLDE REFERENCIA:</span>
             <code class="font-mono strand-stream">{{ diffResult.reference || '' }}</code>
@@ -344,8 +455,18 @@
             <code class="font-mono strand-stream mod-stream">{{ diffResult.modified || '' }}</code>
           </div>
         </div>
+        <div class="diff-alignment-table" v-else>
+          <div class="alignment-row">
+            <span class="row-tag">MOLDE REFERENCIA:</span>
+            <code class="font-mono strand-stream">{{ initialMoldSequence || cleanSequence }}</code>
+          </div>
+          <div class="alignment-row">
+            <span class="row-tag modified">SECUENCIA ACTUAL:</span>
+            <code class="font-mono strand-stream">{{ cleanSequence }}</code>
+          </div>
+        </div>
 
-        <div class="mutation-events-grid" v-if="diffResult.differences && diffResult.differences.length > 0">
+        <div class="mutation-events-grid" v-if="diffResult?.differences && diffResult.differences.length > 0">
           <div v-for="(d, i) in (diffResult.differences || [])" :key="i" class="mutation-card">
             <div class="m-top">
               <span class="m-coord font-mono">Posición {{ d.position }}</span>
@@ -362,9 +483,8 @@
         </div>
       </div>
 
-
-    <!-- 7 & 10: Cuaderno de Bitácora / Registro de Experimentos & Marco Científico -->
-    <div class="audit-log-card md3-card-outlined" v-if="cleanSequence">
+      <!-- PANEL 4: Cuaderno de Bitácora / Registro de Experimentos & Marco Científico -->
+      <div class="audit-log-card md3-card-outlined" v-show="activeLabDrawer === 'audit'">
       <div class="section-header">
         <div class="section-title-group">
           <Icon name="history" size="22" class="section-icon" />
@@ -458,10 +578,8 @@
       </div>
     </div>
 
-    </div><!-- /phase-content-wrapper Phase 1 -->
-
-    <!-- ═══════════════════════ CONTENEDOR FASE 2: EXPRESIÓN GÉNICA ═══════════════════════ -->
-    <div class="phase-content-wrapper" v-show="activePhaseTab === 'phase2'">
+    <!-- ═══════════════════════ PANEL 2: EXPRESIÓN GÉNICA (POL II & GEN MODELO) ═══════════════════════ -->
+    <div class="phase-content-wrapper" v-show="activeLabDrawer === 'expression'">
 
       <!-- Módulo A: Inspección y Arquitectura del Gen Modelo -->
       <div class="module-a-gene-card md3-card-outlined" v-if="selectedGene">
@@ -938,11 +1056,14 @@
             <Icon name="biotech" size="38" class="empty-icon-large" />
           </div>
           <h3>Secuencia Personalizada / Entrada Libre</h3>
-          <p>Introduce cualquier secuencia canónica (A, T, C, G) en el campo superior o selecciona un gen modelo del catálogo para cargar su estructura biofísica oficial.</p>
+          <p>Introduce cualquier secuencia canónica (A, T, C, G) o selecciona un gen modelo del catálogo para ver su arquitectura de exones e intrones.</p>
         </div>
       </div>
 
-    </div><!-- /phase-content-wrapper Phase 2 -->
+    </div><!-- /phase-content-wrapper Expression -->
+        </div><!-- /lab-drawer-scroll-body -->
+      </div><!-- /lab-floating-drawer -->
+    </div><!-- /lab-drawer-backdrop -->
 
     
     <!-- Diálogo Modal: Inducción de Daño en el Molde (Ambiental / CRISPR-Cas9) -->
@@ -2001,6 +2122,11 @@ import ADNAtomico from './ADNAtomico.vue';
 
 const showDamageDialog = ref(false);
 const showGenomeModal = ref(false);
+const activeLabDrawer = ref(null); // 'repair' | 'expression' | 'diff' | 'audit' | null
+
+function toggleLabDrawer(drawerKey) {
+  activeLabDrawer.value = activeLabDrawer.value === drawerKey ? null : drawerKey;
+}
 
 const currentActiveLesions = computed(() => {
   if (envDamageResult.value?.lesions?.length) {
@@ -3402,7 +3528,10 @@ async function replicateWithProbabilities() {
 }
 
 onMounted(() => {
-  // Hasta que no de validar no se carga nada
+  if (!sequenceInput.value) {
+    selectGene('didactic_min_control', false);
+    validateAndProcess(true);
+  }
   fetchLogs();
   fetchSavedExperiments();
 });
@@ -10016,8 +10145,372 @@ onMounted(() => {
 
 @media (min-width: 1200px) {
   .dna-lab-layout {
-    padding-right: 96px;
+    padding-right: 0;
   }
 }
 
+/* ═══════════════════════ ESTACIÓN COMPUTACIONAL 3D EDGE-TO-EDGE FULL-VIEWPORT ═══════════════════════ */
+.dna-lab-layout.full-workstation-mode {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: calc(100vh - 64px) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden;
+  z-index: 40;
+  background: #030b24;
+}
+
+.workstation-3d-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.molecular-workbench-full {
+  width: 100%;
+  height: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Consola Lateral Izquierda y Derecha (Diseño Pro Moderno) */
+.pro-console-dock {
+  position: fixed !important;
+  top: 50% !important;
+  transform: translateY(-50%);
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px 10px;
+  background: linear-gradient(180deg, rgba(8, 15, 32, 0.88) 0%, rgba(5, 10, 24, 0.92) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.78), 0 0 24px rgba(56, 189, 248, 0.14);
+  pointer-events: auto;
+  width: 182px;
+}
+
+.lateral-left-dock {
+  left: 16px !important;
+}
+
+.lateral-quick-dock {
+  right: 16px !important;
+}
+
+.dock-section-tag {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #38bdf8;
+  text-transform: uppercase;
+  padding: 0 6px 4px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.16);
+  margin-bottom: 2px;
+}
+
+.dock-console-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(112, 214, 255, 0.22);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  position: relative;
+}
+
+.dock-console-btn:hover:not(:disabled) {
+  background: rgba(2, 132, 199, 0.25);
+  border-color: #70d6ff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 14px rgba(56, 189, 248, 0.32);
+}
+
+.dock-console-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.dock-console-btn.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.45) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+}
+
+.dock-console-btn.primary-genome-btn {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(135deg, rgba(3, 105, 161, 0.35) 0%, rgba(15, 23, 42, 0.92) 100%);
+}
+
+.dock-console-btn.amber-dock-btn {
+  border-color: rgba(251, 191, 36, 0.42);
+}
+.dock-console-btn.amber-dock-btn:hover:not(:disabled),
+.dock-console-btn.amber-dock-btn.active {
+  border-color: #fbbf24 !important;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.42) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.4);
+}
+
+.dock-console-btn.emerald-dock-btn {
+  border-color: rgba(52, 211, 153, 0.42);
+}
+.dock-console-btn.emerald-dock-btn:hover:not(:disabled),
+.dock-console-btn.emerald-dock-btn.active {
+  border-color: #34d399 !important;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.42) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  box-shadow: 0 0 18px rgba(52, 211, 153, 0.4);
+}
+
+.dock-console-btn.purple-dock-btn {
+  border-color: rgba(192, 132, 252, 0.42);
+}
+.dock-console-btn.purple-dock-btn:hover:not(:disabled),
+.dock-console-btn.purple-dock-btn.active {
+  border-color: #c084fc !important;
+  background: linear-gradient(135deg, rgba(126, 34, 206, 0.42) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.4);
+}
+
+.dock-btn-icon-box {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dock-btn-icon-box.cyan-box {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+.dock-btn-icon-box.amber-box {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.4);
+}
+.dock-btn-icon-box.amber-box .dock-icon {
+  color: #fbbf24;
+}
+.dock-btn-icon-box.emerald-box {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.4);
+}
+.dock-btn-icon-box.emerald-box .dock-icon {
+  color: #34d399;
+}
+.dock-btn-icon-box.purple-box {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border-color: rgba(192, 132, 252, 0.4);
+}
+.dock-btn-icon-box.purple-box .dock-icon {
+  color: #c084fc;
+}
+
+.dock-btn-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.dock-btn-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-btn-meta {
+  font-size: 0.64rem;
+  color: #94a3b8;
+  line-height: 1.2;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-count-badge.alert-badge {
+  background: #e11d48;
+  border-color: #fda4af;
+}
+.dock-count-badge.warn-badge {
+  background: #d97706;
+  border-color: #fde68a;
+}
+
+@media (max-width: 1100px) {
+  .pro-console-dock {
+    width: 58px;
+    padding: 10px 6px;
+  }
+  .dock-section-tag,
+  .dock-btn-text {
+    display: none;
+  }
+  .dock-console-btn {
+    justify-content: center;
+    padding: 6px;
+  }
+}
+
+/* Drawer Flotante Glassmórfico sobre el Visor 3D */
+.lab-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(3, 7, 18, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 88px;
+  animation: drawerFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.lab-floating-drawer {
+  width: min(1240px, 100%);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(9, 16, 32, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.38);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), 0 0 32px rgba(56, 189, 248, 0.18);
+  overflow: hidden;
+}
+
+.lab-drawer-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.drawer-tabs-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawer-tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 9999px;
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer-tab-pill:hover {
+  border-color: rgba(56, 189, 248, 0.55);
+  color: #ffffff;
+}
+
+.drawer-tab-pill.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.45) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border-color: #38bdf8;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+}
+
+.drawer-pill-badge {
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.drawer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer-close-btn:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: #f87171;
+  color: #ffffff;
+}
+
+.lab-drawer-scroll-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.floating-stage-alert {
+  position: absolute;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: 680px;
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(14px);
+}
 </style>

@@ -117,6 +117,19 @@
     <g v-else-if="name === 'chevron_right'">
       <polyline points="9 18 15 12 9 6" />
     </g>
+    <g v-else-if="name === 'chevron_down' || name === 'expand_more'">
+      <polyline points="6 9 12 15 18 9" />
+    </g>
+    <g v-else-if="name === 'chevron_up' || name === 'expand_less'">
+      <polyline points="18 15 12 9 6 15" />
+    </g>
+    <g v-else-if="name === 'palette'">
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+    </g>
     <g v-else-if="name === 'arrow_forward'">
       <line x1="5" y1="12" x2="19" y2="12" />
       <polyline points="12 5 19 12 12 19" />
@@ -340,6 +353,29 @@
       <rect x="2" y="3" width="20" height="4" rx="1" />
       <rect x="4" y="10" width="16" height="4" rx="1" />
       <rect x="6" y="17" width="12" height="4" rx="1" />
+    </g>
+
+    <!-- Chevron / Flechas de Desplegar -->
+    <g v-else-if="name === 'chevron_down' || name === 'expand_more'">
+      <polyline points="6 9 12 15 18 9" />
+    </g>
+    <g v-else-if="name === 'chevron_up' || name === 'expand_less'">
+      <polyline points="18 15 12 9 6 15" />
+    </g>
+    <g v-else-if="name === 'chevron_right'">
+      <polyline points="9 18 15 12 9 6" />
+    </g>
+    <g v-else-if="name === 'chevron_left'">
+      <polyline points="15 18 9 12 15 6" />
+    </g>
+
+    <!-- Paleta de Colores / Leyenda -->
+    <g v-else-if="name === 'palette'">
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z" />
     </g>
 
     <!-- Caja / Vacío -->

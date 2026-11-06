@@ -71,33 +71,39 @@ export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_alb
     };
   }
 
-  // Modelo canónico único estricto según Alberts et al. (Molecular Biology of the Cell)
+  // Modelo canónico único estricto según Alberts et al. (Molecular Biology of the Cell, Cap. 4)
+  // 147 pb = 1.65 vueltas superhelicoidales zurdas (~89 pb por vuelta completa)
   const coreBp = 147;
-  const linkerBp = 53;
+  const minOneTurnBp = 89; // 1 vuelta completa en el octámero (147 / 1.65)
+  const linkerBp = 38;     // Puente linker curvo entre nucleosomas consecutivos
   const unitBp = coreBp + linkerBp;
 
-  let nucleosomeCount = 1;
   let effectiveRepeats = 1;
+  let renderedBp = seqLength;
 
-  if (seqLength >= unitBp) {
-    // Si la secuencia es suficientemente larga, calculamos los nucleosomas soportados directamente
-    nucleosomeCount = Math.max(1, Math.round(seqLength / unitBp));
-    effectiveRepeats = 1;
+  if (seqLength < minOneTurnBp) {
+    // Solo para secuencias micro-didácticas (< 1 vuelta) se proyecta hasta 147 pb exactos sin cola sobrante
+    effectiveRepeats = Math.ceil(coreBp / Math.max(1, seqLength));
+    renderedBp = coreBp;
   } else {
-    // Para secuencias cortas (didácticas), se cicla en tándem para completar nucleosomas cerrados
-    // evitando fragmentos rotos o hebras colgantes incompletas
-    const minTargetBp = 200;
-    effectiveRepeats = Math.ceil(minTargetBp / Math.max(1, seqLength));
-    nucleosomeCount = Math.max(1, Math.floor((seqLength * effectiveRepeats) / unitBp));
+    // Si la cadena da para al menos 1 vuelta (>= 89 pb), jamás se clona ni se agrega secuencia extra
+    effectiveRepeats = 1;
+    renderedBp = seqLength;
   }
 
-  const renderedBp = seqLength * effectiveRepeats;
+  // Cantidad de octámeros: si supera el core + margen de salida (> 165 pb), abre el siguiente nucleosoma
+  // para que ningún tramo quede colgando como un bastón recto sobrante
+  const nucleosomeCount = renderedBp <= 165
+    ? 1
+    : 1 + Math.ceil((renderedBp - coreBp) / unitBp);
+
   const octamerSubunits = nucleosomeCount * 8; // 2×H2A + 2×H2B + 2×H3 + 2×H4
-  const h1Count = nucleosomeCount;             // 1 H1 por cada nucleosoma en la entrada/salida
+  const h1Count = nucleosomeCount;             // 1 H1 por cada nucleosoma en la diada de entrada/salida
   const totalHistoneProteins = nucleosomeCount * 9;
 
-  const repeatNote = effectiveRepeats > 1 ? ` (en tándem ${effectiveRepeats}×)` : '';
-  const ratioText = `${seqLength} pb${repeatNote} · ${nucleosomeCount} nucleosoma(s) [${coreBp} pb core + ${linkerBp} pb linker] · Alberts et al.`;
+  const actualTurns = Number(((Math.min(renderedBp, coreBp) / coreBp) * 1.65).toFixed(2));
+  const repeatNote = effectiveRepeats > 1 ? ` (proyectado a ${renderedBp} pb)` : '';
+  const ratioText = `${seqLength} pb${repeatNote} · ${nucleosomeCount} nucleosoma(s) [${Math.min(renderedBp, coreBp)} pb core · ${actualTurns} vueltas] · Alberts et al.`;
 
   return {
     originalBp: seqLength,
@@ -106,7 +112,7 @@ export function calculateChromatinStoichiometry(seqLength, mode = 'chromatin_alb
     coreBp,
     linkerBp,
     unitBp,
-    turnsPerNucleosome: 1.65,
+    turnsPerNucleosome: actualTurns,
     nucleosomeCount,
     octamerSubunits,
     h1Count,
@@ -169,27 +175,10 @@ function buildChromatinFrames(N, mode, stoich) {
     const firstCoreY = nucCy + R_SUPER * Math.sin(entryAngle);
     const firstCoreZ = nucCz - PITCH_Z * 0.5;
 
-    // 1. ADN espaciador (Linker DNA) previo
-    if (n === 0) {
-      // Cola de entrada inicial
-      const leadBp = Math.min(18, Math.floor(linkerBp * 0.45));
-      const leadDir = [Math.sin(entryAngle), -Math.cos(entryAngle), 0];
-      const leadLen = Math.hypot(...leadDir) || 1;
-      leadDir[0] /= leadLen; leadDir[1] /= leadLen; leadDir[2] /= leadLen;
-
-      for (let k = leadBp; k >= 1 && bp < N; k--) {
-        rawPoints.push({
-          pos: [
-            firstCoreX + leadDir[0] * k * VERTICAL_STEP,
-            firstCoreY + leadDir[1] * k * VERTICAL_STEP,
-            firstCoreZ + leadDir[2] * k * VERTICAL_STEP
-          ],
-          nucIdx: -1
-        });
-        bp++;
-      }
-    } else {
-      // Linker que conecta suavemente el nucleosoma anterior con el actual
+    // 1. ADN espaciador (Linker DNA) previo: solo entre nucleosomas consecutivos (n > 0)
+    // En n === 0 el ADN inicia directamente envolviendo el octámero sin agregar colas rectas artificiales
+    if (n > 0) {
+      // Linker curvo que conecta suavemente la salida del nucleosoma anterior con la entrada del actual
       const prevMeta = nucMeta[n - 1];
       const pExit = prevMeta.exitPoint;
       const pEntry = [firstCoreX, firstCoreY, firstCoreZ];
@@ -219,12 +208,14 @@ function buildChromatinFrames(N, mode, stoich) {
 
     if (bp >= N) break;
 
-    // 2. Superhélice Nucleosomal (Core de 147 pb o adaptativo en 1.65 vueltas)
+    // 2. Superhélice Nucleosomal (Core de 147 pb en 1.65 vueltas; si es el último nucleosoma y quedan <= 18 pb, los envuelve en la misma superhélice sin dejar bastón recto colgante)
     let entryPt = [firstCoreX, firstCoreY, firstCoreZ];
     let exitPt = null;
     let crossPt = null;
+    const isLastNuc = (n === nucleosomeCount - 1);
+    const coreLimit = (isLastNuc && (N - bp) <= coreBp + 18) ? (N - bp) : coreBp;
 
-    for (let k = 0; k < coreBp && bp < N; k++) {
+    for (let k = 0; k < coreLimit && bp < N; k++) {
       const theta = entryAngle - k * dTheta;
       const px = nucCx + R_SUPER * Math.cos(theta);
       const py = nucCy + R_SUPER * Math.sin(theta);
@@ -233,7 +224,7 @@ function buildChromatinFrames(N, mode, stoich) {
       const pt = [px, py, pz];
       if (k === 0) entryPt = [...pt];
       if (k === Math.floor(coreBp / TURNS)) crossPt = [...pt]; // Punto de cruce al completar 1 vuelta
-      if (k === coreBp - 1) exitPt = [...pt];
+      if (k === coreLimit - 1 || bp === N - 1) exitPt = [...pt];
 
       rawPoints.push({ pos: pt, nucIdx: n });
       bp++;
@@ -252,24 +243,21 @@ function buildChromatinFrames(N, mode, stoich) {
     });
   }
 
-  // 3. Cola linker terminal de salida
+  // 3. Si restan pares de bases al final, continúan la curvatura superhelicoidal sin proyectar bastones rectos
   const lastMeta = nucMeta[nucMeta.length - 1];
   if (lastMeta && bp < N) {
-    const pExit = lastMeta.exitPoint;
-    const exitAngle = -TURNS * Math.PI;
-    const trailDir = [Math.sin(exitAngle), Math.cos(exitAngle), 0];
-    const tLen = Math.hypot(...trailDir) || 1;
-    trailDir[0] /= tLen; trailDir[1] /= tLen; trailDir[2] /= tLen;
-
-    let k = 1;
+    const [nucCx, nucCy, nucCz] = lastMeta.center;
+    const entryAngle = TURNS * Math.PI;
+    let k = coreBp;
     while (bp < N) {
+      const theta = entryAngle - k * dTheta;
       rawPoints.push({
         pos: [
-          pExit[0] + trailDir[0] * k * VERTICAL_STEP,
-          pExit[1] + trailDir[1] * k * VERTICAL_STEP,
-          pExit[2] + trailDir[2] * k * VERTICAL_STEP
+          nucCx + R_SUPER * Math.cos(theta),
+          nucCy + R_SUPER * Math.sin(theta),
+          nucCz - PITCH_Z * 0.5 + k * dZ
         ],
-        nucIdx: -1
+        nucIdx: lastMeta.index
       });
       k++;
       bp++;
@@ -455,7 +443,7 @@ export function generateAtomicDNA(rawSequence, centerVertical = true, packagingM
 
   let seq = baseSeq;
   if (packagingMode !== 'linear' && stoich.effectiveRepeats > 1) {
-    seq = baseSeq.repeat(stoich.effectiveRepeats);
+    seq = baseSeq.repeat(stoich.effectiveRepeats).slice(0, stoich.renderedBp);
   }
 
   const N = seq.length;
